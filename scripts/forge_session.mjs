@@ -148,7 +148,14 @@ export const STEPS = [   // exported for learn_digest.mjs (forks row 649 (0)): t
 // narrows to the trio at pehle_guess, at the sharp check, and once immediately before jirah — his 5 Sep "gut pehle"
 // in the forge REFERENCE step 3). check_q stays the per-idea check, trio-less, never bank-due.
 // EXPORTED: this list is the one home; the gate's fence (teaching_gate MOMENT_KINDS) is asserted equal to it.
-export const MOMENTS = ["pehle_guess", "widget_gate", "check_q", "jirah", "sharp_check"];
+// unit mdayq (forks rows 1241 (1) / 1257): SIX since — `day_close` is the day-close question at his day end (two of them,
+// one a turn, F8 A), asked only when `day.mjs end` step 0 says the day is due (dayCloseDue below, F4 A). It carries the
+// trio and is bank-due (study_scope GUT_BEARING_MOMENTS / BANKED_MOMENTS); its rows carry `moment: "day_close"` and are
+// excluded from the axis-done gate AND from the LOCK's negative-space count (F3 B) — a day's one-idea question pays
+// neither. ~~MOMENTS.length === 5~~ (row 266) is struck in the selftest, not erased (L9).
+export const MOMENTS = ["pehle_guess", "widget_gate", "check_q", "jirah", "sharp_check", "day_close"];
+// unit mdayq — the ONE row field value the bank writes for a day-close answer (gaffer_brain gradeCapture `moment`)
+export const DAY_CLOSE = "day_close";
 const AXES = "abcdefghi".split("");
 // CORE-NEVER-DEFERRED, finally in code (audit 31 Jul 2026). Canon, verbatim:
 //   PROJECT_OS.md:316 — "CORE-NEVER-DEFERRED: core measure/formula/range MAIN
@@ -356,7 +363,8 @@ function addMoment(s, kind, now = new Date()) {
   if (!MOMENTS.includes(m)) return { ok: false, error: `moment not ${MOMENTS.join("|")} (${kind})`, session: s };
   // RUNG L1 (ml1 F-5): the moment with its axis and clock, appended on every path below
   const logged = (extra = {}) => [...(Array.isArray(s.moments_log) ? s.moments_log : []),
-    { kind: m, axis: s.current_axis && AXES.includes(s.current_axis) ? s.current_axis : null, at: nowISO(now), ...extra }];
+    { kind: m, axis: s.current_axis && AXES.includes(s.current_axis) ? s.current_axis : null, at: nowISO(now),
+      ...(m === DAY_CLOSE ? { day: istDayOf(nowISO(now)) } : {}), ...extra }];   // unit mdayq (row 1280 (3), mdayq-4 b): a day-close moment names the IST day it closes
   // THE ONE-CHECK-QUESTION LAW, ENFORCED (audit 30 Jul 2026): the contract used to
   // only WARN here while SKILL.md claimed "the pacer hard-stops the second one" —
   // a claim the code did not honour. It does now: in phases 3-6 the second
@@ -411,7 +419,9 @@ function addMoment(s, kind, now = new Date()) {
       moments_by_axis: mba,
       moments_log: logged(),
       check_q_this_pass: m === "check_q" ? (s.check_q_this_pass || 0) + 1 : (s.check_q_this_pass || 0),
-      updated_at: nowISO(now),
+      // unit mdayq (row 1280 (3)): a day-close moment on a closed or stale session is the DAY's, not a continuation — it
+      // never moves the last touch (a stale session stays stale, its pacer stays silent)
+      updated_at: m === DAY_CLOSE && (s.closed_at || isStale(s, now)) ? s.updated_at : nowISO(now),
     },
   };
 }
@@ -790,7 +800,10 @@ function contractLines(s, now = new Date(), clock = undefined, owed = null) {   
     // unit mtrap (mtrap-4 a / mtrap-7 b): the ON axis's note is under the bar — the owed count, and that a new day's note counts only its own day's windows
     + (owed && owed.owed > 0 && owed.axis === s.current_axis && !s.axes_done.includes(owed.axis) && !s.axes_deferred.includes(owed.axis)
       ? ` · note ${owed.axis}: ${owed.have}/${owed.need} traps — ${owed.owed} trap owed (from the lesson's own bait, never made up; a new day's note counts only the windows that touched its day)` : ""));
-  L.push(`  question-moments used: ${MOMENTS.map((m) => `${m} ${s.question_moments[m] || 0}`).join(" · ")} (only these ${MOMENTS.length} are legal — no quiz-dump)${CRACK_CONTRACT}`);
+  // unit mdayq (row 1280 (1)): `day_close` is asked by code at his day end, never mid-lesson — the contract is a mid-lesson
+  // surface like the skeleton, so it prints the lesson's kinds only (its line byte-identical to before mdayq)
+  const lesson = MOMENTS.filter((m) => m !== DAY_CLOSE);
+  L.push(`  question-moments used: ${lesson.map((m) => `${m} ${s.question_moments[m] || 0}`).join(" · ")} (only these ${lesson.length} are legal — no quiz-dump)${CRACK_CONTRACT}`);
   // forks row 276 (1)(a): the per-axis count of step 3's per-idea pictures — said, never gated (the ORDER rides the
   // TURN SKELETON's line 0, the one home of the checkable rules)
   if (n === 3) L.push(`  pictures per axis (picture first at every new idea): ${Object.entries(s.pictures_by_axis || {}).map(([a, k]) => `${a} ${k}`).join(" · ") || "none yet"}`);
@@ -851,7 +864,9 @@ export function axisDoneGate(s, axis, rows = []) {
   const floor = (s.axes_now_at || {})[a] || s.started_at || null;
   const t0 = Date.parse(floor || "");
   const inWindow = (r) => { const t = Date.parse((r && r.ts) || ""); return Number.isFinite(t) && (!Number.isFinite(t0) || t >= t0); };
-  const mine = (rows || []).filter((r) => r && String(r.axis || "").toLowerCase() === a && inWindow(r));
+  // unit mdayq (row 1257 F3 B): a day-close answer (row moment "day_close") is the DAY's question, never this axis's
+  // banked Bolo or interview line — it is not counted here, so it can never pay half of this gate
+  const mine = (rows || []).filter((r) => r && String(r.axis || "").toLowerCase() === a && inWindow(r) && r.moment !== DAY_CLOSE);
   // A row with no register declared IS the Hinglish one: that is the default register of the
   // whole lesson, and the flag exists to mark the exception, not the rule.
   const hinglish = mine.filter((r) => String(r.register || "").toLowerCase() !== "interview");
@@ -932,7 +947,9 @@ export function lockGate(s, rows = [], outstanding = []) {
   const done = (Array.isArray(s.axes_done) ? s.axes_done : []).map((a) => String(a || "").toLowerCase());
   const ungrilled = done.filter((a) => !graded.has(a));
   const missing = [];
-  if (!mine.some((r) => probeIs(r, "negative_space"))) missing.push(`STEP 10 is the LOCK and nothing has asked him what ${s.concept} does NOT do — the negative-space probe is the single strongest senior signal in the dossier. Ask it, bank it with \`--probe negative_space\`, then lock.`);
+  // unit mdayq (row 1257 F3 B): the LOCK's negative-space probe is on the WHOLE concept; a day-close Q2 (one idea of one
+  // day, row moment "day_close") is not that, so it is not counted here
+  if (!mine.some((r) => probeIs(r, "negative_space") && r.moment !== DAY_CLOSE)) missing.push(`STEP 10 is the LOCK and nothing has asked him what ${s.concept} does NOT do — the negative-space probe is the single strongest senior signal in the dossier. Ask it, bank it with \`--probe negative_space\`, then lock.`);
   if (ungrilled.length) missing.push(`axis ${ungrilled.join("")} ${ungrilled.length === 1 ? "was" : "were"} taught and closed but never GRILLED — the Jirah round (STEP 9) runs on the WHOLE concept now, and the LOCK is where it is counted. Per axis: one sharp question + his own capsule's traps + "reinvent it from scratch", then \`node scripts/gaffer_brain.mjs capture voice_rep ${s.concept}:<axis> --axis <axis> --gut <knew|shaky|guessed> --asked "<q>" --said "<his words, verbatim — the bank keeps the bytes of his prompt record; a copy not inside it is refused>" --surface code --probe ${JIRAH_PROBE}\` — and \`node scripts/gaffer_brain.mjs judge-round\` after, because a jirah row nobody judged is a question asked, not a grade.`);
   if (!mine.some((r) => probeIs(r, "cross_axis"))) missing.push(`nothing has made him CROSS the axes on ${s.concept} — nine axes answered one at a time are nine facts, not one concept. Ask the question that needs two of them at once, bank it with \`--probe cross_axis\`, then lock.`);
   return { ok: missing.length === 0, missing, axes_ungrilled: ungrilled, axes_done_seen: done.length };
@@ -950,6 +967,61 @@ export function closeGate(s, rows = [], outstanding = []) {
   if (!mine.length) missing.push("this session banked NOTHING — every gut-word he said tonight dies with this terminal. Bank them first (`gaffer_brain.mjs capture …`), then close.");
   else if (unjudged.length) missing.push(`${unjudged.length} banked answer(s) have no verdict — run the round's ONE judge call first: \`node scripts/gaffer_brain.mjs judge-round\`. capture.mjs writes the reps, not this organ.`);
   return { ok: missing.length === 0, missing, banked: mine.length, unjudged: unjudged.length };
+}
+/** dayCloseDue — PURE (unit mdayq, forks rows 1241 (1) / 1257). Is the day-close pair due at his day end on IST day D?
+ *  Read by `day.mjs end` step 0 (F4 A), which hands in this organ's own two files (the live session + the history rows,
+ *  this organ is their SOLE WRITER) and the bank's rows (gaffer_brain bankRows, read only). Nothing is read here.
+ *    · an axis marked DONE on D (axes_done + axes_marked_at) → not due: that axis's own banked moments ran. A DEFERRED
+ *      mark is not a close ("deferred ≠ dropped").
+ *    · no teaching turn on D → not due, taught false. A teaching turn IS a pacer ledger entry of D (F2 A): an
+ *      axes_now_history or moments_log entry stamped on D.
+ *    · two bank rows with moment "day_close" stamped on D → not due, done.
+ *    · else due, with the day's material by code (F1 A: the teacher composes both questions from it; a capsule may
+ *      inform, never be the source): the concept, the axes declared on D by letter and name, the moment kinds of D, and
+ *      the axis the rows carry — the LAST axis declared on D (F7 A); none declared on D → not due (F7 B, the fallback).
+ *      Since row 1280 (2) (mdayq-3 b) "declared on D" also counts an axis WORKED on D: a moments_log entry stamped on D
+ *      that carries an axis (a null axis counts for nothing).
+ *  @returns {{due:boolean, why:string, taught?:boolean, done?:boolean, concept?:string|null, axis?:string, axis_name?:string|null,
+ *    material?:{axes:string[], moments:Object<string,number>}, asked?:number, next?:string}} */
+export function dayCloseDue({ session = null, history = [], D = null, bank = [], axisNames = {} } = /** @type {any} */ ({})) {
+  const day = String(D || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return { due: false, why: `no IST day given (${D})`, taught: false };
+  const names = axisNames && typeof axisNames === "object" ? axisNames : {};
+  const named = (x) => `${x}${typeof names[x] === "string" && names[x] ? ` (${names[x]})` : ""}`;
+  const on = (at) => typeof at === "string" && istDayOf(at) === day;
+  const sessions = [session, ...(Array.isArray(history) ? history : [])].filter((x) => x && typeof x === "object" && !Array.isArray(x));
+  for (const x of sessions) for (const a of (Array.isArray(x.axes_done) ? x.axes_done : [])) {
+    const m = (x.axes_marked_at || {})[a];
+    if (m && on(m.at)) return { due: false, why: `axis ${named(a)} closed on ${day} — its own moments are banked`, taught: true };
+  }
+  // the live file and its history row may hold the same session: one entry per (kind, axis, at)
+  const seen = new Set(), decl = [], moms = [];
+  for (const x of sessions) {
+    for (const h of (Array.isArray(x.axes_now_history) ? x.axes_now_history : [])) {
+      if (!h || !AXES.includes(h.axis) || !on(h.at) || seen.has(`now:${h.axis}:${h.at}`)) continue;
+      seen.add(`now:${h.axis}:${h.at}`); decl.push({ concept: x.concept || null, axis: h.axis, at: h.at });
+    }
+    for (const m of (Array.isArray(x.moments_log) ? x.moments_log : [])) {
+      if (!m || !MOMENTS.includes(m.kind) || !on(m.at) || seen.has(`m:${m.kind}:${m.axis}:${m.at}`)) continue;
+      seen.add(`m:${m.kind}:${m.axis}:${m.at}`); moms.push({ concept: x.concept || null, kind: m.kind, at: m.at });
+      // unit mdayq (row 1280 (2), mdayq-3 b): a moment on D that carries an axis is that axis WORKED on D (a day he
+      // continues an old axis is a study day); a null axis counts for nothing
+      if (AXES.includes(m.axis)) decl.push({ concept: x.concept || null, axis: m.axis, at: m.at });
+    }
+  }
+  if (!decl.length && !moms.length) return { due: false, why: `no teaching turn on ${day} (no pacer entry stamped that day)`, taught: false };
+  const banked = (Array.isArray(bank) ? bank : []).filter((r) => r && r.moment === DAY_CLOSE && on(r.ts));
+  if (banked.length >= 2) return { due: false, why: `the day-close pair is banked (${banked.length} row(s) on ${day})`, taught: true, done: true, asked: banked.length };
+  decl.sort((p, q) => Date.parse(p.at) - Date.parse(q.at));
+  const last = decl[decl.length - 1];
+  if (!last) return { due: false, why: `no axis declared or worked on ${day} — a day-close row needs the axis taught that day (F7 B)`, taught: true };
+  const axes = [...new Set(decl.map((d) => d.axis))];
+  const moments = moms.reduce((o, m) => ((o[m.kind] = (o[m.kind] || 0) + 1), o), /** @type {Object<string,number>} */ ({}));
+  const has = (p) => banked.some((r) => String(r.probe || "").toLowerCase() === p);
+  const next = has("recall") && !has("negative_space") ? "negative_space" : !has("recall") && has("negative_space") ? "recall" : banked.length ? "negative_space" : "recall";
+  return { due: true, why: `${day} was taught and no axis closed`, taught: true, concept: last.concept, axis: last.axis,
+    axis_name: typeof names[last.axis] === "string" && names[last.axis] ? names[last.axis] : null,
+    material: { axes: axes.map(named), moments }, asked: banked.length, next };
 }
 /** relockRow — PURE: is this session a proven re-lock, and what row says so?
  *  Two conditions, both about EVIDENCE and neither about how the session felt:
@@ -1775,8 +1847,51 @@ function selftest() {
     // axis, the record the bank reads), a kind outside the five is refused and nothing is counted
     const sc = addMoment(g, "sharp_check", T0);
     const bogus = addMoment(g, "sharp", T0);
-    assert("row 266 — `moment sharp_check` is legal and counted (overall + on the current axis); a kind outside the five is refused and counts nothing",
-      MOMENTS.length === 5 && sc.ok && sc.session.question_moments.sharp_check === 1 && !bogus.ok && /sharp_check/.test(bogus.error) && bogus.session === g, JSON.stringify({ sc: sc.ok && sc.session.question_moments, bogus: bogus.error }));
+    // unit mdayq (row 1257): ~~MOMENTS.length === 5~~ (row 266) struck, not erased — `day_close` is the sixth kind; the
+    // bogus-kind refusal below is unchanged (a gate only gets stricter)
+    assert("row 266 — `moment sharp_check` is legal and counted (overall + on the current axis); a kind outside the six is refused and counts nothing",
+      MOMENTS.length === 6 && sc.ok && sc.session.question_moments.sharp_check === 1 && !bogus.ok && /sharp_check/.test(bogus.error) && bogus.session === g, JSON.stringify({ sc: sc.ok && sc.session.question_moments, bogus: bogus.error }));
+    // unit mdayq (rows 1241 (1) / 1257) — THE DAY-CLOSE MOMENT, planted both ways
+    {
+      const dc = addMoment({ ...s3, current_axis: "c" }, "day_close", T0);
+      assert("mdayq W1 — `moment day_close` is legal: counted in question_moments, on the current axis, and logged with its axis",
+        dc.ok && dc.session.question_moments.day_close === 1 && dc.session.moments_by_axis.c.day_close === 1
+        && dc.session.moments_log.at(-1).kind === "day_close" && dc.session.moments_log.at(-1).axis === "c" && !addMoment(s3, "day_closed", T0).ok,
+        JSON.stringify(dc.session && dc.session.question_moments));
+      const open = { ...blank("tokenization"), started_at: "2026-11-20T00:00:00.000Z", axes_now_at: { c: "2026-11-20T04:00:00.000Z" } };
+      const dcRow = { id: "x:dc", axis: "c", ts: "2026-11-20T05:00:00.000Z", moment: "day_close", probe: "negative_space" };
+      const gA = axisDoneGate(open, "c", [dcRow]), gA2 = axisDoneGate(open, "c", [{ ...dcRow, moment: null }]);
+      assert("mdayq W5 — a day-close row on the open axis does NOT pay the axis-done gate's banked-answer half (F3 B); the same row with no moment does",
+        !gA.ok && gA.rows_seen === 0 && /no banked answer for axis c/.test(gA.missing[0] || "") && gA2.rows_seen === 1, JSON.stringify({ gA: gA.missing, gA2: gA2.rows_seen }));
+      const lA = lockGate(open, [dcRow]), lA2 = lockGate(open, [{ ...dcRow, moment: null }]);
+      assert("mdayq W5' — a day-close Q2 banked `--probe negative_space` does NOT meet the LOCK's concept-level negative-space probe (F3 B); a probe with no moment does",
+        lA.missing.some((m) => /does NOT do/.test(m)) && !lA2.missing.some((m) => /does NOT do/.test(m)), JSON.stringify(lA.missing.length));
+      const D = "2026-11-20", at = (h) => `2026-11-20T0${h}:00:00.000Z`;
+      const day = (extra = {}) => ({ ...blank("tokenization"), axes_now_history: [{ axis: "b", at: at(3) }, { axis: "c", at: at(4) }], moments_log: [{ kind: "check_q", axis: "c", at: at(5) }], ...extra });
+      const bankDC = (n) => Array.from({ length: n }, (_, i) => ({ id: `dc${i}`, moment: "day_close", ts: at(6), probe: i ? "negative_space" : "recall" }));
+      const r1 = dayCloseDue({ session: day({ axes_done: ["b"], axes_marked_at: { b: { at: at(4), step: 3, jirah_before: 0 } } }), D });
+      const r2 = dayCloseDue({ session: day({ axes_deferred: ["b"], axes_marked_at: { b: { at: at(4), step: 3, jirah_before: 0 } } }), D });
+      const r3 = dayCloseDue({ session: { ...blank("tokenization"), axes_now_history: [{ axis: "c", at: "2026-11-19T04:00:00.000Z" }] }, D });
+      const r4 = dayCloseDue({ session: day(), D, axisNames: { b: "bee", c: "sea" } });
+      const r5 = dayCloseDue({ session: day(), D, bank: bankDC(2) });
+      const r6 = dayCloseDue({ session: day(), D, bank: bankDC(1) });
+      const r7 = dayCloseDue({ session: { ...blank("tokenization"), moments_log: [{ kind: "check_q", axis: null, at: at(5) }] }, D });
+      assert("mdayq W7 — dayCloseDue: axis done on D → not due · deferred on D → due · nothing on D → not due, taught false · declared on D → due with the last axis and the material by name · two day-close rows → done · one → due, next negative_space · no axis declared on D → not due (F7 B)",
+        !r1.due && r1.taught && r2.due && !r3.due && r3.taught === false && r4.due && r4.axis === "c" && r4.concept === "tokenization"
+        && r4.material.axes.join("|") === "b (bee)|c (sea)" && r4.material.moments.check_q === 1 && r4.next === "recall"
+        && !r5.due && r5.done && r6.due && r6.asked === 1 && r6.next === "negative_space" && !r7.due && r7.taught && /F7 B/.test(r7.why),
+        JSON.stringify({ r1: r1.why, r2: r2.due, r3: r3.why, r4: r4.material, r5: r5.why, r6: r6.next, r7: r7.why }));
+      // row 1280 (2), mdayq-3 b: an old axis continued on D (declared on an earlier day, worked today) is due on that axis
+      const r8 = dayCloseDue({ session: { ...blank("tokenization"), axes_now_history: [{ axis: "c", at: "2026-11-19T04:00:00.000Z" }],
+        moments_log: [{ kind: "check_q", axis: "c", at: at(5) }] }, D });
+      assert("mdayq W15 — dayCloseDue (row 1280 (2)): a moment on D carrying an axis is that axis worked on D → due on it; a null axis still counts for nothing",
+        r8.due && r8.axis === "c" && !r7.due, JSON.stringify({ r8 }));
+      // row 1280 (3), mdayq-4 b: day_close is the one kind a closed session takes, and its log entry names the IST day
+      const closed = { ...day(), closed_at: at(7), updated_at: at(7) };
+      const dk = addMoment(closed, "day_close", new Date(Date.parse(at(8))));
+      assert("mdayq W16 — addMoment day_close on a CLOSED session: logged with the IST day it closes, the last touch unmoved",
+        dk.ok && dk.session.moments_log.at(-1).day === D && dk.session.updated_at === closed.updated_at, JSON.stringify(dk.session && dk.session.moments_log.at(-1)));
+    }
     assert("a TEXT-FIRST widget refusal recorded before row 276 still counts against the verdict like a quiz-dump, and the count is reported",
       coverage({ ...g, widget_refused: 1 }, T0).method_clean === false && coverage(g, T0).widget_refused === 0);
   }
@@ -3143,7 +3258,10 @@ export async function hookMain() {
       }
       break;
     }
-    case "moment": console.log(oneLine(apply(addMoment(live(need(load())), rest[0])))); break;
+    // unit mdayq (row 1280 (3), mdayq-4 b): `day_close` ALONE is accepted on a closed or stale session (the day end comes
+    // after the lesson); every other kind still refuses through live()
+    case "moment": { const k = String(rest[0] || "").trim().toLowerCase(), s0 = need(load()); const r = addMoment(k === DAY_CLOSE ? s0 : live(s0), rest[0]);
+      console.log(oneLine(apply(r)) + (k === DAY_CLOSE ? ` · day-close moment for ${r.session.moments_log.at(-1).day}` : "")); break; }
     case "pointer": {
       // THE RESUME POINTER (row 68 (b), 6 Sep 2026). `pointer "<question>"` writes the exact
       // unanswered micro-question where he stopped; bare `pointer` reads it back. need(), not

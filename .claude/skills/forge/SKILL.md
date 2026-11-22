@@ -40,7 +40,7 @@ description: Run a full FORGE study session INSIDE Claude Code with ZERO capture
 ## THE BANK — one command per answer, not optional (A3, 4 Sep 2026) — carried whole because every axis needs it
 
 At the axis's THREE banked moments only — the sharp check, the Bolo, the interview line — you type ONE
-bank line. Per-idea typed answers are re-welded in the turn and never banked (5 Sep 2026, row 53b).
+bank line. Plus ONE day-close pair at his day end (`day.mjs end` asks for it by code, unit mdayq): one recall, one what-it-does-not-do, each after `moment day_close`, each banked with `--moment day_close`. Per-idea typed answers are re-welded in the turn and never banked (5 Sep 2026, row 53b).
 He types his answer; you type the bank line:
 
 ```

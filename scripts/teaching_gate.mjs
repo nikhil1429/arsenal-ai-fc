@@ -143,8 +143,8 @@ export const CHECKS = Object.freeze({
   "B.bank-per-idea": { fam: "B", mouth: "count", fix: "\"samajh aaya\" check ka jawab per-idea hai — bank NAHI hota; bank sirf axis ke moments par (sharp check · Bolo · interview line) aur jirah par" },
   "B.bank-verbatim": { fam: "B", mouth: "count", fix: "bank line mein --gut uska apna gut-word (pakka→knew · shayad→shaky · pata nahi→guessed) — usne gut-word nahi diya to --gut kabhi type mat karo, --said uske shabd verbatim (bank door unhe uske prompt record mein dhoondhta hai — bahar ka copy REFUSED, galat --gut bhi), --asked tumhara sawaal verbatim" },
   "B.latency": { fam: "B", mouth: "count", fix: "--latency_ms wahi number jo hook line ne diya (VERBATIM) — nahi padh sakte to flag hata do" },
-  "B.moment": { fam: "B", mouth: "patch", fix: "abhi EK tool: node scripts/forge_session.mjs moment check_q|pehle_guess|widget_gate|jirah|sharp_check — text mein kuch nahi jodna" },
-  "B.moment-kind": { fam: "B", mouth: "patch", fix: "abhi EK tool: legal moment declare karo (pehle_guess · check_q · widget_gate · jirah · sharp_check) — text mein kuch nahi jodna" },
+  "B.moment": { fam: "B", mouth: "patch", fix: "abhi EK tool: node scripts/forge_session.mjs moment check_q|pehle_guess|widget_gate|jirah|sharp_check|day_close — text mein kuch nahi jodna" },
+  "B.moment-kind": { fam: "B", mouth: "patch", fix: "abhi EK tool: legal moment declare karo (pehle_guess · check_q · widget_gate · jirah · sharp_check · day_close) — text mein kuch nahi jodna" },
   "B.askuser": { fam: "B", mouth: "count", fix: "AskUserQuestion nahi — ek sawaal text mein, woh khud type karega" },
   "B.whole-read": { fam: "B", mouth: "count", fix: "poori file mat padho (REFERENCE / SAMJHAO_MERGED / VISUAL_CONTRACT / forge SKILL / scripts / memory) — digest jo section bataye, sirf wahi, offset+limit se" },
   "B.tools": { fam: "B", mouth: "count", fix: "mid-concept system / tool kaam nahi — park it: ek line, phir micro-question wapas" },
@@ -395,7 +395,7 @@ const VOICE_REP = /gaffer_brain\.mjs["']?\s+capture\s+voice_rep\b/i;
 // The fence: forge_session's own MOMENTS (the pacer owns the kinds; a copy here keeps the Stop hook from loading the
 // pacer — importing it would also make its turn_hook SHIM a silent no-op). The selftest asserts the two are equal.
 // FIVE since forks row 266 (sharp_check).
-export const MOMENT_KINDS = Object.freeze(["pehle_guess", "check_q", "widget_gate", "jirah", "sharp_check"]);
+export const MOMENT_KINDS = Object.freeze(["pehle_guess", "check_q", "widget_gate", "jirah", "sharp_check", "day_close"]);   // unit mdayq (row 1257): day_close is the sixth
 
 // THE STUDY SET (G3's allowed set, read after the fact for the tools no PreToolUse rail sees). ONE home since P2
 // concern 2: study_scope.mjs (ALLOWED_CMD, the unsafe-shell fence, the canon-read paths — shellInStudySet), which
@@ -1308,8 +1308,14 @@ async function selftest() {
     const pacer = await import("./forge_session.mjs");
     const skKinds = ((/moment ((?:[a-z_]+\|)+[a-z_]+)`?\s*$/m.exec(sk.split("\n").find((l) => /\[EK CHECK\]/.test(l)) || "") || [])[1] || "").split("|");
     const same = (a, b) => a.length === b.length && a.every((k) => b.includes(k));
-    assert(`FENCE · the pacer's ${pacer.MOMENTS.length} legal kinds = the gate's MOMENT_KINDS = the kinds the skeleton's [EK CHECK] prints (sharp_check included, row 266)`,
-      Array.isArray(pacer.MOMENTS) && same(pacer.MOMENTS, [...MOMENT_KINDS]) && same(skKinds, [...MOMENT_KINDS]) && pacer.MOMENTS.includes("sharp_check"), JSON.stringify({ pacer: pacer.MOMENTS, gate: MOMENT_KINDS, skeleton: skKinds }));
+    // unit mdayq (row 1257, FORK mdayq-1 in ci/mdayq/PROOF.md): `day_close` is legal at the pacer and the gate, and is the
+    // ONE kind the teaching skeleton's [EK CHECK] does not print — it is asked by code at his day end (`day.mjs end` step
+    // 0 names `moment day_close`), never as a mid-lesson check. The skeleton's list is still asserted EXACT: the gate's
+    // kinds minus that one, no more, no fewer.
+    const SKELETON_KINDS = MOMENT_KINDS.filter((k) => k !== "day_close");
+    assert(`FENCE · the pacer's ${pacer.MOMENTS.length} legal kinds = the gate's MOMENT_KINDS; the kinds the skeleton's [EK CHECK] prints = those minus day_close (sharp_check included, row 266; day_close by unit mdayq)`,
+      Array.isArray(pacer.MOMENTS) && same(pacer.MOMENTS, [...MOMENT_KINDS]) && same(skKinds, SKELETON_KINDS) && pacer.MOMENTS.includes("sharp_check")
+      && pacer.MOMENTS.includes("day_close") && SKELETON_KINDS.length === MOMENT_KINDS.length - 1, JSON.stringify({ pacer: pacer.MOMENTS, gate: MOMENT_KINDS, skeleton: skKinds }));
     const q = (rx) => { const m = rx.exec(sk); return m ? m[1] : null; };
     const ranLine = q(/first line names it: "([^"]+)"/), bankLine = q(/the text's first line: "([^"]+)"/);
     const position = (q(/\[POSITION\] (.+?) — never a count/) || "").replace("<the idea, BY NAME>", "pair-merge");
