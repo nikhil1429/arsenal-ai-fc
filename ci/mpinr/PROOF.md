@@ -172,3 +172,25 @@ CHECKPOINT · STOPPED at 2026-11-20T01:32:16Z · merged tip bf561374bd63bdf65087
 - **A named slip, repaired.** One local `git --work-tree checkout` was run without its own GIT_INDEX_FILE and rewrote this clone's index (never the working tree, never a commit). `git reset -q` restored it before any commit; the status after showed only the witness edit.
 
 CHECKPOINT · 2026-11-21T11:15:53Z · merge sha 63fd0d9 (main 7bf008b) · fix b83ce4e · witness GREEN MPINR own_source module · 9 clause(s) · run_mutants: 9 of 9 · control GREEN · legs of b83ce4e: npm test node 24 success, hermetic node 22 success, npm test node 22 and hermetic node 24 in progress at the read · resume from: their verdict
+
+## ONLY-NAMED BECOMES BOUND-CLASS (rows 1311 (1) / 1312 (2), 22 Nov 2026)
+- **Why the car was out of the train.** The runner measured the car in the WITNESSES member's form (head = the train top, base = the tree of ci/mpinr/BASE). It left ONE id, ONLY-NAMED, with "219 path(s) differ — BEYOND THE NAMED". That clause compares a whole-tree path list base vs head, so it reads red the first time any other unit lands.
+- **The rename.** The clause is now `"ONLY-NAMED BOUND"`, a literal in `ci/mpinr/witness_mpinr.mjs`; the member's `boundIds` reads `["ONLY-NAMED BOUND","BOUND"]` from it (22 Nov 2026). Its mutant is kept, renamed alike in `run_mutants_mpinr.mjs`. It stays judged at adoption against the unit's parent.
+- **Every other clause checked for the same shape; none is BOUND-class:**
+  - SELFTEST, NARROW, GUARD, COPY and LEAF read the HEAD tree only.
+  - SUITE reads the head's package.json only.
+  - KILLED compares ONE declaration (base conductor STEP_TIMEOUT_MS) against what the head's module hands its child. That is not a whole-tree count or list.
+  - LAST reads the process list.
+- **Named, not BOUND-class but tree-coupled.** NARROW's "spec targets resolve" reads ten named functions of other organs on the HEAD tree. A later unit that renames one of them (audit `deal` / `runAudit`, awayday `TAIL_BUDGET` / `checkLane`, dugout `main` / imports, forge_session's header, gaffer_brain `VERIFY_TIMEOUT_MS`, gates `main`, mutagen `coveredFiles`) turns it red. That red is a true one for mpin-narrow, whose targets these are; the architect may rule it BOUND or keep it.
+- **The merge.** Main `84cbc03126eddb85c7d5cf54b51610068800315c` was merged with no conflict. `ci/mpinr/BASE` = 84cbc03. Against main only `package.json` (`1 1`), `scripts/own_source.mjs` and `ci/mpinr/` differ.
+- **The witness on bare LF work trees** (the member's form, private index, 22 Nov 2026):
+  - base 84cbc03 → `RED MPINR · SELFTEST · SUITE · NARROW · KILLED · GUARD · COPY · LEAF · ONLY-NAMED BOUND` (exit 1);
+  - head vs 84cbc03 → `GREEN MPINR own_source module · 9 clause(s)` (exit 0);
+  - head vs the frozen old base fb42118 → `RED MPINR · ONLY-NAMED BOUND`. Through the member's own boundIds / judgeLast this reads **GREEN**, the base 84cbc03 still reads RED with seven ids left, and the car no longer reds on another unit's landing.
+- **The mutants** (clone of 2cccc08, base the LF tree 84cbc03, 22 Nov 2026): `run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN`. The control is unchanged.
+- **The WITNESSES member** (`ORGANISM_TEST_PROFILE=hermetic GITHUB_ACTIONS=true GITHUB_WORKSPACE=<clone> node scripts/organism_test.mjs witnesses`, a local clone of 2cccc08, 22 Nov 2026):
+  - 59 witness(es) ran; `ok GREEN at head against its BASE` 59, FAIL 0;
+  - mpinr reads `witness ‹mpinr› 4.6 s · GREEN MPINR own_source module · 9 clause(s)`;
+  - the member's 5 reds are all `its BASE is in the clone` (mr3, mrf, mrj, mrt, mrv): this clone lacks those commits, so they are its environment, not this unit.
+
+CHECKPOINT · 2026-11-22T13:28:44Z · tip = the commit carrying this line (on 2cccc08) · BASE 84cbc03 · renamed id ONLY-NAMED BOUND · other clauses: none BOUND-class (NARROW's spec-target read named as tree-coupled) · witness: base RED MPINR · SELFTEST · SUITE · NARROW · KILLED · GUARD · COPY · LEAF · ONLY-NAMED BOUND / head GREEN MPINR own_source module · 9 clause(s) · run_mutants: 9 of 9 · control GREEN · WITNESSES member 59 GREEN at head, 0 red · returns as a TOP car
