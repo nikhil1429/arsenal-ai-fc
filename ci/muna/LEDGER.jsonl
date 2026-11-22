@@ -17,3 +17,8 @@
 {"ts":"2026-11-22T11:03:23.898Z","act":"the mutants at 929ad23","cmd":"node ci/muna/run_mutants_muna.mjs --org <tree of 929ad23>","last_line":"run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-22T11:03:23.899Z","act":"the hermetic suite on a clean clone of 929ad23","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 173 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
 {"ts":"2026-11-22T11:03:23.900Z","act":"main before the checkpoint","cmd":"git fetch origin main && git log --oneline -1 origin/main","last_line":"84cbc03 (unmoved: nothing to merge)"}
+{"ts":"2026-11-22T11:10:53.241Z","act":"merge origin/main (runner M order 16:4x)","cmd":"git fetch origin && git merge --no-edit origin/main","last_line":"Already up to date. (main 84cbc03)"}
+{"ts":"2026-11-22T11:10:53.242Z","act":"the gates on the tip","cmd":"node scripts/gates.mjs","last_line":"gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides, and every schema'd state file matches"}
+{"ts":"2026-11-22T11:10:53.243Z","act":"the witness both ways on the tip","cmd":"node ci/muna/witness_muna.mjs --org <tree of 051a29a> --base-org <tree of BASE>","last_line":"GREEN MUNA landing with no session awake · 17 clause(s)"}
+{"ts":"2026-11-22T11:10:53.244Z","act":"the mutants on the tip","cmd":"node ci/muna/run_mutants_muna.mjs --org <tree of 051a29a>","last_line":"run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-22T11:10:53.245Z","act":"the WITNESSES member units","cmd":"count ci/<unit>/witness_<unit>.mjs on each tree","last_line":"org 64 · base 63"}
