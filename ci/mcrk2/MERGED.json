@@ -1,0 +1,7 @@
+{
+ "why": "unit mcrk2 (runner M, forks rows 1272 (5) / 1273 (1); the class of row 1200 (2), ci/mgat/MERGED.json): main 3d059d0 (mdayq landed, row 1295; architect 67) merged into the build and BASE re-cut to it: every file outside the named set is main's, so the list is empty; it stays for the next merge, and BOUND accepts a file outside the named set only when its LF bytes are git's own merge of BASE and main (git merge-tree), listed here",
+ "main": "3d059d06ce0eeee3719f320981ae3ab40c6ebd41",
+ "base": "3d059d06ce0eeee3719f320981ae3ab40c6ebd41",
+ "merge_tree": "1604b399951fa81a92bbf46deccc3792dae08202",
+ "files": {}
+}

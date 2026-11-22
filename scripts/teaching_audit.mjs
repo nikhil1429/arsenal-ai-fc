@@ -156,6 +156,7 @@ import { randomUUID, createHash } from "node:crypto";   // unit mbank (row 1230)
 import { subjectsOf, coreAxes, REGISTRY_PATH } from "./registry.mjs";   // S10 #10 sources + #12 core axes — rows, never literals · row 583 (5): REGISTRY_PATH, for the selftest's proof that it reads its OWN registry
 import { SCOPE_GLOBAL, humanText, SLASH_NOISE, BANKED_MOMENTS, transcriptPathFor } from "./study_scope.mjs";   // G0 (23 Sep 2026): the dispatcher's study-scope verdict, stamped on every row · L4 (6 Oct 2026): his last prompt bounds the turn (the reader the gate and the replay use) and the test moments are the landed test-moment case's own set
 import { recordPicture, loadRegistry, pictureLines } from "./widget.mjs";   // L4 (fate 54): the registry's OWN writer — widget.mjs stays the sole writer of widgets.json (nobody's hook callee, so never a shim no-op)
+import { readCracks } from "./forge_session.mjs";   // unit mcrk2 — the crack rows' reader, read only (forge_session.mjs is their SOLE WRITER)
 import { HARNESS_WRAPPERS, HARNESS_MARKERS } from "./harness_text.mjs";   // row 858 (1)-(2), LENT by lane V: HARNESS_PROMPT's names, one home
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -198,6 +199,7 @@ export const CHECKED_RULES = [
   "uncaptured-rep",
   "act-mt2kgbt7", "act-mt2kgn09", "max-intensity-check",
   "act-mueywvag",
+  "crack-gap",
 ];
 
 // THE SEED GAP, DECLARED IN CODE RATHER THAN DISCOVERED LATER (7 Sep 2026).
@@ -218,6 +220,8 @@ export const CHECKED_RULES = [
 // (forks row 649 (0): this note sat between the waiver and the list and pushed the waiver out of lawpack's six-line window.)
 // law-waiver:jugad — a DECLARED GAP LIST, never a subject list: it names rule ids this
 // file emits that its OWNER has not yet seeded, and its whole purpose is to shrink to [].
+// unit mcrk2 (forks rows 1258 F1 A / 1281 (3)): `crack-gap` was declared here on 21 Nov and left it on 22 Nov, in the same
+// commit that seeded its row in teaching_contract.mjs (the ratchet below holds both directions).
 export const SEED_GAP = ["act-mueywvag"];
 
 // COVERAGE HONESTY, PER RULE (full-organism audit P1.1-P1.2, 7 Aug 2026). A rule
@@ -236,6 +240,7 @@ export const RULE_NOTES = {
   "his-word": "machine sees ONE fingerprint: an axis marked done with zero Jirah before it. Every other his-word violation is semantic and stays his.",
   "coverage": "machine sees ONE fingerprint: a CORE axis landing in axes_deferred. The half-answer/scope-cut class is semantic and stays his.",
   "uncaptured-rep": "machine sees ONE fingerprint, and it is a COUNT, not a judgement: a legal question-moment was declared to the pacer during this turn and reps_log.jsonl grew by zero rows in the same window. It cannot see whether the moment DESERVED a rep (a widget_gate he waved through is not a bankable answer), and it cannot see a rep banked late, in a later turn — that one closes itself the moment the row lands. WHAT IT CANNOT SEE AT ALL is the session that never declares a moment: an untracked teaching turn banks nothing and is measured as nothing. That slice stays his.",
+  "crack-gap": "machine sees ONE fingerprint, a join and not a judgement: a crack row (cracks.jsonl, forge_session.mjs its sole writer) written from THIS turn's own paired prompt (same Claude session id, the same prompt_at, or the same turn_id when both carry one) with a NAMED GAP — moment undeclared before his answer, or no axis ON. The gap is the TEACHER's miss, never his (row 1243 (2)): his words were written all the same. It cannot see a crack the teacher never ran, and it cannot see a moment declared to the wrong question.",
   "act-mueywvag": "machine sees the ORDER of ONE turn's blocks, read from transcript_path at Stop: a NEW IDEA (newIdeaOf — a check_q turn, or a turn whose last message opens a term by the asli-naam anchor with no test moment and no pehle_guess) whose show_widget does not come before the turn's LAST text block (none at all, or only after it) is one drift. It CANNOT see a new idea taught with neither a check_q nor a naming act, it cannot judge whether the picture SHOWED the idea (any show_widget counts), and a turn it could not read (no transcript_path, unreadable, no prompt in the tail) is never a drift — the row says null with a named picture_why, because 'I could not read it' is not 'he got no picture'. The picture at a TEST moment is the gate's red, not this drift.",
 };
 
@@ -1478,6 +1483,21 @@ export function turnPicture(hook = {}, turn = readTurn(hook && hook.transcript_p
  *  last text) — is ONE measured drift under his word #22's own contract row, act-mueywvag, auto-counted through the same
  *  autohit lane as every drift above. The NULL PATH is never a drift: "I could not read the turn" is not "he got no
  *  picture". Pure. */
+/** crackGapDrift — PURE (unit mcrk2). The one drift for this turn's crack rows written with a named gap, or null. The
+ *  join is the paired prompt: same session id AND (the same turn_id when both carry one, else the same prompt_at). The
+ *  evidence names the row ids, the gaps and the axes — never his words. */
+export function crackGapDrift({ rows = [], sessionId = null, promptAt = null, turnId = null } = {}) {
+  if (!sessionId || !promptAt) return null;
+  // forks row 1281 (2): the drift is the TEACHER's — a row whose only gap is the organism's (session-unchecked) is not counted here
+  const hit = (Array.isArray(rows) ? rows : []).filter((r) => r && r.kind === "crack" && typeof r.gap === "string" && r.gap && String(r.gap).split("+").some((g) => g !== "session-unchecked") && r.prompt_session_id === sessionId
+    && (turnId && typeof r.turn_id === "string" && r.turn_id ? r.turn_id === turnId : r.prompt_at === promptAt));
+  if (!hit.length) return null;
+  return {
+    rule: "crack-gap",
+    evidence: hit.map((r) => `crack ${r.id} written with ${r.gap} (axis ${r.axis}, ${r.concept}) — the teacher's miss, his words written all the same`).join(" · "),
+    excerpt: `gaps [${hit.map((r) => r.gap).join(",")}]`,
+  };
+}
 export function pictureDrift(pic) {
   if (!pic || pic.new_idea !== true || pic.picture_first !== false) return null;
   const via = String(pic.moment || "").split(",").includes("check_q") ? "check_q declared" : "a term opened by its asli naam";
@@ -1784,6 +1804,14 @@ export function stopHook(hook, io) {
   // record counts it and the log row carries its evidence — the one list every drift already rides.
   const missDrift = res.audited ? pictureDrift(pic) : null;
   if (missDrift) res.drifts.push(missDrift);
+  // unit mcrk2 (forks rows 1243 (2) / 1258 F1 A): a crack row of THIS turn written with a named gap is counted as drift on
+  // this lane — the teacher's miss; read through the owner's reader, joined to the paired prompt (never his words)
+  if (res.audited && paired) {
+    let ckRows = [];
+    try { ckRows = typeof io.readCracks === "function" ? io.readCracks() : (readCracks(join(STATE_DIR, "cracks.jsonl")).rows || []); } catch { ckRows = []; }
+    const gapDrift = crackGapDrift({ rows: ckRows, sessionId: sid, promptAt: p.at, turnId: typeof p.turn_id === "string" ? p.turn_id : null });
+    if (gapDrift) res.drifts.push(gapDrift);
+  }
 
   const why = res.audited ? null : (readWhy || res.why);
 
@@ -2196,9 +2224,25 @@ function selftest() {
       const emitted = ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage", "neev-pehle", "link-back", "terminology", "decided",
         "uncaptured-rep",   // W0-D · LR-04 — grown deliberately: this mirror is the ratchet, and it may only ever be widened alongside a real emitter
         "act-mt2kgbt7", "act-mt2kgn09", "max-intensity-check",   // 7 Sep 2026 — checks 12, 13 and 14, each with a real emitter above
-        "act-mueywvag"];   // 7 Oct 2026, forks row 583 (6) — widened alongside its real emitter, pictureDrift at Stop
+        "act-mueywvag",   // 7 Oct 2026, forks row 583 (6) — widened alongside its real emitter, pictureDrift at Stop
+        "crack-gap"];   // 21 Nov 2026, unit mcrk2 (forks row 1258 F1 A) — widened alongside its real emitter, crackGapDrift at Stop
       return emitted.every((r) => CHECKED_RULES.includes(r)) && CHECKED_RULES.every((r) => emitted.includes(r));
     })());
+  {
+    // unit mcrk2 (forks row 1258 F1 A) — the crack gap counts as drift, joined to the paired prompt, never his words
+    const ck = { kind: "crack", id: "ck-a1", gap: "moment-undeclared", axis: "d", concept: "tokenization", prompt_session_id: "s1", prompt_at: "2026-11-21T06:00:00.000Z", words: "his own words here" };
+    const g = crackGapDrift({ rows: [ck], sessionId: "s1", promptAt: ck.prompt_at });
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    assert("CRACK GAP (unit mcrk2) — a gap row of THIS turn's paired prompt is one drift `crack-gap` naming the row; another session, another prompt, no gap, or a different turn id → none; the evidence never carries his words",
+      g && g.rule === "crack-gap" && /ck-a1 written with moment-undeclared/.test(g.evidence) && !g.evidence.includes(ck.words) && !String(g.excerpt).includes(ck.words)
+      && crackGapDrift({ rows: [ck], sessionId: "s2", promptAt: ck.prompt_at }) === null
+      && crackGapDrift({ rows: [ck], sessionId: "s1", promptAt: "2026-11-21T06:01:00.000Z" }) === null
+      && crackGapDrift({ rows: [{ ...ck, gap: null }], sessionId: "s1", promptAt: ck.prompt_at }) === null
+      && crackGapDrift({ rows: [{ ...ck, turn_id: "t-9" }], sessionId: "s1", promptAt: ck.prompt_at, turnId: "t-1" }) === null
+      && crackGapDrift({ rows: [{ ...ck, gap: "session-unchecked", gap_owner: "organism" }], sessionId: "s1", promptAt: ck.prompt_at }) === null   // row 1281 (2): the organism's, not the teacher's
+      && !!crackGapDrift({ rows: [{ ...ck, gap: "moment-undeclared+session-unchecked", gap_owner: "teacher+organism" }], sessionId: "s1", promptAt: ck.prompt_at })
+      && /if \(gapDrift\) res\.drifts\.push\(gapDrift\);/.test(src) && src.indexOf("if (gapDrift) res.drifts.push(gapDrift);") < src.indexOf("for (const d of res.drifts) staged.push"));
+  }
   assert("W0-D · LR-04 — every CHECKED_RULE that is only PARTIALLY machine-visible carries its RULE_NOTES slice, so 'no drift caught' can never widen into 'taught correctly'",
     typeof RULE_NOTES["uncaptured-rep"] === "string" && RULE_NOTES["uncaptured-rep"].length > 80);
 
