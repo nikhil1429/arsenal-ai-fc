@@ -1,0 +1,295 @@
+{
+  "_comment": "unit mrulew (C:rule-witnesses, MWIT spec 88bf69d UNITS row 10). rules: <teaching rule id> -> its witness command (node <tracked path> [args], rung_receipt.mjs parseWitness). plants: <id> -> {red, clean}, one planted turn each, judged by the org tree teaching_audit.mjs (auditTurn args; a plant with blocks goes through pictureFacts + pictureDrift). A rule id the live teaching_contract.json holds without a row here reads RED.",
+  "rules": {
+    "one-idea": "node ci/witness/mrulew/witness_rules.mjs rule one-idea",
+    "dheema-not-lamba": "node ci/witness/mrulew/witness_rules.mjs rule dheema-not-lamba",
+    "hinglish": "node ci/witness/mrulew/witness_rules.mjs rule hinglish",
+    "his-level": "node ci/witness/mrulew/witness_rules.mjs rule his-level",
+    "no-system-mid-concept": "node ci/witness/mrulew/witness_rules.mjs rule no-system-mid-concept",
+    "confusion-is-literal": "node ci/witness/mrulew/witness_rules.mjs rule confusion-is-literal",
+    "his-word": "node ci/witness/mrulew/witness_rules.mjs rule his-word",
+    "uncaptured-rep": "node ci/witness/mrulew/witness_rules.mjs rule uncaptured-rep",
+    "coverage": "node ci/witness/mrulew/witness_rules.mjs rule coverage",
+    "neev-pehle": "node ci/witness/mrulew/witness_rules.mjs rule neev-pehle",
+    "link-back": "node ci/witness/mrulew/witness_rules.mjs rule link-back",
+    "terminology": "node ci/witness/mrulew/witness_rules.mjs rule terminology",
+    "decided": "node ci/witness/mrulew/witness_rules.mjs rule decided",
+    "act-mt2kgbt7": "node ci/witness/mrulew/witness_rules.mjs rule act-mt2kgbt7",
+    "act-mt2kgn09": "node ci/witness/mrulew/witness_rules.mjs rule act-mt2kgn09",
+    "max-intensity-check": "node ci/witness/mrulew/witness_rules.mjs rule max-intensity-check",
+    "act-mueywvag": "node ci/witness/mrulew/witness_rules.mjs rule act-mueywvag"
+  },
+  "plants": {
+    "one-idea": {
+      "red": {
+        "assistantText": "Token ek chhota tukda hai. Kya ye samajh aaya? Aur vocabulary kya hai?"
+      },
+      "clean": {
+        "assistantText": "Token ek chhota tukda hai, jaise roti ka ek kaur. Kya ye samajh aaya?"
+      }
+    },
+    "dheema-not-lamba": {
+      "red": {
+        "assistantText": "## Token\nToken ek tukda hai.\n\n## Vocabulary\nVocabulary ek list hai.\n\n## Sampling\nSampling ek chunav hai."
+      },
+      "clean": {
+        "assistantText": "Token ek chhota tukda hai, jaise roti ka ek kaur. Ek hi cheez, poori kholi hui."
+      }
+    },
+    "hinglish": {
+      "red": {
+        "assistantText": "A token is a small piece of text that the model reads one at a time."
+      },
+      "clean": {
+        "assistantText": "Token ek chhota tukda hai jo model ek ek karke padhta hai."
+      }
+    },
+    "his-level": {
+      "red": {
+        "assistantText": "Ye to tumhara dormant knowledge hai, token ek tukda hai."
+      },
+      "clean": {
+        "assistantText": "Token ek chhota tukda hai, chalo zero se dekhte hain."
+      }
+    },
+    "no-system-mid-concept": {
+      "red": {
+        "assistantText": "Ruko, pehle node scripts/capture.mjs chala lete hain, phir token pe aate hain."
+      },
+      "clean": {
+        "assistantText": "`node scripts/capture.mjs` baad mein — park kiya. Token ek chhota tukda hai."
+      }
+    },
+    "confusion-is-literal": {
+      "red": {
+        "userText": "samajh nahi aaya",
+        "prevStep": 3,
+        "session": {
+          "step": 4
+        },
+        "assistantText": "Theek hai, aage badhte hain."
+      },
+      "clean": {
+        "userText": "samajh nahi aaya",
+        "prevStep": 4,
+        "session": {
+          "step": 4
+        },
+        "assistantText": "Wahin rukte hain, zero se shuru karte hain."
+      }
+    },
+    "his-word": {
+      "red": {
+        "prevAxesDone": [],
+        "session": {
+          "axes_done": [
+            "a"
+          ],
+          "axes_marked_at": {
+            "a": {
+              "jirah_before": 0
+            }
+          }
+        },
+        "assistantText": "Axis a ho gaya."
+      },
+      "clean": {
+        "prevAxesDone": [],
+        "session": {
+          "axes_done": [
+            "a"
+          ],
+          "axes_marked_at": {
+            "a": {
+              "jirah_before": 1
+            }
+          }
+        },
+        "assistantText": "Axis a ho gaya."
+      }
+    },
+    "uncaptured-rep": {
+      "red": {
+        "prevMoments": 0,
+        "prevReps": 5,
+        "repsNow": 5,
+        "session": {
+          "question_moments": {
+            "check_q": 1
+          }
+        },
+        "assistantText": "Kya ye samajh aaya?"
+      },
+      "clean": {
+        "prevMoments": 0,
+        "prevReps": 5,
+        "repsNow": 6,
+        "session": {
+          "question_moments": {
+            "check_q": 1
+          }
+        },
+        "assistantText": "Kya ye samajh aaya?"
+      }
+    },
+    "coverage": {
+      "red": {
+        "prevAxesDeferred": [],
+        "session": {
+          "axes_deferred": [
+            "d"
+          ]
+        },
+        "assistantText": "Axis d baad mein."
+      },
+      "clean": {
+        "prevAxesDeferred": [],
+        "session": {
+          "axes_deferred": [
+            "zz"
+          ]
+        },
+        "assistantText": "Axis zz baad mein."
+      }
+    },
+    "neev-pehle": {
+      "red": {
+        "termState": {
+          "opened": [],
+          "flagged": []
+        },
+        "assistantText": "Ab ground truth se compare karo aur score nikalo."
+      },
+      "clean": {
+        "termState": {
+          "opened": [
+            "ground truth"
+          ],
+          "flagged": []
+        },
+        "assistantText": "Ab ground truth se compare karo aur score nikalo."
+      }
+    },
+    "link-back": {
+      "red": {
+        "closed": {
+          "names": [
+            "Embeddings"
+          ]
+        },
+        "linkState": {
+          "seen": false,
+          "flagged": false
+        },
+        "session": {
+          "step": 5
+        },
+        "assistantText": "Token ek chhota tukda hai."
+      },
+      "clean": {
+        "closed": {
+          "names": [
+            "Embeddings"
+          ]
+        },
+        "linkState": {
+          "seen": false,
+          "flagged": false
+        },
+        "session": {
+          "step": 5
+        },
+        "assistantText": "Token ek chhota tukda hai, aur har token ka ek embedding banta hai."
+      }
+    },
+    "terminology": {
+      "red": {
+        "assistantText": "Model ka shabdkosh ek fixed list hai."
+      },
+      "clean": {
+        "assistantText": "Model ka shabdkosh, yaani vocabulary, ek fixed list hai."
+      }
+    },
+    "decided": {
+      "red": {
+        "assistantText": "Chalo selfknowledge ko wapas enable karte hain."
+      },
+      "clean": {
+        "assistantText": "Token ek chhota tukda hai."
+      }
+    },
+    "act-mt2kgbt7": {
+      "red": {
+        "assistantText": "Roti ka ek kaur. Iska asli naam hai **token**. Kya ye samajh aaya?"
+      },
+      "clean": {
+        "assistantText": "Roti ka ek kaur. Iska asli naam hai **token**. Technical line: a token is the unit of text a model reads. Kya ye samajh aaya?"
+      }
+    },
+    "act-mt2kgn09": {
+      "red": {
+        "assistantText": "Ab idea 2 of 4 pe hain: token ek tukda hai."
+      },
+      "clean": {
+        "assistantText": "TOKENIZATION › axis b › token ka matlab: token ek tukda hai."
+      }
+    },
+    "max-intensity-check": {
+      "red": {
+        "intensityState": {
+          "pending_axis": "a",
+          "flagged_axes": []
+        },
+        "assistantText": "Agla axis shuru karte hain."
+      },
+      "clean": {
+        "intensityState": {
+          "pending_axis": "a",
+          "flagged_axes": []
+        },
+        "assistantText": "Axis a ki depth aur breadth maximum thi, interaction bhi poori."
+      }
+    },
+    "act-mueywvag": {
+      "red": {
+        "blocks": [
+          {
+            "kind": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "node scripts/forge_session.mjs moment check_q"
+            }
+          },
+          {
+            "kind": "text",
+            "text": "Token ek tukda hai. Kya samjhe?"
+          }
+        ],
+        "lastMessage": ""
+      },
+      "clean": {
+        "blocks": [
+          {
+            "kind": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "node scripts/forge_session.mjs moment check_q"
+            }
+          },
+          {
+            "kind": "tool",
+            "name": "show_widget",
+            "input": {
+              "title": "token"
+            }
+          },
+          {
+            "kind": "text",
+            "text": "Token ek tukda hai. Kya samjhe?"
+          }
+        ],
+        "lastMessage": ""
+      }
+    }
+  }
+}
