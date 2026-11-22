@@ -30,6 +30,7 @@ description: Run a full FORGE study session INSIDE Claude Code with ZERO capture
   `start <concept>` (refuses while a session is open) · `step <0-11>` · `axis <a-i> now|done|defer` ·
   `moment pehle_guess|widget_gate|check_q|jirah|sharp_check` (sharp_check = the axis-close sharp check, row 266) · `pointer "…"` · `contract` · `resume` · `close`.
   `crack` (`node scripts/forge_session.mjs crack`, no args) — run it in the SAME turn you write the ```diff: it writes his words of that turn verbatim with the concept, axis and moment (unit mcrk).
+  `contract`'s axes line saying `N trap owed` = the axis note holds fewer than three distinct traps of THIS lesson and its cold gate refuses it: set one more bait from this lesson's own material (a ```diff of a real break); never write one to reach a count — capsule traps teach but are never counted, and a new day's note counts only the windows that touched its day (unit mtrap).
   → `REFERENCE.md` "THE PACER".
 - **THE NOTES LAW** (22 Sep, row 240): notes are extracted from the archive by code at the week's end;
   your only live job is the four elicitations (gut-word · stuck-story at the crack with the one ```diff
