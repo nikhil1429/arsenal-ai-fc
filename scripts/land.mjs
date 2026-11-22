@@ -21,6 +21,9 @@
 //   ci/ lands only with the campaign names-gate result as an input (--names-gate); absent = REFUSED.
 //   NO-CI-DIR (unit ms1 · row 1066 F7 A): once main carries a ci/<unit>/BASE (ms1's landing on), a landing whose tree lacks
 //   ci/<unit>/witness_<unit>.mjs with a 40-hex ci/<unit>/BASE, or that touches nothing under ci/<unit>/, is REFUSED.
+//   NO-CI-DIR · THE CLAUSE WITNESS (unit mcid · row 1321 (1)) beside it, the sentence above kept: the law ALSO holds when the
+//   landing carries a 40-hex ci/<unit>/BASE, touches ci/<unit>/, and carries at least one ci/witness/<unit>/witness_NAME.mjs
+//   (NAME [a-z0-9_-]+ — the path the suite's clauses member runs); a landing with neither witness is REFUSED NO-CI-DIR as today.
 //   THE JUDGE-HELD REFUSAL (unit mlj, rows 1040 (2) F1 / 1043 (2) F1; spec ci/mlv0/PROOF.md FORK 1): while a judge round
 //   holds keeper's JUDGE_PORT the verb (and its --dry) REFUSES JUDGE-HELD — read through keeper.mjs judgeHeld, the one
 //   predicate every retire reads, as the LAST gate before the move. A wait, not a stop of his: the count is not reset.
@@ -230,8 +233,10 @@ async function land(unit, opt) {
     const has = (p) => git(["cat-file", "-e", `${T}:${p}`]).ok;
     const w = [`ci/${unit}/witness_${unit}.mjs`, `ci/${unit}/witness_${unit.replace(/-/g, "_")}.mjs`].find(has) || `ci/${unit}/witness_${unit}.mjs`;
     const baseOk = has(b) && /^[0-9a-f]{40}$/.test(git(["cat-file", "blob", `${T}:${b}`]).out);
-    if (!has(w) || !baseOk || !touched.some((p) => p.startsWith(`ci/${unit}/`)))
-      return stop(1, "REFUSED", "NO-CI-DIR", `a landing carries ${w} and a 40-hex ${b}, and touches ci/${unit}/`, T);
+    //   row 1321 (1): OR at least one clause witness of THIS unit, ci/witness/<unit>/witness_NAME.mjs (the clauses member's path)
+    const cw = lines(git(["ls-tree", "-r", "--name-only", T, "--", `ci/witness/${unit}/`]).out).some((p) => p.startsWith(`ci/witness/${unit}/`) && /^witness_[a-z0-9_-]+\.mjs$/.test(p.slice(`ci/witness/${unit}/`.length)));
+    if ((!has(w) && !cw) || !baseOk || !touched.some((p) => p.startsWith(`ci/${unit}/`)))
+      return stop(1, "REFUSED", "NO-CI-DIR", `a landing carries ${w} (or a ci/witness/${unit}/witness_NAME.mjs) and a 40-hex ${b}, and touches ci/${unit}/`, T);
   }
   const idx = join(mkdtempSync(join(os.tmpdir(), "land-index-")), "index");
   try {
