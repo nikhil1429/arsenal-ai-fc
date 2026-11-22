@@ -217,6 +217,9 @@ function seed(now = new Date()) {
       // path exists on exactly one laptop, and anywhere else — or after a reset, or a
       // corrupt file — every uncaptured-rep autohit would exit 1, forever, silently.
       r("uncaptured-rep", "Question-moment declare hua aur us turn mein koi rep bank nahi hua = woh rep HUA HI NAHI (his 30 Aug order). Usi waqt capture karo, baad mein nahi."),
+      // unit mcrk2 (forks rows 1258 F1 A / 1281 (3), 22 Nov 2026): teaching_audit.mjs emits `crack-gap` (crackGapDrift) — its
+      // ONE seed row travels with that commit, so its autohit never exits 1 on a machine whose gitignored contract lacks it.
+      r("crack-gap", "Answer se PEHLE moment declare karo (aur axis ON rakho) — crack ke words likhe jaate hain, par undeclared moment ya no axis teacher ka gap hai, uska kabhi nahi (row 1243 (2))."),
     ],
   };
 }
@@ -1160,9 +1163,9 @@ function selftest() {
   const T0 = new Date("2026-07-31T18:00:00Z");
   const base = seed(T0);
 
-  assert("seed carries all SIXTEEN rules (grown 6 Aug, 7 Aug, 9 Aug C1, 2 Sep W0-D, and 7 Sep 2026 — the three per-turn carries teaching_audit emits: a re-seed must never orphan the audit's rule ids)", base.rules.length === 16);
+  assert("seed carries all SEVENTEEN rules (grown 6 Aug, 7 Aug, 9 Aug C1, 2 Sep W0-D, 7 Sep 2026 — the three per-turn carries teaching_audit emits — and 22 Nov 2026, unit mcrk2's crack-gap, forks row 1281 (3): a re-seed must never orphan the audit's rule ids)", base.rules.length === 17);
   assert("every rule id the audit organ stages against exists in the seed (the re-seed trap, closed — incl. neev-pehle and uncaptured-rep, the two it has missed)",
-    ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage", "neev-pehle", "uncaptured-rep"]
+    ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage", "neev-pehle", "uncaptured-rep", "crack-gap"]
       .every((id) => base.rules.some((r) => r.id === id)));
 
   const hit = hitRule(hitRule(base, "hinglish", T0).state, "hinglish", T0).state;
@@ -1179,10 +1182,10 @@ function selftest() {
     secondSlots.size === hit.rules.length - 1);
 
   const grown = addRule(base, "no-praise", "Praise sirf jab kamayi ho, aur specific ho.", T0);
-  assert("add grows the set without touching this file", grown.ok && grown.state.rules.length === 17);
+  assert("add grows the set without touching this file", grown.ok && grown.state.rules.length === 18);
   assert("add refuses a duplicate id", addRule(grown.state, "no-praise", "x", T0).ok === false);
   assert("hit refuses an unknown id", hitRule(base, "nope", T0).ok === false);
-  assert("drop removes", dropRule(base, "hinglish").state.rules.length === 15);
+  assert("drop removes", dropRule(base, "hinglish").state.rules.length === 16);
 
   // ---- the turn clock: the three ORIGINAL invariants, asserted against BOTH engines
   const t1L = bumpTurnLegacy(base, "S1");
