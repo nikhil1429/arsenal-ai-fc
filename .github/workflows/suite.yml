@@ -38,11 +38,32 @@
 #     a BASE red a warning — and the verdict is ONE more, which `node scripts/ci_verdict.mjs <sha>` reads signed-out.
 # The log carries NAMES only (assert and member lines, the headline): a detail line can quote a state file, and the
 # full outputs stay on the runner.
+# MSHARD · THE WITNESSES MEMBER SPLIT ACROSS JOBS (20 Nov 2026, forks rows 1171 (3) / 1188). Measured on 5759cce: the
+# witnesses member alone is 1762.8 to 2226.2 s of a 60-minute job and grows by one witness per landed unit (spec
+# ci/mshard/MSHARD_SPEC.md on claude/mshard-spec, M3). So, per node, three kinds of job run (F-JOB J2):
+#   · `suite · node N` — today's head and merge-base steps; its head step prints the witness PLAN and spawns no witness;
+#   · `witnesses · node N · shard k` — one per entry of the `shard:` list (its length IS K, read by organism_test.mjs and
+#     never typed in a script; F-K b), each judging its fixed slice of the plan (LPT over ci/mshard/TIMES, F-SHAPE B);
+#   · `npm test · node N` — THE LEG, the fold: it keeps the leg's name, so `node scripts/ci_verdict.mjs <sha>` still
+#     reads ONE verdict per leg. A red in any shard is a red of the leg by the same name; a missing shard is a red by
+#     name, never a pass (row 1188 (2)).
+# Jobs carry DIGESTS only (F-CARRY a): `ci_verdict.mjs digest` keeps the machine lines' names, shas and numbers, never a
+# detail; the raw outputs stay on their runner as before. Every job keeps the one bound below: the split never raises it.
 name: suite
 
+# unit mciq · THE QUEUE BRAKE (forks row 1256 (2), 21 Nov 2026). MEASURED by the runner (two public API reads, 16:27 IST):
+# 23 runs queued and 9 in progress; four ready land tips sat 16th to 20th behind runs drawn by keep refs pushed as branches
+# under superseded/ and by the cloud seats' queue branches claude/<unit>-queue (one commit, a settings key, never a build).
+# So a push to those two namespaces draws NO run. Syntax: `branches` with NEGATED patterns (GitHub's documented filter for
+# push: patterns are read in order, the LAST one that matches a ref decides, a `!` one excludes; `branches` and
+# `branches-ignore` cannot both sit on one event, and keeping the match-all "**" first leaves every other ref exactly as it
+# was). It composes: the filter gates the push event alone, so pull_request and workflow_dispatch trigger as before, and an
+# excluded ref never starts a run, so it never enters the concurrency group below, which is unchanged. The gate is NOT
+# loosened: main, land/**, claude/*-build, claude/*-spec and every other branch still run both legs (node 22 and 24).
+# Witness: ci/mciq/witness_mciq.mjs proves it by name (`*` never crosses a `/`, so claude/*-queue is one segment).
 on:
   push:
-    branches: ["**"]
+    branches: ["**", "!superseded/**", "!claude/*-queue"]
   pull_request:
   workflow_dispatch: {}
 
@@ -56,8 +77,8 @@ permissions:
   contents: read
 
 jobs:
-  npm-test:
-    name: npm test · node ${{ matrix.node }}
+  suite:
+    name: suite · node ${{ matrix.node }}
     runs-on: windows-latest
     timeout-minutes: 60
     strategy:
@@ -105,9 +126,12 @@ jobs:
           echo "base=$base" >> "$GITHUB_OUTPUT"
           echo "head $head · merge base $base (against $ref)"
 
-      # THE HEAD TREE. Nothing hides a red: the run's exit is printed, and the verdict step judges its output.
+      # THE HEAD TREE. Nothing hides a red: the run's exit is printed, and the verdict judges its output. The witnesses
+      # member prints the PLAN here and runs no witness: the shard jobs judge them (unit mshard).
       - name: npm test · hermetic · head
         shell: bash
+        env:
+          ORGANISM_WITNESS_SHARDS: plan
         run: |
           set +e
           node scripts/organism_test.mjs all > "$RUNNER_TEMP/b1_head.txt" 2>&1
@@ -144,13 +168,119 @@ jobs:
           grep -E "^organism_test:" "$RUNNER_TEMP/b1_base.txt" || echo "(no headline line on the base)"
           exit 0
 
+      # THE DIGESTS (F-CARRY a): names, shas and numbers only leave this runner. The base's own instrument is NOT carried:
+      # the fold reads it from its own clone by the base sha.
+      - name: the digests
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/b1_carry"
+          node scripts/ci_verdict.mjs digest "$RUNNER_TEMP/b1_head.txt" > "$RUNNER_TEMP/b1_carry/head.txt"
+          node scripts/ci_verdict.mjs digest "$RUNNER_TEMP/b1_base.txt" > "$RUNNER_TEMP/b1_carry/base.txt"
+          { echo "head=${{ steps.base.outputs.head }}"; echo "base=${{ steps.base.outputs.base }}"; echo "instrument=${{ steps.basetest.outputs.instrument }}"; } > "$RUNNER_TEMP/b1_carry/meta.txt"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: b1-node${{ matrix.node }}-suite
+          path: ${{ runner.temp }}/b1_carry/
+          if-no-files-found: error
+
+  witnesses:
+    name: witnesses · node ${{ matrix.node }} · shard ${{ matrix.shard }}
+    runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+        shard: [1, 2, 3]
+    env:
+      ORGANISM_TEST_PROFILE: hermetic
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # every unit's BASE must be in the clone (the member never fetches)
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: the no-API-key law holds on this runner
+        shell: bash
+        run: |
+          if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "REFUSED — ANTHROPIC_API_KEY is set on this runner. Every organ refuses to start"
+            echo "          when it is, and no lane here needs one: the organism rides the Max"
+            echo "          subscription. Remove the secret from the repo, do not work around this."
+            exit 1
+          fi
+          echo "ok — no API key on this runner, which is the only state this repo allows."
+
+      - run: npm ci
+
+      # ONE shard of the plan at HEAD (unit mshard). Its names go to the log; its digest is the only thing it carries.
+      - name: witnesses · hermetic · head · shard ${{ matrix.shard }}
+        shell: bash
+        env:
+          ORGANISM_WITNESS_SHARD: ${{ matrix.shard }}
+        run: |
+          set +e
+          node scripts/organism_test.mjs witnesses > "$RUNNER_TEMP/b1_shard.txt" 2>&1
+          echo "organism_test exit $? (witnesses, shard ${{ matrix.shard }})"
+          grep -E "^  (ok  |FAIL|LIVE) |^organism_test:|^── " "$RUNNER_TEMP/b1_shard.txt" || echo "(no headline line — the runner did not reach its own summary)"
+          mkdir -p "$RUNNER_TEMP/b1_carry"
+          node scripts/ci_verdict.mjs digest "$RUNNER_TEMP/b1_shard.txt" > "$RUNNER_TEMP/b1_carry/shard_${{ matrix.shard }}.txt"
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: b1-node${{ matrix.node }}-shard${{ matrix.shard }}
+          path: ${{ runner.temp }}/b1_carry/
+          if-no-files-found: error
+
+  # THE LEG: the fold. It runs whenever the run was not cancelled, so a shard that died, timed out or never uploaded is a
+  # red BY NAME here (WITNESS SHARD k/n · produced its machine line), never a pass and never a silent skip.
+  npm-test:
+    name: npm test · node ${{ matrix.node }}
+    needs: [suite, witnesses]
+    if: ${{ !cancelled() }}
+    runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the base's own instrument is read from this clone by its sha, never carried
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - uses: actions/download-artifact@v4
+        continue-on-error: true   # nothing to download is judged below, by name
+        with:
+          pattern: b1-node${{ matrix.node }}-*
+          path: ${{ runner.temp }}/b1_carry
+          merge-multiple: true
+
       # THE VERDICT — its exit IS the job's: 0 GREEN, 1 RED. Every red an annotation, then ONE verdict annotation.
       - name: the neutral verdict
         shell: bash
         run: |
-          node scripts/ci_verdict.mjs compare --head "$RUNNER_TEMP/b1_head.txt" --base "$RUNNER_TEMP/b1_base.txt" \
-            --label "node ${{ matrix.node }}" --head-sha "${{ steps.base.outputs.head }}" --base-sha "${{ steps.base.outputs.base }}" \
-            ${{ steps.basetest.outputs.instrument == 'head' && '--base-instrument "$RUNNER_TEMP/b1_base_instrument.mjs"' || '' }} \
+          c="$RUNNER_TEMP/b1_carry"
+          meta() { { grep -E "^$1=" "$c/meta.txt" 2>/dev/null || true; } | head -1 | sed "s/^$1=//" | tr -d '\r'; }
+          head=$(meta head); base=$(meta base); instrument=$(meta instrument)
+          parts=()
+          for f in "$c"/shard_*.txt; do if [ -f "$f" ]; then parts+=(--head-part "$f"); fi; done
+          if [ "$instrument" = "head" ]; then
+            git show "$base:scripts/organism_test.mjs" > "$RUNNER_TEMP/b1_base_instrument.mjs" 2>/dev/null || true
+            parts+=(--base-instrument "$RUNNER_TEMP/b1_base_instrument.mjs")
+          fi
+          node scripts/ci_verdict.mjs compare --head "$c/head.txt" --base "$c/base.txt" \
+            --label "node ${{ matrix.node }}" --head-sha "$head" --base-sha "$base" "${parts[@]}" \
             | tee "$RUNNER_TEMP/b1_verdict.txt"
           code=${PIPESTATUS[0]}
           { echo "## npm test · node ${{ matrix.node }}"; echo ""; grep -E "^B1_VERDICT " "$RUNNER_TEMP/b1_verdict.txt"; } >> "$GITHUB_STEP_SUMMARY"

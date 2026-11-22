@@ -27,9 +27,20 @@
 // tracked source in this workspace (one `git ls-files` read, only when such a cause exists); a run with no machine line names
 // its last section (payload `cause["(head)"]` / `cause["(base)"]`, F7 A); a leg with no verdict annotation costs ONE more call,
 // for its failed step's name (F6 A). Still no annotation added, and a GREEN head's output byte-identical.
-// MODES: compare · selftest · <sha>
+// THE FOLD (unit mshard, forks rows 1171 (3) / 1188, spec ci/mshard/MSHARD_SPEC.md on claude/mshard-spec c82a0e6): the
+// witnesses member runs as K shard jobs per node (F-SHAPE B, F-K b), beside the suite job, and a small fold job keeps the
+// leg's name `npm test · node N` (F-JOB J2), so this reader still reads ONE verdict per leg. Jobs carry DIGESTS, never raw
+// outputs (F-CARRY a): `digest` keeps the machine lines' names, shas and numbers only — no `detail`, no other line.
+// `compare --head-part <digest>` (one per shard) folds the parts into ONE suite before the unchanged judge: a red in any
+// shard is a red of the leg by the same name, and a missing, doubled or unjudged shard or unit is a red BY NAME, never a
+// pass (row 1188 (2)). The `causes` channel of unit mdtl, when a machine line carries it, rides through the digest and the
+// fold unchanged (row 1188 (2)). `times` prints the measured table ci/mshard/TIMES for a seat to commit (F-TABLE a); the
+// suite never reaches the network.
+// MODES: compare · digest · times · selftest · <sha>
 // CLI: node scripts/ci_verdict.mjs <sha> [--repo owner/name]
-//      node scripts/ci_verdict.mjs compare --head <file> --base <file> --label <l> [--head-sha s] [--base-sha s] [--base-instrument f]
+//      node scripts/ci_verdict.mjs compare --head <file> --base <file> --label <l> [--head-sha s] [--base-sha s] [--base-instrument f] [--head-part <file>]…
+//      node scripts/ci_verdict.mjs digest <raw organism_test output>
+//      node scripts/ci_verdict.mjs times <sha> [--repo owner/name] | times --from-log <job log>…
 // ============================================================================
 import { readFileSync } from "node:fs";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -95,6 +106,95 @@ export function lawpackRises(headLp, baseLp, baseline = null) {
     if (h > b) out.push(`LAW PACK ROSE · ${law} ${b} → ${h}${baseLp ? "" : " (the base printed no law pack line: against lawpack.mjs BASELINE)"}`);
   }
   return out;
+}
+// ── unit mshard · the digest and the fold ───────────────────────────────────────────────────────────────────────────────
+const TAGS = { verdict: "ORGANISM_TEST_VERDICT ", plan: "WITNESS_PLAN ", shard: "WITNESS_SHARD ", lawpack: `${LAWPACK_LINE} ` };
+/** the JSON of the first line opening with `tag`, or null @param {string} text @param {string} tag */
+export function machineLine(text, tag) {
+  const line = String(text).split(/\r?\n/).find((l) => l.startsWith(tag));
+  if (!line) return null;
+  try { const j = JSON.parse(line.slice(tag.length)); return j && typeof j === "object" ? j : null; } catch { return null; }
+}
+const strs = (a) => (Array.isArray(a) ? a.filter((x) => typeof x === "string") : []);
+const num = (x) => (typeof x === "number" && Number.isFinite(x) ? x : null);
+const nums = (o) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([, v]) => num(v) !== null));
+/** F-CARRY a: a raw organism_test output → its digest, the only bytes that leave a job. Every key is picked by name and every
+ *  value checked for its type (a string, a number, or a list of them): `unruled[].detail` and every printed line are dropped,
+ *  and a key this list does not name never travels. × unit mdtl2 (F7 A): a run with NO verdict line carries ONE section line, the
+ *  last section it reached as sectionCause rebuilds it from <osSrc> (the workspace's organism_test.mjs) — the public spelling,
+ *  never the raw line; `── (withheld)` when it is not public bytes; nothing when no section was reached — so the fold's judge
+ *  names the same last section a whole raw output would have. @param {string} raw @param {string} [osSrc] @returns {string[]} */
+export function digest(raw, osSrc = "") {
+  const out = [];
+  const v = machineLine(raw, TAGS.verdict);
+  if (!(v && Array.isArray(v.reds))) {
+    const c = sectionCause(raw, osSrc), LAST = "last section · ";
+    if (c.startsWith(LAST)) out.push(`── ${c.slice(LAST.length)} ──`);
+    else if (c !== "no section reached") out.push("── (withheld) ──");
+  }
+  if (v && Array.isArray(v.reds)) {
+    const d = { modes: strs(v.modes), pass: num(v.pass), fail: num(v.fail), exit: num(v.exit),
+      ruled: (Array.isArray(v.ruled) ? v.ruled : []).map((r) => ({ assert: String(r && r.assert), row: num(r && r.row), owner: String(r && r.owner) })),
+      unruled: (Array.isArray(v.unruled) ? v.unruled : []).map((r) => ({ assert: String(r && r.assert) })),
+      stale: strs(v.stale), invalid: strs(v.invalid), profile: String(v.profile || ""), reds: strs(v.reds), live: strs(v.live) };
+    if (Array.isArray(v.causes)) d.causes = strs(v.causes);   // unit mdtl's channel: public bytes by its own law, carried as they are
+    out.push(`${TAGS.verdict}${JSON.stringify(d)}`);
+  }
+  const lp = parseLawpack(raw);   // unit mlaw's counts (F3 A): {law: n}, names and numbers by parseLawpack's own filter
+  if (lp) out.push(`${TAGS.lawpack}${JSON.stringify(lp)}`);
+  const p = machineLine(raw, TAGS.plan);
+  if (p) out.push(`${TAGS.plan}${JSON.stringify({ n: num(p.n), head: String(p.head || ""), units: strs(p.units), shards: (Array.isArray(p.shards) ? p.shards : []).map(strs), unknown: strs(p.unknown), stale: strs(p.stale) })}`);
+  const s = machineLine(raw, TAGS.shard);
+  if (s) out.push(`${TAGS.shard}${JSON.stringify({ k: num(s.k), n: num(s.n), head: String(s.head || ""), plan: strs(s.plan), judged: strs(s.judged), secs: nums(s.secs) })}`);
+  return out;
+}
+/** every leaf a name (a string) or a number — the measured property of a digest (F-CARRY a's condition) @param {any} x @returns {boolean} */
+export const namesAndNumbers = (x) => x === null || typeof x === "string" || (typeof x === "number" && Number.isFinite(x))
+  || (Array.isArray(x) ? x.every(namesAndNumbers) : typeof x === "object" && Object.values(x).every(namesAndNumbers));
+
+/** THE FOLD: the suite job's digest and one digest per shard → ONE parsed suite, as one process holding every red would have
+ *  printed it. Unsharded (no plan line, no part) it is parseSuite(head), byte for byte. Every way a shard or a unit can go
+ *  missing is a red BY NAME (row 1188 (2)): never zero reds by absence.
+ *  @param {string} headText @param {string[]} partTexts */
+export function mergeParts(headText, partTexts = []) {
+  const head = parseSuite(headText), plan = machineLine(headText, TAGS.plan);
+  if (!plan && !partTexts.length) return { suite: head, shards: null };
+  if (!head) return { suite: null, shards: null };
+  const reds = [];
+  if (!plan) {
+    reds.push("WITNESS PLAN · the suite job names the witness plan its shard parts judge (unit mshard)");
+    return { suite: { ...head, fail: head.fail + reds.length, reds: [...head.reds, ...reds] }, shards: null };
+  }
+  const n = Number(plan.n) || 0, units = strs(plan.units), want = (Array.isArray(plan.shards) ? plan.shards : []).map(strs);
+  const parts = partTexts.map((t) => ({ v: parseSuite(t), s: machineLine(t, TAGS.shard) }));
+  let pass = head.pass, fail = head.fail;
+  const all = [...head.reds], live = [...head.live], causes = [...head.causes], shards = [];
+  /** @type {Map<string, number>} */
+  const seen = new Map();
+  const unitRed = new Set();
+  const red = (u) => unitRed.add(u);
+  if (!(n > 0) || want.length !== n) reds.push(`WITNESS PLAN · names ${n} shard(s) and carries ${want.length} (unit mshard)`);
+  for (let k = 1; k <= n; k++) {
+    const mine = parts.filter((p) => p.s && Number(p.s.k) === k && p.v);
+    const tag = `WITNESS SHARD ${k}/${n}`;
+    if (!mine.length) { reds.push(`${tag} · produced its machine line (unit mshard)`); for (const u of want[k - 1] || []) red(u); continue; }
+    if (mine.length > 1) reds.push(`${tag} · produced exactly one part (unit mshard)`);
+    for (const p of mine) {
+      const s = /** @type {any} */ (p.s), v = /** @type {NonNullable<ReturnType<typeof parseSuite>>} */ (p.v);
+      if (String(s.head) !== String(plan.head) || Number(s.n) !== n) reds.push(`${tag} · judged the head and the plan the suite job names (unit mshard)`);
+      const sp = strs(s.plan), jd = new Set(strs(s.judged)), mineWant = new Set(want[k - 1] || []);
+      for (const u of sp) { seen.set(u, (seen.get(u) || 0) + 1); if (!jd.has(u) || !mineWant.has(u)) red(u); }
+      for (const u of mineWant) if (!sp.includes(u)) red(u);
+      pass += v.pass; fail += v.fail; all.push(...v.reds); live.push(...v.live); causes.push(...v.causes);
+      shards.push({ k, units: sp, secs: nums(s.secs) });
+    }
+  }
+  // a part with no shard line or no verdict line names no k: the k it should have carried is red above (produced its machine line)
+  for (const p of parts) if (p.s && p.v && !(Number(p.s.k) >= 1 && Number(p.s.k) <= n)) reds.push(`WITNESS SHARD ${p.s.k}/${n} · is a shard of the plan (unit mshard)`);
+  for (const u of units) if (seen.get(u) !== 1) red(u);
+  for (const u of seen.keys()) if (!units.includes(u)) red(u);
+  for (const u of [...unitRed].sort()) reds.push(`WITNESS ‹${u}› · judged in exactly one shard (unit mshard)`);
+  return { suite: { pass, fail: fail + reds.length, reds: [...all, ...reds], live, profile: head.profile, causes, lawpack: head.lawpack }, shards };
 }
 
 /** a member's identity across two trees: its name with every digit run folded @param {string} n */
@@ -182,8 +282,10 @@ export const workspaceFile = (p) => { try { return readFileSync(new URL(`../${p}
  *  readSrc is the witness-source door (default: none, so every witness cause is WITHHELD; main passes workspaceSrc)
  *  @param {ReturnType<typeof parseSuite>} head @param {ReturnType<typeof parseSuite>} base @param {string} label
  *  @param {string} [headSha] @param {string} [baseSha] @param {string} [baseSrc] @param {Record<string, number> | null} [baseline]
- *  @param {(unit: string) => string} [readSrc] */
-export function compareLines(head, base, label, headSha = "", baseSha = "", baseSrc = "", baseline = null, readSrc = () => "", io = {}) {
+ *  @param {(unit: string) => string} [readSrc]
+ *  @param {{ readFile?: (p: string) => string, tracked?: () => Set<string>, text?: { head: string, base: string } | null }} [io] unit mdtl2's workspace doors
+ *  @param {{ k: number, units: string[], secs: Record<string, number> }[] | null} [shards] unit mshard: the fold's per-shard seconds (absent when unsharded) */
+export function compareLines(head, base, label, headSha = "", baseSha = "", baseSrc = "", baseline = null, readSrc = () => "", io = {}, shards = null) {
   /** unit mdtl2: io = { readFile, tracked, text } — the workspace doors and the two raw outputs (absent: the pure default) */
   const { readFile = () => "", tracked = () => new Set(), text = null } = /** @type {{ readFile?: (p: string) => string, tracked?: () => Set<string>, text?: { head: string, base: string } | null }} */ (io);
   const j = judge(head, base, baseSrc, baseline, text, text ? readFile("scripts/organism_test.mjs") : "");
@@ -194,7 +296,8 @@ export function compareLines(head, base, label, headSha = "", baseSha = "", base
   lines.push(...annotate("warning", `BASE RED · ${label}`, j.old));
   const payload = { v: j.v, label, head: headSha, base: baseSha, why: j.why, new: j.fresh, base_red: j.old.length, fixed: j.fixed.length,
     pass: head ? head.pass : null, fail: head ? head.fail : null, live: head ? head.live.length : null, profile: head ? head.profile : null,
-    instrument: baseSrc ? "head (the base's own died before its machine line)" : "base", ...(Object.keys(cause).length ? { cause } : {}) };
+    instrument: baseSrc ? "head (the base's own died before its machine line)" : "base", ...(Object.keys(cause).length ? { cause } : {}),
+    ...(shards ? { shards } : {}) };   // unit mshard: {k, units, secs} per shard (the times table's source); absent when unsharded
   lines.push(`::${j.v === "GREEN" ? "notice" : "error"} title=${escProp(`${VERDICT_TITLE} · ${label}`)}::${esc(`B1_VERDICT ${JSON.stringify(payload)}`)}`);
   lines.push(`B1_VERDICT ${label} ${j.v} — ${j.why} · head ${headSha.slice(0, 7) || "?"} · base ${baseSha.slice(0, 7) || "?"} · ${j.fresh.length} new red · ${j.old.length} base red · ${j.fixed.length} base red now passing`);
   return { lines, verdict: j.v };
@@ -207,10 +310,20 @@ export function compareLines(head, base, label, headSha = "", baseSha = "", base
  *  @param {string} yml @returns {string[]} */
 export function legsOf(yml) {
   const t = String(yml).replace(/\r\n/g, "\n");
-  const name = /^\s*name:\s*(.*?)\$\{\{\s*matrix\.node\s*\}\}\s*$/m.exec(t);
+  // unit mshard: suite.yml carries several matrix jobs (suite, witnesses, the fold), so the leg's NAME is read from the job whose
+  // own name derives names of the leg's form (LEG); its NODES stay unit mlaw's read, the file's first node list — the
+  // ci_verdict selftest holds every node list equal to REQUIRED_LEGS, so the lists cannot part while the suite is green
+  const jobs = /^jobs:\s*$/m.test(t) ? t.slice(t.search(/^jobs:\s*$/m)).split(/\n(?=  [\w-]+:\s*$)/m).slice(1) : [t];
   const matrix = /^\s*node:\s*\[([^\]]*)\]/m.exec(t);
-  if (!name || !matrix) return [];
-  return matrix[1].split(",").map((s) => s.trim()).filter(Boolean).map((n) => `${name[1]}${n}`);
+  if (!matrix) return [];
+  const nodes = matrix[1].split(",").map((x) => x.trim()).filter(Boolean);
+  for (const b of jobs) {
+    const name = /^\s*name:\s*(.*?)\$\{\{\s*matrix\.node\s*\}\}\s*$/m.exec(b);
+    if (!name) continue;
+    const legs = nodes.map((n) => `${name[1]}${n}`);
+    if (legs.length && legs.every((l) => LEG.test(l))) return legs;
+  }
+  return [];
 }
 const SUITE_YML = new URL("../.github/workflows/suite.yml", import.meta.url);
 export const REQUIRED_LEGS = Object.freeze(legsOf((() => { try { return readFileSync(SUITE_YML, "utf8"); } catch { return ""; } })()));
@@ -268,11 +381,103 @@ export async function readVerdict(sha, repo, get) {
   return { line: `ci_verdict ${short} ${red ? "RED" : "GREEN"} — ${parts.join(" | ")} (${calls} calls)`, calls, v: red ? "RED" : "GREEN" };
 }
 
+// ── unit mshard · F-TABLE a: the measured times table, PRINTED for a seat to commit (the suite never reaches the network) ──
+/** the B5 seconds lines of one job log (`WITNESS ‹u› · ran in N s (B5)`) → {unit: seconds} @param {string} text */
+export function secsFromLog(text) {
+  /** @type {Record<string, number>} */
+  const m = {};
+  for (const x of String(text).matchAll(/WITNESS ‹([a-z0-9-]+)› · ran in (\d+(?:\.\d+)?) s \(B5\)/g)) m[x[1]] = Math.max(m[x[1]] ?? 0, Number(x[2]));
+  return m;
+}
+/** the table: the LARGEST seconds per unit over every map handed in (a slow leg is the one that meets the bound)
+ *  @param {Record<string, number>[]} maps @param {string} source @param {string} when */
+export function timesTable(maps, source, when) {
+  /** @type {Record<string, number>} */
+  const max = {};
+  for (const m of maps) for (const [u, v] of Object.entries(nums(m))) if (/^[a-z0-9-]+$/.test(u)) max[u] = Math.max(max[u] ?? 0, v);
+  return [`# ci/mshard/TIMES · unit → seconds, the largest over ${source} · printed by node scripts/ci_verdict.mjs times (F-TABLE a), never typed · ${when}`,
+    ...Object.keys(max).sort().map((u) => `${u} ${max[u].toFixed(1)}`)];
+}
+/** the fold payloads' per-shard seconds of a commit, one map per leg, in at most 3 anonymous calls (as readVerdict)
+ *  @param {string} sha @param {string} repo @param {(path: string) => Promise<any>} get */
+export async function readTimesOf(sha, repo, get) {
+  const runs = await get(`/repos/${repo}/commits/${sha}/check-runs?per_page=100`);
+  const { legs, missing } = pickLegs((runs && runs.check_runs) || []);
+  const maps = [], named = [];
+  for (const leg of legs) {
+    const anns = await get(`/repos/${repo}/check-runs/${leg.id}/annotations?per_page=100`);
+    const vAnn = (Array.isArray(anns) ? anns : []).find((a) => String(a.title || "").startsWith(VERDICT_TITLE) && String(a.message || "").startsWith("B1_VERDICT "));
+    let p = null;
+    try { p = vAnn ? JSON.parse(String(vAnn.message).slice("B1_VERDICT ".length)) : null; } catch { p = null; }
+    const m = Object.assign({}, ...((p && Array.isArray(p.shards)) ? p.shards : []).map((x) => nums(x && x.secs)));
+    if (Object.keys(m).length) { maps.push(m); named.push(`${leg.name} [run ${leg.id}]`); }
+  }
+  return { maps, named, missing };
+}
+
 /** the anonymous network door: no token, ever @param {string} p */
 async function anonymousGet(p) {
   const r = await fetch(`https://api.github.com${p}`, { headers: { Accept: "application/vnd.github+json", "User-Agent": "ci-verdict-reader" } });
   if (!r.ok) throw new Error(`GET ${p} answered ${r.status}`);
   return r.json();
+}
+
+/** unit mshard: the jobs that MAKE the leg, read from suite.yml's text — the job named like a leg (the fold) and every job its
+ *  `needs:` names — each as {id, bounds} (its own timeout-minutes lines). [] when no job is named like a leg. A job outside the
+ *  leg (main's `hermetic-twice`, unit mherm) is not a part of the split and is not judged here (PROOF names it as a fork).
+ *  @param {string} wf @returns {{ id: string, bounds: number[] }[]} */
+export function legJobs(wf) {
+  const body = String(wf).replace(/\r\n/g, "\n").split(/^jobs:\s*$/m)[1] || "";
+  const blocks = body.split(/\n(?= {2}[a-z0-9_-]+:\s*$)/m).map((b) => ({ id: (/^ {2}([a-z0-9_-]+):\s*$/m.exec(b) || [])[1], b })).filter((x) => x.id);
+  const leg = blocks.find((x) => { const n = /^ {4}name:\s*(.+?)\s*$/m.exec(x.b); return !!n && LEG.test(n[1].replace(/\$\{\{\s*matrix\.node\s*\}\}/g, "22")); });
+  if (!leg) return [];
+  const needs = (/^ {4}needs:\s*\[([^\]]*)\]/m.exec(leg.b) || /^ {4}needs:\s*([a-z0-9_-]+)\s*$/m.exec(leg.b) || ["", ""])[1].split(",").map((x) => x.trim()).filter(Boolean);
+  const want = [leg.id, ...needs];
+  return want.map((id) => { const x = blocks.find((y) => y.id === id); return { id, bounds: x ? [...x.b.matchAll(/^\s*timeout-minutes:\s*(\d+)\s*$/gm)].map((m) => Number(m[1])) : [] }; });
+}
+/** unit mshard, the workflow's shape, read from suite.yml's text (W-S10 / W-S11): ONE job is named like a leg (the fold), no
+ *  other job's name can read as a leg, and every job of the LEG (the fold and every job it needs) carries exactly one
+ *  timeout-minutes, all equal (the bound is one bound, never raised by a split) @param {string} wf @returns {[string, boolean][]} */
+export function workflowLaws(wf) {
+  const names = [...String(wf).matchAll(/^ {4}name:\s*(.+?)\s*$/gm)].map((m) => m[1]);
+  const legLike = names.filter((n) => LEG.test(n.replace(/\$\{\{\s*matrix\.node\s*\}\}/g, "22")));
+  const lj = legJobs(wf), first = lj.length && lj[0].bounds.length ? lj[0].bounds[0] : NaN;
+  return [
+    ["exactly ONE job of suite.yml is named like a leg (`npm test · node N`): the fold, so the reader reads one verdict per leg", legLike.length === 1],
+    ["every job of the leg (the fold and every job it needs) carries ONE timeout-minutes, all equal (a split never raises the bound)", lj.length > 1 && lj.every((j) => j.bounds.length === 1 && j.bounds[0] === first)],
+  ];
+}
+/** unit mshard, the digest and the fold, planted both ways (fixtures only) @returns {[string, boolean][]} */
+function foldLaws() {
+  const H = "a".repeat(40);
+  const v = (reds, extra = {}) => `ORGANISM_TEST_VERDICT ${JSON.stringify({ modes: ["witnesses"], pass: 5, fail: reds.length, exit: reds.length ? 1 : 0, ruled: [], unruled: reds.map((r) => ({ assert: r, detail: "SECRET-DETAIL" })), stale: [], invalid: [], profile: "hermetic", reds, live: [], ...extra })}`;
+  const plan = `WITNESS_PLAN ${JSON.stringify({ n: 3, head: H, units: ["a", "b", "c", "d"], shards: [["a", "d"], ["b"], ["c"]], unknown: [], stale: [] })}`;
+  const part = (k, units, reds = [], judged = units, head = H) => `${v(reds)}\nWITNESS_SHARD ${JSON.stringify({ k, n: 3, head, plan: units, judged, secs: Object.fromEntries(units.map((u) => [u, 1.5])) })}\n  detail line SECRET-DETAIL`;
+  const top = `${v(["S"])}\n${plan}`;
+  const full = mergeParts(top, [part(1, ["a", "d"], ["WITNESS ‹a› · GREEN at head against its BASE"]), part(2, ["b"]), part(3, ["c"])]);
+  const gone = mergeParts(top, [part(1, ["a", "d"]), part(3, ["c"])]);
+  const unj = mergeParts(top, [part(1, ["a", "d"], [], ["a"]), part(2, ["b"]), part(3, ["c"])]);
+  const dbl = mergeParts(top, [part(1, ["a", "d"]), part(2, ["b", "a"]), part(3, ["c"])]);
+  const sha = mergeParts(top, [part(1, ["a", "d"]), part(2, ["b"], [], ["b"], "b".repeat(40)), part(3, ["c"])]);
+  const lone = mergeParts(top, []);
+  const dg = digest(part(2, ["b"], ["R"]));
+  const plain = `${v(["S"])}`;
+  const has = (m, n) => !!m.suite && m.suite.reds.some((r) => r.startsWith(n));
+  return [
+    ["fold: a red in any shard is a red of the leg by the same name, the suite job's reds kept, pass and fail summed", !!full.suite && full.suite.reds.includes("S") && full.suite.reds.includes("WITNESS ‹a› · GREEN at head against its BASE") && full.suite.reds.length === 2 && full.suite.pass === 20],
+    ["fold: a missing shard is a red BY NAME (WITNESS SHARD 2/3), and its units are named, never a pass", has(gone, "WITNESS SHARD 2/3 · produced its machine line") && has(gone, "WITNESS ‹b› · judged in exactly one shard")],
+    ["fold: a unit a shard planned and never judged is a red by name", has(unj, "WITNESS ‹d› · judged in exactly one shard") && !has(unj, "WITNESS ‹a› · judged")],
+    ["fold: a unit in two shards is a red by name", has(dbl, "WITNESS ‹a› · judged in exactly one shard")],
+    ["fold: a part naming another head sha is a red by name", has(sha, "WITNESS SHARD 2/3 · judged the head")],
+    ["fold: a plan line with NO part is red for every shard (fails closed)", [1, 2, 3].every((k) => has(lone, `WITNESS SHARD ${k}/3 · produced`))],
+    ["fold: no plan line and no part is parseSuite byte for byte (F-UNSHARDED a)", JSON.stringify(mergeParts(plain, []).suite) === JSON.stringify(parseSuite(plain)) && mergeParts(plain, []).shards === null],
+    ["fold: parts with no plan line is a red by name", has(mergeParts(plain, [part(1, ["a"])]), "WITNESS PLAN · ")],
+    ["fold: unit mdtl's causes ride through (the suite job's and every part's, in order)", (() => { const c = mergeParts(`${v([], { causes: ["c0"] })}\n${plan}`, [part(1, ["a", "d"]).replace('"live":[]', '"live":[],"causes":["c1"]'), part(2, ["b"]), part(3, ["c"])]); return !!c.suite && JSON.stringify(c.suite.causes) === JSON.stringify(["c0", "c1"]); })()],
+    ["fold × mlaw: the digest carries the law pack line and the folded suite keeps its counts, so a rise is still a NEW red after the fold", (() => { const lpl = `${LAWPACK_LINE} ${JSON.stringify({ "jugad-literal-subject-list": 92 })}`; const d = digest(`${top}\n${lpl}`).join("\n"); const f = mergeParts(d, [part(1, ["a", "d"]), part(2, ["b"]), part(3, ["c"])]); const b = parseSuite(`${v(["S"])}\n${LAWPACK_LINE} ${JSON.stringify({ "jugad-literal-subject-list": 91 })}`); return d.includes(lpl) && !!f.suite && JSON.stringify(f.suite.lawpack) === JSON.stringify({ "jugad-literal-subject-list": 92 }) && judge(f.suite, b).fresh.some((r) => r.startsWith("LAW PACK ROSE · jugad-literal-subject-list 91 → 92")); })()],
+    ["fold × mdtl2 (F7 A): a run with no verdict line digests to the section sectionCause names on the whole raw output (real, forged, none), and a run with one carries no section line",
+      (() => { const os = 'section("SUITES — every member run");'; const L = (x) => `noise\n── ${x} ────\nmore`; return ["SUITES — every member run", "FORGED-SECTION"].every((x) => sectionCause(digest(L(x), os).join("\n"), os) === sectionCause(L(x), os)) && !digest(L("FORGED-SECTION"), os).join("\n").includes("FORGED") && digest("died", os).length === 0 && !digest(`${L("SUITES — every member run")}\n${v([])}`, os).some((l) => l.startsWith("── ")); })()],
+    ["digest: the machine lines only, no detail key, no detail line; every leaf a name or a number", dg.length === 2 && !dg.join("\n").includes("SECRET-DETAIL") && !dg.join("\n").includes("detail") && dg.every((l) => namesAndNumbers(JSON.parse(l.slice(l.indexOf(" ") + 1))))],
+  ];
 }
 
 function selftest() {
@@ -380,10 +585,11 @@ function selftest() {
     ok("PLANTED mrdr · a required leg with no run (node 24 missing, node 22 twice): PENDING after ONE call, naming the missing leg — never GREEN", M.v === "PENDING" && M.calls === 1 && M.line.includes("missing npm test · node 24"));
     const N2 = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", { check_runs: [{ id: 9, name: "public-safe-chores", status: "completed" }] }]]));
     ok("PLANTED mrdr · no leg at all: NONE after ONE call, naming both missing legs", N2.v === "NONE" && N2.calls === 1 && REQUIRED_LEGS.every((n) => N2.line.includes(n)));
-    let matrix = "";
-    try { matrix = (readFileSync(new URL("../.github/workflows/suite.yml", import.meta.url), "utf8").match(/^\s*node:\s*\[([^\]]*)\]/m) || ["", ""])[1]; } catch { matrix = ""; }
-    const nodes = matrix.split(",").map((s) => s.trim()).filter(Boolean);
-    ok("mrdr · REQUIRED_LEGS equals suite.yml's own matrix line, one leg per node (checked, never trusted)", nodes.length > 0 && JSON.stringify(nodes.map((n) => `npm test · node ${n}`)) === JSON.stringify(REQUIRED_LEGS));
+    let wf = "";
+    try { wf = readFileSync(new URL("../.github/workflows/suite.yml", import.meta.url), "utf8"); } catch { wf = ""; }
+    // unit mshard (W-S11): EVERY `node: [...]` list (the suite, the shards, the fold) equals REQUIRED_LEGS — before, only the first was read
+    const lists = [...wf.matchAll(/^\s*node:\s*\[([^\]]*)\]/gm)].map((m) => m[1].split(",").map((x) => x.trim()).filter(Boolean));
+    ok("mrdr · REQUIRED_LEGS equals EVERY node matrix list of suite.yml, one leg per node (checked, never trusted; unit mshard reads them all)", lists.length > 0 && lists.every((nodes) => JSON.stringify(nodes.map((n) => `npm test · node ${n}`)) === JSON.stringify(REQUIRED_LEGS)));
     const FB = await frozenBaseline();
     ok("mlaw · lawpack.mjs's frozen BASELINE is readable from this file (the base-with-no-line comparison has its numbers)",
       !!FB && Number.isSafeInteger(FB["jugad-literal-subject-list"]) && (await frozenBaseline("file:///nonexistent/lawpack.mjs")) === null);
@@ -394,6 +600,12 @@ function selftest() {
       JSON.stringify(three) === JSON.stringify(["npm test · node 22", "npm test · node 24", "npm test · node 26"]) && JSON.stringify(crlf) === JSON.stringify(["npm test · node 22", "npm test · node 24"]));
     ok("PLANTED mlaw · a suite.yml with no matrix line or no job name line derives NO leg (the reader then says NONE, never GREEN)",
       legsOf(yml("")).length === 0 && legsOf(yml("        node: [22]", "    name: npm test")).length === 0 && legsOf("").length === 0);
+    for (const [what, cond] of workflowLaws(wf)) ok(`mshard · ${what}`, cond);
+    // the leg's jobs, planted both ways: a job OUTSIDE the leg with no bound is not judged; a job the leg needs with none is refused
+    const wfp = (b) => `jobs:\n  s:\n    name: s · node \${{ matrix.node }}\n${b}    timeout-minutes: 7\n  x:\n    name: x · node \${{ matrix.node }}\n  f:\n    name: npm test · node \${{ matrix.node }}\n    needs: [s]\n    timeout-minutes: 7\n`;
+    ok("mshard · ONEBOUND judges the leg's jobs (the fold and its needs): a job outside the leg with no bound holds, a needed job's second or raised bound is refused",
+      workflowLaws(wfp("")).every(([, c]) => c) && JSON.stringify(legJobs(wfp("")).map((j) => j.id)) === '["f","s"]' && !workflowLaws(wfp("    timeout-minutes: 8\n")).every(([, c]) => c) && !workflowLaws(wfp("").replace("needs: [s]\n    timeout-minutes: 7", "needs: [s]\n    timeout-minutes: 8")).every(([, c]) => c));
+    for (const [what, cond] of foldLaws()) ok(`mshard · ${what}`, cond);
     console.log(`\nci_verdict selftest: ${pass} passed, ${fail} failed`);
     console.log(fail ? "SELFTEST FAILED" : "ALL CHECKS PASSED");
     return fail ? 1 : 0;
@@ -401,6 +613,8 @@ function selftest() {
 }
 
 const flag = (n) => { const i = process.argv.indexOf(`--${n}`); return i > 0 ? process.argv[i + 1] : undefined; };
+/** every value of a repeatable flag, in order @param {string} n */
+const flags = (n) => process.argv.flatMap((a, i) => (a === `--${n}` && i + 1 < process.argv.length ? [process.argv[i + 1]] : []));
 
 async function main() {
   const mode = process.argv[2] || "";
@@ -408,16 +622,37 @@ async function main() {
   if (mode === "compare") {
     const read = (p) => { try { return p ? readFileSync(p, "utf8") : ""; } catch { return ""; } };   // an unreadable run is a run with no headline
     // --base-instrument: the base's OWN organism_test.mjs, passed only when the base was measured by the head's instead
-    const head = parseSuite(read(flag("head"))), base = parseSuite(read(flag("base")));
+    // --head-part (unit mshard): one shard digest each; the fold makes them ONE suite before the unchanged judge
+    const folded = mergeParts(read(flag("head")), flags("head-part").map(read));
+    const head = folded.suite, base = parseSuite(read(flag("base")));
     // unit mlaw (F3 A): only a base with no law pack line needs the frozen baseline, read from lawpack.mjs itself (never typed here)
     const baseline = head && head.lawpack && base && !base.lawpack ? await frozenBaseline() : null;
     const { lines, verdict } = compareLines(head, base, flag("label") || "suite", flag("head-sha") || "", flag("base-sha") || "", read(flag("base-instrument")), baseline, workspaceSrc,
-      { readFile: workspaceFile, tracked: workspaceTracked, text: { head: read(flag("head")), base: read(flag("base")) } });   // unit mdtl2: the workspace doors
+      { readFile: workspaceFile, tracked: workspaceTracked, text: { head: read(flag("head")), base: read(flag("base")) } }, folded.shards);   // unit mdtl2: the workspace doors
     for (const l of lines) console.log(l);
     process.exitCode = verdict === "GREEN" ? 0 : 1;
     return;
   }
-  if (!/^[0-9a-f]{7,40}$/i.test(mode)) { console.log("ci_verdict: <sha> [--repo owner/name] | compare --head f --base f --label l | selftest"); process.exitCode = 2; return; }
+  if (mode === "digest") {
+    let raw = "";
+    try { raw = readFileSync(String(process.argv[3] || ""), "utf8"); } catch { raw = ""; }   // an unreadable run digests to nothing: the fold reds it by name
+    for (const l of digest(raw, workspaceFile("scripts/organism_test.mjs"))) console.log(l);   // × mdtl2 F7 A: the section is rebuilt from the workspace
+    return;
+  }
+  if (mode === "times") {
+    const logs = flags("from-log");
+    const when = new Date().toISOString().slice(0, 10);
+    if (logs.length) { for (const l of timesTable(logs.map((f) => { try { return secsFromLog(readFileSync(f, "utf8")); } catch { return {}; } }), `${logs.length} job log(s), their B5 lines`, when)) console.log(l); return; }
+    const sha = String(process.argv[3] || "");
+    if (!/^[0-9a-f]{7,40}$/i.test(sha)) { console.log("ci_verdict: times <sha> [--repo owner/name] | times --from-log <job log>…"); process.exitCode = 2; return; }
+    try {
+      const { maps, named, missing } = await readTimesOf(sha, flag("repo") || DEFAULT_REPO, anonymousGet);
+      if (!maps.length) { console.log(`ci_verdict times ${sha.slice(0, 7)} NONE — no leg's verdict carries shard seconds${missing.length ? `; missing ${missing.join(" · ")}` : ""}`); process.exitCode = 1; return; }
+      for (const l of timesTable(maps, `the fold of ${sha.slice(0, 7)} (${named.join(" · ")})`, when)) console.log(l);
+    } catch (e) { console.log(`ci_verdict times ${sha.slice(0, 7)} UNREADABLE — ${e instanceof Error ? e.message : String(e)}`); process.exitCode = 2; }
+    return;
+  }
+  if (!/^[0-9a-f]{7,40}$/i.test(mode)) { console.log("ci_verdict: <sha> [--repo owner/name] | compare --head f --base f --label l [--head-part f]… | digest <file> | times <sha> | selftest"); process.exitCode = 2; return; }
   try {
     const { line, v } = await readVerdict(mode, flag("repo") || DEFAULT_REPO, anonymousGet);
     console.log(line);

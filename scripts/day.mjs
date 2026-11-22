@@ -19,6 +19,10 @@
 //   Both bind the host from the HOOK PAYLOAD (G0's law: the model never types an id). A second start is a JOIN, never a fork.
 //   `start` also runs usage_tap.mjs need ONCE (unit mpool, rows 1062 F8 A / 1091 (2)): the pool's ONE keyed card is filed at the
 //   learn start, by the tap's own door, only on a WAIT for want of a source. Its one line rides the start line as `pool: …`.
+//   `start` also runs daily_green.mjs final ONCE (unit mdayv, forks rows 1195 / 1229 F1 C): the meter takes the ONE final read
+//   of every IST day that is over and has none yet, through its OWN CLI, after the rollover close and the night close, on the
+//   ok and the not-ok path alike, never waiting on a judge. Its ONE line (the newest `… · read FINAL` line) is printed only
+//   when a final row was written or confirmed (F11 A); the conductor MORNING `meter-final` step is the other carrier.
 // THE END is the session model's to call when it reads HIS MEANING that the study day is over — in any words. NO phrase list,
 //   no regex of his words and no model call lives here (L6); the instruction rides CLAUDE.md and the SessionStart brief (F9).
 // MODES:
@@ -107,6 +111,13 @@ async function closeNight() {
   return n.stdout.split(/\r?\n/).find((l) => l.startsWith("NIGHT ")) || null;
 }
 
+// unit mdayv — THE FINAL READ, through its owner's CLI (daily_green.mjs is sole writer of daily_green.jsonl): ONE call per start;
+// its ONE line back, only when a final row was written or confirmed (F11 A: it matches neither `NIGHT ` nor `pool:`), else null.
+async function meterFinal() {
+  const m = await ownerRun("daily_green.mjs", ["final"]);
+  return m.stdout.split(/\r?\n/).map((l) => l.trim()).filter((l) => /^DAILY GREEN \d{4}-\d{2}-\d{2} IST · .* · read FINAL$/.test(l)).at(-1) || null;
+}
+
 // ── START ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 export async function start({ session = null, transcript = null, by = "hand", now = new Date() } = {}) {
   if (process.env.ARSENAL_ORGAN === "1") return { ok: true, silent: true };   // a headless organ is never his study day
@@ -126,9 +137,10 @@ export async function start({ session = null, transcript = null, by = "hand", no
   const pool = await ownerRun("usage_tap.mjs", ["need"]);
   const poolNote = ` · pool: ${lastLine(pool).replace(/^usage tap · need: /, "").slice(0, 120) || `usage_tap exit ${pool.status}`}`;
   const night = await closeNight();   // unit mfac (F9 A): the learn start closes the night and never waits — its ONE line rides this start
-  if (!r.ok) return { ok: false, r, night, line: `day: start ${D} — the sitting did not open: ${r.error}${r.resume ? ` → ${r.resume}` : ""}${rolled}${poolNote}` };
+  const meter = await meterFinal();   // unit mdayv (F1 C): the final read of the days that are over, by the meter's own CLI
+  if (!r.ok) return { ok: false, r, night, meter, line: `day: start ${D} — the sitting did not open: ${r.error}${r.resume ? ` → ${r.resume}` : ""}${rolled}${poolNote}` };
   const hostNote = r.joined ? (prevHost && prevHost !== session ? ` · host moved ${short(prevHost)} → ${short(r.host_session_id)} (this /learn session is the study session now)` : ` · host ${short(r.host_session_id)} (same session — JOINED, nothing new)`) : ` · host ${short(r.host_session_id)}`;
-  return { ok: true, r, night, line: `day: START ${D} · sitting ${r.id} ${r.joined ? "JOINED" : "OPEN"} (door ${r.door}, ${by})${hostNote}${rolled}${poolNote} · the day ends when HE means it: node scripts/day.mjs end` };
+  return { ok: true, r, night, meter, line: `day: START ${D} · sitting ${r.id} ${r.joined ? "JOINED" : "OPEN"} (door ${r.door}, ${by})${hostNote}${rolled}${poolNote} · the day ends when HE means it: node scripts/day.mjs end` };
 }
 
 // ── END ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -275,6 +287,7 @@ async function main() {
       const r = await start({ session: opt("--session") || (typeof p.session_id === "string" ? p.session_id : null), transcript: opt("--transcript") || (typeof p.transcript_path === "string" ? p.transcript_path : null), by: opt("--by") || "hand" });
       if (r.line) console.log(r.line);
       if (r.night) console.log(r.night);   // unit mfac: the ONE night line, only when a night was armed
+      if (r.meter) console.log(r.meter);   // unit mdayv: the ONE final-read line, only when a final row was written or confirmed
       return;   // HOOK PATH: never process.exit
     }
     case "end": { const r = await end({ pointer: opt("--pointer"), dayq: opt("--dayq") }); for (const l of r.lines) console.log(l); process.exitCode = r.code; return; }

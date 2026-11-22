@@ -56,6 +56,7 @@ description: The session-agnostic front door to the day's learning — reads the
   (1) gut-word before every answer · (2) the stuck-story in HIS words the moment a crack fires, with the ONE
   ```diff block written right there — it IS the crack log, never log a crack later · (3) Bolo at axis close,
   [in that same turn run `node scripts/forge_session.mjs crack` (no args) — the crack ROW: his words verbatim, concept · axis · moment (unit mcrk)]
+  [the pacer's axes line saying `N trap owed` = the axis note holds fewer than three distinct traps of THIS lesson: set one more bait from this lesson's own material (a ```diff of a real break); never write one to reach a count — a new day's note counts only the windows that touched its day (unit mtrap)]
   pasted verbatim · (4) the English interview line. Plus the pointer at every stop and THE BANK line at its
   three moments (the digest prints it filled in). No note block, no `build_exchanges` mid-lesson.
 - **THE AXIS RECAP ARTIFACT (9 Oct 2026, his word; acts `amuzxdtzwg4` + naming `amuzxl2g566`).** When

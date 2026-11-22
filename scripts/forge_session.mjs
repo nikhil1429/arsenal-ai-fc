@@ -712,7 +712,31 @@ export function appendCrack(row, path = CRACKS) {
   const back = readCracks(path);
   return back.rows && back.rows.some((r) => r.id === row.id) ? { ok: true, id: row.id } : { ok: false, why: "read-back: the row is not on the disk" };
 }
-function contractLines(s, now = new Date(), clock = undefined) {
+// ── UNIT MTRAP (forks rows 1198 / 1230) — THE BAR OF THREE DISTINCT TRAPS, its ONE home ──────────────────────────
+// notes_compiler.mjs's cold gate refuses a note under it before any reader is called, and RE-EXPORTS these; they live
+// HERE because this file's contract reads them every turn and the compiler already imports this file (unit mcrk), so
+// any import of the compiler from here is a cycle (a lazy import too — dependency-cruiser counts it).
+/** TRAP_BAR — the bar of three DISTINCT traps (row 1198 (1): it STAYS). verdictOf, stubReader and gateableOf read it. */
+export const TRAP_BAR = 3;
+/** COUNTED_FROM — the trap sources that count: THIS lesson's cracks and corrections (mtrap-3 b); a capsule trap NEVER counts. */
+export const COUNTED_FROM = Object.freeze(["crack", "correction"]);
+/** NO_BAIT — the compiler's placeholder bait for a diff with no `-` line (buildNote's crack push); a missing bait is not a trap. */
+export const NO_BAIT = "(no - line)";
+const foldBait = (s) => String(s == null ? "" : s).normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+/** gateableOf — PURE. {gateable, have, need, owed}. `have` = the note's distinct counted traps by FOLDED bait (mtrap-2 b): a
+ *  capsule trap, an empty bait or the placeholder bait does not count, and two baits that fold equal count once. It only
+ *  COUNTS — nothing is added to `traps` (row 1198 (2): no trap invented, no count padded). */
+export function gateableOf(note) {
+  const seen = new Set();
+  for (const t of note && Array.isArray(note.traps) ? note.traps : []) {
+    if (!t || !COUNTED_FROM.includes(t.from)) continue;
+    const b = foldBait(t.bait);
+    if (b && b !== foldBait(NO_BAIT)) seen.add(b);
+  }
+  const have = seen.size;
+  return { gateable: have >= TRAP_BAR, have, need: TRAP_BAR, owed: Math.max(0, TRAP_BAR - have) };
+}
+function contractLines(s, now = new Date(), clock = undefined, owed = null) {   // owed (unit mtrap): {axis, have, need, owed} of the ON axis's latest live note, read at the dispatch
   if (!s || !s.concept) return [];
   if (s.closed_at) return [];                                    // a closed session pacts nothing
   if (isStale(s, now)) return [];                                // W0-D: last touch, not birth
@@ -742,7 +766,10 @@ function contractLines(s, now = new Date(), clock = undefined) {
   L.push(`  THE METHOD order: ${STEPS.map((t, i) => (i === n ? `[${i} ${t}]` : `${i} ${t}`)).join(" · ")}`);
   if (skipped.length) L.push(`  ⚠ SKIPPED so far: ${skipped.map((i) => `${i} ${STEPS[i]}`).join(" · ")} — say so out loud, or go back.`);
   L.push(`  axes:${s.current_axis && !s.axes_done.includes(s.current_axis) && !s.axes_deferred.includes(s.current_axis) ? ` ON ${s.current_axis} ·` : ""} done ${s.axes_done.join("") || "—"} · deferred ${s.axes_deferred.join("") || "—"} · left ${AXES.filter((a) => !s.axes_done.includes(a) && !s.axes_deferred.includes(a)).join("") || "—"}`
-    + (ungraded.length ? ` · ungraded ${ungraded.join("")}` : ""));
+    + (ungraded.length ? ` · ungraded ${ungraded.join("")}` : "")
+    // unit mtrap (mtrap-4 a / mtrap-7 b): the ON axis's note is under the bar — the owed count, and that a new day's note counts only its own day's windows
+    + (owed && owed.owed > 0 && owed.axis === s.current_axis && !s.axes_done.includes(owed.axis) && !s.axes_deferred.includes(owed.axis)
+      ? ` · note ${owed.axis}: ${owed.have}/${owed.need} traps — ${owed.owed} trap owed (from the lesson's own bait, never made up; a new day's note counts only the windows that touched its day)` : ""));
   L.push(`  question-moments used: ${MOMENTS.map((m) => `${m} ${s.question_moments[m] || 0}`).join(" · ")} (only these ${MOMENTS.length} are legal — no quiz-dump)${CRACK_CONTRACT}`);
   // forks row 276 (1)(a): the per-axis count of step 3's per-idea pictures — said, never gated (the ORDER rides the
   // TURN SKELETON's line 0, the one home of the checkable rules)
@@ -3249,7 +3276,20 @@ export async function hookMain() {
       // The clock is read HERE (not inside the pure renderer) for the same reason the
       // dossier line is: fixtures stay disk-free, and an unreadable audit file costs
       // nothing but the line itself.
-      const lines = contractLines(sNow, new Date(), stopToPromptMs(loadAuditLast(), loadTeaching()));
+      // unit mtrap — the ON axis's owed traps: the newest LIVE compiled note of (concept, axis) in compiled_notes.jsonl (read
+      // only; notes_compiler.mjs is its sole writer), counted by gateableOf above. Read HERE, never in the pure renderer; an
+      // absent or unreadable ledger costs only the fragment, never the contract.
+      let owed = null;
+      if (sNow && sNow.concept && sNow.current_axis && existsSync(join(STATE_DIR, "compiled_notes.jsonl"))) {
+        try {
+          const rows = readFileSync(join(STATE_DIR, "compiled_notes.jsonl"), "utf8").split(/\r?\n/).filter((l) => l.trim())
+            .map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter((o) => o && o.kind === "compiled" && typeof o.id === "string");
+          const gone = new Set(rows.map((o) => o.supersedes).filter(Boolean));
+          const n = rows.filter((o) => !gone.has(o.id) && o.concept === String(sNow.concept).toLowerCase() && o.axis === sNow.current_axis).at(-1);
+          if (n) owed = { axis: n.axis, ...gateableOf(n.note) };
+        } catch (e) { owed = null; process.stderr.write(`forge_session: compiled_notes.jsonl unreadable (${String((e && e.code) || e).slice(0, 60)}) — no trap count this turn\n`); }
+      }
+      const lines = contractLines(sNow, new Date(), stopToPromptMs(loadAuditLast(), loadTeaching()), owed);
       if (lines.length) {
         // Deliverable 2 (7 Aug 2026): the dossier calibration rides the SAME block,
         // loaded here (not inside the pure renderer) so fixtures stay disk-free and

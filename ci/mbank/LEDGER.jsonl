@@ -48,3 +48,9 @@
 {"ts":"2026-11-21T13:09Z","act":"witness-base","cmd":"node ci/mbank/witness_mbank.mjs --org <main> --base-org <main>","last_line":"RED MBANK · B1 … B20"}
 {"ts":"2026-11-21T13:09Z","act":"mutants","cmd":"node ci/mbank/run_mutants_mbank.mjs --org <tip> --base-org <main 7bf008b>","last_line":"run_mutants: 20 of 20 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-21T13:09Z","act":"mf2","cmd":"node ci/mf2/witness_mf2.mjs --org <tip> --base-org <main 7bf008b>","last_line":"RED MF2 · BOUND (F4 GREEN · ok→FAIL none)"}
+{"ts":"2026-11-21T18:59Z","act":"merge-main","cmd":"git fetch origin main && git merge --no-edit FETCH_HEAD (a0645d2)","last_line":"merge e5439a6 · no conflicted file"}
+{"ts":"2026-11-21T18:59Z","act":"gates","cmd":"node scripts/gates.mjs report (LF clone @ b626774)","last_line":"gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides, and every schema'd state file matches"}
+{"ts":"2026-11-21T18:59Z","act":"witness-head","cmd":"node ci/mbank/witness_mbank.mjs --org <tip> --base-org <main a0645d2>","last_line":"GREEN MBANK … · 22 clause(s)"}
+{"ts":"2026-11-21T18:59Z","act":"mshard","cmd":"node ci/mshard/witness_mshard.mjs --org <tip> --base-org <5759cce>","last_line":"RED MSHARD · BOUND (every W-S clause ✓)"}
+{"ts":"2026-11-21T18:59Z","act":"mgat","cmd":"node ci/mgat/witness_mgat.mjs --org <tip> --base-org <5759cce>","last_line":"RED MGAT · BOUND (W1-W9 org GREEN)"}
+{"ts":"2026-11-22T01:11Z","act":"mlv3-fifty","cmd":"node ci/mlv3/witness_mlv3.mjs --org <tree> --base-org <40347a6> ×50 (20 tip alone · 20 base 0ee0516 alone · 10 tip beside the mbank witness)","last_line":"T1 red 0/20 · 0/20 · 0/10 → branch (c)"}
