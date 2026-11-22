@@ -694,3 +694,104 @@ The reds, by name:
   that read or plant through the `&&` strings; their files are not named to this unit), awaiting its ruling.
 
 CHECKPOINT · 11:22 UTC 2026-11-22 · tip = the commit carrying this line (merge 87d327c) · BASE 84cbc03 · folded 133 member files (0 new since 7bf008b) · witness GREEN 12 / base RED H1-H9 · mutants 14/14 control GREEN · WITNESSES 131 passed 8 failed at the tip (131 / 6 at main; new: ‹mcov› ‹mprk› ‹mdtl2› = MHOT-M2) · resume from: the next merge of main, and the ruling on MHOT-M2
+
+## 19 · FORKS ROW 1309 — MHOT-M2 RULED A: mcov, mprk, mdtl2 re-cut; the class grep; the bare form (2026-11-22)
+
+**(1) The three re-cuts**, in place as ADDED edits, struck text kept, never a bare OR. Where the tree holds `suite/members`,
+each clause reads or plants through the tree's own roll and member files; where it does not, the old string runs unchanged.
+- **`ci/mcov/witness_mcov.mjs` — C1 COVERAGE, C5 ONE RECORD, C6 SLOW-GREEN, C7 HANG-NAMED.** C1, C6 and C7 share one door,
+  `plantBoundMembers`: `mcov_slow` and `mcov_hang` now get a member file each, where they were appended to the string.
+  C5 `oneRecord` counts each of the four over the tree's roll (`roll --json`), its name case-folded, so a second file for
+  one organ is two records. An unreadable roll is a red.
+- **`ci/mprk/witness_mprk.mjs` — COVER.** The roll must name `parked` with argv `["selftest"]` exactly once.
+- **`ci/mdtl2/witness_mdtl2.mjs` — E1, E2, E3, E10, E11** all ride one door, `plantRepo`. The planted repo gets
+  `suite/members` with one member file per planted member, and the tree's own chain strings stand.
+- **This unit's suite file, for E11:** suites()'s roll assert now registers only when it bites, so a green toy run counts
+  exactly what the string instrument counted. Coverage keeps the clean-roll ok line on every run, and H8's named red stands.
+
+Each re-cut witness, from this tree's file, run against its own BASE on main `84cbc03` (the string branch) and on this
+tree (the roll branch), git clones:
+
+```
+mcov   --org main 84cbc03: RED MCOV · BOUND     --org 352996f: RED MCOV · BOUND        (C1-C7 HOLDS on both)
+mprk   --org main 84cbc03: RED MPRK · BOUND     --org 352996f: RED MPRK · BOUND        (COVER GREEN on both)
+mdtl2  --org main 84cbc03: RED MDTL2 · BOUND    --org 352996f: RED MDTL2 · E10 BOUND   (E1 E2 E3 E11 GREEN on both)
+```
+
+Beyond BOUND (row 1200 (2)'s class: none of the three has a bound-base door), all three are green on main, and two are
+green on this tree. **mdtl2 E10 reads RED on this tree. FORK MHOT-M4 (a hunk whose two intents cannot both hold
+byte for byte), both sides:**
+- *mdtl2 meant (E10 RULED, a guard):* every toy FAIL name, its detail line and its machine-line `unruled` entry are
+  BYTE-identical between the head tree and the base tree, so a KNOWN_RED entry keeps its match across the trees.
+- *mhot meant (F1 B, the spec's walk order):* the roll walks members in file-name order. The planted reds come out
+  `toy_canary`, `toy_member`, `toy_salad` on the roll tree and `toy_member`, `toy_canary`, `toy_salad` on the string
+  tree. The roll-up assert's detail, the first red's tail, therefore differs. Measured with a printing copy of the
+  witness: the FAIL set is equal, but its order and the roll-up's first tail differ. The clauses run is byte-identical.
+- *Options:* A E10 re-cut to compare the FAIL set order-insensitively, and the roll-up detail as the set of red members'
+  tails, where the head holds `suite/members` (the KNOWN_RED match then rides the set) · B this unit's runner walks
+  members in an order a unit can declare (a file field), which would reopen F1's "a member is one file nobody else edits"
+  · C E10 judged only between two trees of the same shape (a one-time transition at mhot's landing).
+  M-MDTL2-E1 below reds E1 (with E3 and E10) and the control holds E10 red, as measured.
+
+**The mutants** (`run_mutants_mhot.mjs --unit-bases <dir>`; each witness run against its own BASE; judged by the named
+clause: RED on the mutant, not red on the control):
+
+```
+  ok   MPRK CONTROL · the unmutated copy → RED MPRK · BOUND
+  ok   M-MPRK-COVER · the parked member file removed → RED MPRK · COVER, BOUND
+  ok   MCOV CONTROL · the unmutated copy → RED MCOV · BOUND
+  ok   M-MCOV-C1 · the planted mcov_slow member file never written (the plant's member file removed) → RED MCOV · BOUND, C1 COVERAGE, C6 SLOW-GREEN
+  ok   M-MCOV-C5 · a second member file for one organ (PROBE.json beside probe.json) → RED MCOV · BOUND, C5 ONE RECORD
+  ok   MDTL2 CONTROL · the unmutated copy → RED MDTL2 · E10 BOUND
+  ok   M-MDTL2-E1 · the planted toy_member's member file never written → RED MDTL2 · E1 E3 E10 BOUND
+run_mutants: 18 of 18 mutant(s) RED by the clause that names them · control GREEN       (12 mhot + 2 mlaw + 4 re-cut)
+```
+
+**(2) THE CLASS, from mhot's landing:** a new witness reads suite members through the roll, never the strings. The grep of
+every landed witness, at this merge:
+
+```
+$ git grep -l -E "organism:selftest|squad:selftest" HEAD -- 'ci/**/*.mjs'
+ci/mcov/run_mutants_mcov.mjs  ci/mcov/witness_mcov.mjs  ci/mdtl2/witness_mdtl2.mjs  ci/mfac/witness_mfac.mjs
+ci/mhot/run_mutants_mhot.mjs  ci/mhot/witness_mhot.mjs  ci/mpool/witness_mpool.mjs
+$ git grep -n -E 'split\("&&"\)|&& node scripts|\.mjs selftest\(' HEAD -- 'ci/**/*.mjs'   # outside the seven re-cut units
+(none)
+```
+
+Every hit is a witness this unit re-cut (mcov, mdtl2, mfac W7, mpool P) or this unit's own. `run_mutants_mcov.mjs` names the
+strings only as the source text of an `organism_test.mjs` edit, and that line (`SUITE_NAMES`) still exists. mprk matched by
+`&&`-splitting without the names; it is re-cut. **No fourth witness.**
+
+**(3) The bare form (row 1307 (1)):** this witness judges BOUND only when `--bound-base` is named. Bare, as the suite member
+runs it, it prints `CLAUSE BOUND NOT JUDGED`. HB names its bases explicitly, and the mutant runner always names one.
+
+```
+$ node ci/mhot/witness_mhot.mjs --org <clone 352996f> --base-org <clone 84cbc03>                       # bare
+CLAUSE BOUND NOT JUDGED · no --bound-base named: the bare form never judges BOUND against a frozen sha (row 1307 (1), row 1309 (3))
+GREEN MHOT the member roll · 11 clause(s) · BOUND NOT JUDGED                                         (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <clone 352996f> --base-org <clone 84cbc03> --bound-base <clone 84cbc03>
+GREEN MHOT the member roll · 12 clause(s)                                                            (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <clone 84cbc03> --base-org <clone 84cbc03>
+RED MHOT · H1, H2, H3, H4, H5, H6, H7, H8, H9                                                        (exit 1)
+```
+
+**WITNESSES** (all three shards, the neutral flags, git clone of `352996f`):
+
+```
+shard 1 36 passed, 1 failed · shard 2 48 passed, 2 failed · shard 3 48 passed, 4 failed → 132 passed, 7 failed
+  (main 84cbc03, §18: 131 passed, 6 failed)
+  witness ‹mhot›  GREEN MHOT the member roll · 11 clause(s) · BOUND NOT JUDGED
+  witness ‹mcov›  RED MCOV · BOUND     witness ‹mprk›  RED MPRK · BOUND     witness ‹mlaw›  RED MLAW · BOUND
+  witness ‹mdtl2› RED MDTL2 · E10 BOUND   (FORK MHOT-M4)
+```
+
+The seven reds, by name:
+- **"its BASE is in the clone":** ‹mr3› ‹mrf› ‹mrj› ‹mrt› ‹mrv›, the same five as at main (§18). Environment.
+- **‹mdtl2›:** E10, fork MHOT-M4.
+- **‹mcrk2› G9 SETTLE:** flaky, and not this unit's. It was re-run alone against its own BASE, five times on each tree:
+  this tree red red red green green, main red green green red red. Part (ii), "declared in the turn → axis c", is
+  sometimes NOT PLACED on both.
+
+‹mcov› and ‹mprk› no longer red in WITNESSES.
+
+CHECKPOINT · 13:03 UTC 2026-11-22 · tip = the commit carrying this line (on 352996f) · BASE 84cbc03 · re-cut: mcov C1 C5 C6 C7 · mprk COVER · mdtl2 E1 E2 E3 E10 E11 (E10 = FORK MHOT-M4) · their mutants 4/4 · each beyond BOUND green on main and on this tree except mdtl2 E10 on this tree · grep: no fourth witness · bare form GREEN 11 · BOUND NOT JUDGED · mutants 18/18 control GREEN · WITNESSES 132 passed 7 failed · resume from: the ruling on MHOT-M4, then the next merge of main
