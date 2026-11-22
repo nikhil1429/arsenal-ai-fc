@@ -9,3 +9,4 @@
 {"ts":"2026-11-22T14:42:10.565Z","act":"measure","cmd":"G9 repaired 50 × three ways → ci/mg9/G9_50.txt","last_line":"(a) GREEN 50 RED 0 · (b) GREEN 50 RED 0 · (c) GREEN 50 RED 0"}
 {"ts":"2026-11-22T14:42:10.565Z","act":"measure","cmd":"mcap 50 × three ways → ci/mg9/MCAP_50.txt","last_line":"(a) GREEN 50 RED 0 · (b) GREEN 0 RED 50 (base 5759cce, 38 of 86 each run, by contract) · (c) GREEN 50 RED 0 · no flip in 150"}
 {"ts":"2026-11-22T14:42:10.565Z","act":"measure","cmd":"mdayv 50 × three ways → ci/mg9/MDAYV_50.txt","last_line":"(a) GREEN 50 RED 0 · (b) GREEN 0 RED 50 (base 7bf008b, 4 of 27 each run, by contract) · (c) GREEN 50 RED 0 · no flip in 150"}
+{"ts":"2026-11-22T15:14:38.592Z","act":"measure","cmd":"WITNESSES member over claude/mg9-build (clean full-history clone, neutral flags, no session id; row 1292 (3))","last_line":"WITNESSES · 64 unit(s) judged in 1944.6 s · 64 GREEN at head against its BASE · organism_test: 135 passed, 0 failed · ruled 0 · UNRULED 0"}

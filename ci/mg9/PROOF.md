@@ -63,4 +63,4 @@ reached under load (the suite member's job time, not a clause), are the candidat
 
 ## 6. CHECKPOINT
 
-CHECKPOINT · repair built (compile handed max(real, lastAt + 1); old wait struck) · witness GREEN 4 clauses at tip, RED MG9 · FAST, STRUCK at 84cbc03 · mutants 4/4, control GREEN · G9 repaired 150/150 GREEN · mcap and mdayv: no flip in 150 (base RED by contract) · left: the WITNESSES member over this tree (running), its count on the next push
+CHECKPOINT · repair built (compile handed max(real, lastAt + 1); old wait struck) · witness GREEN 4 clauses at tip, RED MG9 · FAST, STRUCK at 84cbc03 · mutants 4/4, control GREEN · G9 repaired 150/150 GREEN · mcap and mdayv: no flip in 150 (base RED by contract) · WITNESSES member over this tree (row 1292 (3), clean full-history clone, the neutral flags, 2026-11-22): 64 of 64 unit(s) GREEN at head against their BASE, 0 failed (organism_test: 135 passed, 0 failed) · left: nothing — the runner's cut
