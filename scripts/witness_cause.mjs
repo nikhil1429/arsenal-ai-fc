@@ -15,6 +15,15 @@
 // Two checks by two files: scripts/organism_test.mjs builds causes with causesOf(); scripts/ci_verdict.mjs re-reads the
 // witness source and keeps a cause only if verifyCause() rebuilds it byte for byte, else it is WITHHELD. Shape C (opt-in
 // CAUSE codes in a witness) is NOT built here (row 1186 F2). No length, size or bound is typed in this file.
+// UNIT mkp24 (forks row 1216 K-F2 C0 · K-F3 A · K-F10 A), ONE edit of this module:
+//   · K-F10 A, the multi-word clause id: a header claim line whose id runs up to its column gap (two spaces or more, or
+//     ` · `) and a quoted literal `"<ID>( <ID>)* · "` name the WHOLE id (`T1 IDLE`, `M1 PORTHELD`); causesOf matches the
+//     judged ids GREEDILY, the longest known id first. judgeLast (scripts/organism_test.mjs) is untouched, so the judged
+//     name and detail stay byte-identical and every KNOWN_RED entry keeps its match.
+//   · K-F2 C0, the code rule: a witness may print `CAUSE <ID> <CODE>` before a red clause line; it is kept only when <ID>
+//     is a judged red id and <CODE> (the CODE grammar: no digits) is a key of the `const CAUSES = { … }` literal of the
+//     witness's OWN tracked source, and the text that leaves is THAT literal's value (no digits), re-read from the source by
+//     both checks, never the witness's stdout. Any other CAUSE line on a red id becomes the one WITHHELD entry.
 // MODES: selftest
 // CLI: node scripts/witness_cause.mjs selftest
 // ============================================================================
@@ -22,6 +31,10 @@ import { pathToFileURL } from "node:url";
 
 /** a clause id, the grammar organism_test.mjs boundIds already assumes */
 export const ID = /^[A-Z][A-Z0-9-]*$/;
+/** unit mkp24 (K-F10 A): a clause id of one word or more, each of the ID grammar, one space apart */
+export const IDS = /^[A-Z][A-Z0-9-]*(?: [A-Z][A-Z0-9-]*)*$/;
+/** unit mkp24 (K-F2 C0): a cause code, a key of the witness's own CAUSES literal — no digits */
+export const CODE = /^[A-Z][A-Z-]*$/;
 export const WITHHELD = "WITHHELD";
 export const WITHHELD_TEXT = "a clause id that is not a literal of the witness's own source was withheld";
 export const NO_CLAIM = "(no header claim for this id in its source)";
@@ -47,6 +60,7 @@ export function claimLines(src) {
   const H = headerLines(src);
   const b = H.map((l) => /^\/\/(\s+)(?:[A-Z][A-Z0-9-]*\s+·\s+)*BOUND\b/.exec(l)).find(Boolean);
   const indent = b ? b[1] : null;
+  const lit = quotedIds(src);   // unit mkp24 (K-F10 A, the C4 CENSUS replay): a multi-word id that is a quoted literal
   /** @type {Map<string, string>} */
   const out = new Map();
   let struck = false;
@@ -54,8 +68,14 @@ export function claimLines(src) {
     const marks = (l.match(/~~/g) || []).length;
     if (marks || struck) { if (marks % 2) struck = !struck; continue; }
     const m = /^\/\/(\s+)([A-Z][A-Z0-9-]*)(?:\s+·\s+|\s+)(\S.*?)\s*$/.exec(l);
-    if (!m || (indent !== null && m[1] !== indent) || out.has(m[2])) continue;
-    out.set(m[2], m[3]);
+    if (!m) continue;
+    const at = indent === null || m[1] === indent;
+    if (at && !out.has(m[2])) out.set(m[2], m[3]);
+    // unit mkp24 (K-F10 A): the multi-word id runs up to its column gap; its first word keeps the claim it had above. At
+    // another indent than BOUND's it is a claim only when the id is a quoted clause literal of the source (ci/mdet's
+    // header heads its BOUND section at one indent and claims its clauses at another)
+    const w = /^\/\/\s+([A-Z][A-Z0-9-]*(?: [A-Z][A-Z0-9-]*)+)(?:\s+·\s+|\s{2,})(\S.*?)\s*$/.exec(l);
+    if (w && !out.has(w[1]) && (at || lit.has(w[1]))) out.set(w[1], w[2]);
   }
   return out;
 }
@@ -63,26 +83,64 @@ export function claimLines(src) {
 /** the one-line claim of <id> in <src>, or null @param {string} src @param {string} id */
 export const claimOf = (src, id) => claimLines(src).get(id) ?? null;
 
+/** the quoted ids of <src>: a quoted string that IS the id or opens with it (one word, or several: unit mkp24 K-F10 A)
+ *  @param {string} src @returns {Set<string>} */
+function quotedIds(src) {
+  const ids = new Set();
+  for (const m of String(src).matchAll(/(["'`])([A-Z][A-Z0-9-]*)(?=\1|[\s·,:])/g)) ids.add(m[2]);
+  for (const m of String(src).matchAll(/(["'`])([A-Z][A-Z0-9-]*(?: [A-Z][A-Z0-9-]*)+)(?=\1| · )/g)) ids.add(m[2]);
+  return ids;
+}
+
 /** every id that is a literal of <src>: a quoted string that IS the id or opens with it, and every header claim id
  *  @param {string} src @returns {Set<string>} */
 export function idsInSource(src) {
   const ids = new Set(claimLines(src).keys());
-  for (const m of String(src).matchAll(/(["'`])([A-Z][A-Z0-9-]*)(?=\1|[\s·,:])/g)) ids.add(m[2]);
+  for (const i of quotedIds(src)) ids.add(i);
   return ids;
 }
 
-/** the causes of ONE judged witness red. kind "killed" and "grammar" are the member's own reds; otherwise every token of
- *  <left> (the ids beyond BOUND) is kept only if it is a literal of <src>, and every other token becomes ONE WITHHELD entry.
- *  @param {{ left?: string, src?: string, kind?: "clauses"|"killed"|"grammar", code?: number|null }} a
+/** unit mkp24 (K-F2 C0): the codes of <src>'s own `const CAUSES = { "<CODE>": "<text>", … }` literal — a key of the CODE
+ *  grammar with a text carrying no digit, no quote, no backslash and no line break; the first per key
+ *  @param {string} src @returns {Map<string, string>} */
+export function codesOf(src) {
+  const out = new Map();
+  const m = /(?:^|\n)const CAUSES = \{([^}]*)\}/.exec(String(src));
+  if (!m) return out;
+  for (const p of m[1].matchAll(/"([^"\\\r\n]*)"\s*:\s*"([^"\\\r\n]*)"/g)) if (CODE.test(p[1]) && !/\d/.test(p[2]) && !out.has(p[1])) out.set(p[1], p[2]);
+  return out;
+}
+
+/** the causes of ONE judged witness red. kind "killed" and "grammar" are the member's own reds; otherwise the tokens of
+ *  <left> (the ids beyond BOUND) are matched GREEDILY against the literal ids of <src>, the longest first (unit mkp24,
+ *  K-F10 A); each matched id keeps its header claim, then (K-F2 C0) the CODE of every `CAUSE <that id> <CODE>` line of
+ *  <cause> whose CODE is a key of <src>'s CAUSES literal, as `<CODE> · <that literal's text>`. Every token that is no
+ *  literal, and every CAUSE line on a matched id whose CODE is no key, becomes ONE WITHHELD entry; a CAUSE line on an id
+ *  that is not a judged red is dropped.
+ *  @param {{ left?: string, src?: string, kind?: "clauses"|"killed"|"grammar", code?: number|null, cause?: string[] }} a
  *  @returns {{ id: string, text: string }[]} */
-export function causesOf({ left = "", src = "", kind = "clauses", code = null }) {
+export function causesOf({ left = "", src = "", kind = "clauses", code = null, cause = [] }) {
   if (kind === "killed") return [{ id: "KILLED", text: MEMBER.KILLED }];
   if (kind === "grammar") return [{ id: "GRAMMAR", text: `${MEMBER.GRAMMAR} (exit ${Number.isInteger(code) && /** @type {number} */ (code) >= 0 ? code : "none"})` }];
-  const ids = idsInSource(src), out = [];
+  const ids = idsInSource(src), codes = codesOf(src), out = [], seen = new Set();
+  const wide = Math.max(1, ...[...ids].map((i) => i.split(" ").length));
+  const said = [...cause].map((l) => /^CAUSE (\S.*?) (\S+)$/.exec(String(l).trim())).filter(Boolean);
+  const toks = String(left).split(/\s+/).filter(Boolean);
   let withheld = false;
-  for (const t of [...new Set(String(left).split(/\s+/).filter(Boolean))]) {
-    if (ID.test(t) && ids.has(t)) out.push({ id: t, text: claimOf(src, t) ?? NO_CLAIM });
-    else withheld = true;
+  for (let i = 0; i < toks.length;) {
+    let hit = null;
+    for (let n = Math.min(wide, toks.length - i); n >= 1 && !hit; n--) { const c = toks.slice(i, i + n).join(" "); if (IDS.test(c) && ids.has(c)) hit = c; }
+    if (!hit) { withheld = true; i++; continue; }
+    i += hit.split(" ").length;
+    if (seen.has(hit)) continue;
+    seen.add(hit);
+    out.push({ id: hit, text: claimOf(src, hit) ?? NO_CLAIM });
+    const kept = new Set();
+    for (const m of said.filter((x) => /** @type {RegExpExecArray} */ (x)[1] === hit)) {
+      const k = /** @type {RegExpExecArray} */ (m)[2];
+      if (!(CODE.test(k) && codes.has(k))) { withheld = true; continue; }
+      if (!kept.has(k)) { kept.add(k); out.push({ id: hit, text: `${k} · ${codes.get(k)}` }); }
+    }
   }
   if (withheld) out.push({ id: WITHHELD, text: WITHHELD_TEXT });
   return out;
@@ -106,12 +164,18 @@ export function verifyCause(line, reds, readSrc) {
   const member = [...reds].sort((a, b) => b.length - a.length).find((r) => s.startsWith(`${r} · `));
   if (!member) return null;
   const withheld = { member, cause: `${WITHHELD} · ${WITHHELD_TEXT}` };
-  const m = /^([A-Z][A-Z0-9-]*) · (.*)$/s.exec(s.slice(member.length + 3));
+  const m = /^([A-Z][A-Z0-9-]*(?: [A-Z][A-Z0-9-]*)*) · (.*)$/s.exec(s.slice(member.length + 3));   // unit mkp24: a multi-word id
   if (!m || /[\r\n]/.test(m[2])) return withheld;
   const [, id, text] = m;
   const unit = unitOf(member);
   const ok = (id === WITHHELD && text === WITHHELD_TEXT) || (id === "KILLED" && text === MEMBER.KILLED) || (id === "GRAMMAR" && GRAMMAR_TEXT.test(text))
-    || (!!unit && (() => { const src = String(readSrc(unit) || ""); return !!src && idsInSource(src).has(id) && text === (claimOf(src, id) ?? NO_CLAIM); })());
+    || (!!unit && (() => {
+      const src = String(readSrc(unit) || "");
+      if (!src || !idsInSource(src).has(id)) return false;
+      if (text === (claimOf(src, id) ?? NO_CLAIM)) return true;
+      const c = /^([A-Z][A-Z-]*) · (.*)$/s.exec(text);   // unit mkp24 (K-F2 C0): a code's text is re-read from the source
+      return !!c && codesOf(src).get(c[1]) === c[2];
+    })());
   return ok ? { member, cause: `${id} · ${text}` } : withheld;
 }
 
@@ -156,6 +220,41 @@ function selftest() {
     && verifyCause(causeText(M, c2[1]), [M], read)?.cause === `${WITHHELD} · ${WITHHELD_TEXT}` && verifyCause(`NOT A RED · P1 · x`, [M], read) === null
     && verifyCause(causeText(M, c1[0]), [M], () => "")?.cause.startsWith(WITHHELD) === true);
   ok("unitOf / sourcePaths: the unit inside ‹ ›, both witness spellings", unitOf(M) === "toy" && sourcePaths("mfac-floor").length === 2 && sourcePaths("mf2").length === 1);
+  // unit mkp24 (forks row 1216 K-F10 A · K-F2 C0)
+  const msrc = [
+    "#!/usr/bin/env node",
+    "//   T1 IDLE      spool drained: a write retires the worker.",
+    "//   T2 ONCE      a stream lands once.",
+    "//   M1 RESTART   the restart claim",
+    "//   M1 PORTHELD  the port-held claim",
+    "//   LIVE-SAFE    the live ports are safe",
+    "//   XML · BOUND · LAST  as in every unit.",
+    "import { x } from \"y\";",
+    "const CAUSES = {",
+    "  \"RETIRE-LATE\": \"no RETIRING line by the bound\",",
+    "  \"LOST\": \"an event never landed\",",
+    "  \"DIGIT-TEXT\": \"a text with 4112 in it\",",
+    "};",
+    "clause(\"T1 IDLE · spool drained\", f); clause(\"T2 ONCE · once\", f); clause(\"M1 PORTHELD · port\", f); clause(\"LIVE-SAFE · safe\", f);",
+  ].join("\r\n");
+  const r1 = causesOf({ left: "T1 IDLE LIVE-SAFE", src: msrc });
+  ok("mkp24 K-F10 · a multi-word id is matched whole, longest first: `T1 IDLE LIVE-SAFE` gives T1 IDLE and LIVE-SAFE, no WITHHELD",
+    r1.length === 2 && r1[0].id === "T1 IDLE" && r1[0].text === "spool drained: a write retires the worker." && r1[1].id === "LIVE-SAFE" && !r1.some((c) => c.id === WITHHELD));
+  const r2 = causesOf({ left: "M1 PORTHELD", src: msrc });
+  ok("mkp24 K-F10 · `M1 PORTHELD` gives its OWN claim (not M1 RESTART's); the first word keeps its old claim", r2.length === 1 && r2[0].id === "M1 PORTHELD" && r2[0].text === "the port-held claim" && claimOf(msrc, "M1") === "RESTART   the restart claim");
+  ok("mkp24 C0 · codesOf reads the CAUSES literal: CODE-grammar keys, a text with a digit is no code", codesOf(msrc).get("RETIRE-LATE") === "no RETIRING line by the bound" && codesOf(msrc).has("LOST") && !codesOf(msrc).has("DIGIT-TEXT") && codesOf(src).size === 0);
+  const r3 = causesOf({ left: "T1 IDLE T2 ONCE", src: msrc, cause: ["CAUSE T1 IDLE RETIRE-LATE", "CAUSE T2 ONCE LOST\r", "CAUSE T2 ONCE LOST", "CAUSE M1 PORTHELD LOST"] });
+  ok("mkp24 C0 · a CAUSE code that is a key rides its red id as `<CODE> · <the literal's text>`; a CAUSE on a green id is dropped",
+    JSON.stringify(r3) === JSON.stringify([{ id: "T1 IDLE", text: "spool drained: a write retires the worker." }, { id: "T1 IDLE", text: "RETIRE-LATE · no RETIRING line by the bound" }, { id: "T2 ONCE", text: "a stream lands once." }, { id: "T2 ONCE", text: "LOST · an event never landed" }]));
+  const r4 = causesOf({ left: "T1 IDLE", src: msrc, cause: [`CAUSE T1 IDLE ${CAN}`, "CAUSE T1 IDLE DIGIT-TEXT", "CAUSE T1 IDLE NOT-A-KEY"] });
+  ok("mkp24 C0 · a CAUSE whose code is no key (a canary, a digit text, an unknown code) becomes ONE WITHHELD and never leaves",
+    r4.length === 2 && r4[1].id === WITHHELD && !JSON.stringify(r4).includes(CAN) && !JSON.stringify(r4).includes("4112"));
+  const MM = "WITNESS ‹mtoy› · GREEN at head against its BASE", mread = (u) => (u === "mtoy" ? msrc : "");
+  ok("mkp24 · verifyCause rebuilds a multi-word claim and a code's text from the source; a forged code text is WITHHELD",
+    verifyCause(causeText(MM, r1[0]), [MM], mread)?.cause === "T1 IDLE · spool drained: a write retires the worker."
+    && verifyCause(causeText(MM, r3[1]), [MM], mread)?.cause === "T1 IDLE · RETIRE-LATE · no RETIRING line by the bound"
+    && verifyCause(`${MM} · T1 IDLE · RETIRE-LATE · ${forged}`, [MM], mread)?.cause === `${WITHHELD} · ${WITHHELD_TEXT}`
+    && verifyCause(`${MM} · T1 IDLE · DIGIT-TEXT · a text with 4112 in it`, [MM], mread)?.cause === `${WITHHELD} · ${WITHHELD_TEXT}`);
   console.log(`\nwitness_cause selftest: ${pass} passed, ${fail} failed`);
   console.log(fail ? "SELFTEST FAILED" : "ALL CHECKS PASSED");
   return fail ? 1 : 0;
