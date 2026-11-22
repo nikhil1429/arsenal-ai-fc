@@ -7,3 +7,8 @@
 {"ts":"2026-11-22T09:59:09.015Z","act":"a campaign tool path in public code","cmd":"grep -n 'WORKTREE_TOOL = ' scripts/rails.mjs","last_line":"153:export const WORKTREE_TOOL = \"C:/Users/nikhi/arsenal-audit-artifacts/campaign-2026-09/tools/v/worktree.mjs\";"}
 {"ts":"2026-11-22T09:59:09.016Z","act":"hermetic suite at the cut (cloud bare checkout, no node_modules)","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"mutagen: exit 1 |   code: 'ERR_MODULE_NOT_FOUND' | } | Node.js v22.23.5 (process exit 2)"}
 {"ts":"2026-11-22T09:59:09.017Z","act":"wrote the spec","cmd":"write ci/muna/MUNA_SPEC.md","last_line":"spec complete, nothing built"}
+{"ts":"2026-11-22T10:57:35.887Z","act":"cut the build branch from main","cmd":"git fetch origin main && git checkout -b claude/muna-build origin/main","last_line":"84cbc03126eddb85c7d5cf54b51610068800315c"}
+{"ts":"2026-11-22T10:57:35.888Z","act":"the witness both ways on committed LF trees","cmd":"node ci/muna/witness_muna.mjs --org <tree of d6b2c3e> --base-org <tree of BASE>","last_line":"GREEN MUNA landing with no session awake · 17 clause(s)"}
+{"ts":"2026-11-22T10:57:35.889Z","act":"the mutants on the build tree","cmd":"node ci/muna/run_mutants_muna.mjs --org <tree of d6b2c3e>","last_line":"run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-22T10:57:35.890Z","act":"the WITNESSES member's units, build and BASE","cmd":"ls -d ci/*/ | count dirs holding witness_<unit>.mjs, on each tree","last_line":"org 64 · base 63"}
+{"ts":"2026-11-22T10:57:35.891Z","act":"the installer row reads back","cmd":"node -e installerRegistrations(setupScripts()) | grep Muna","last_line":"ArsenalFC-Muna setup/INSTALL_CYBORG_TASKS.ps1:169 holes 0"}
