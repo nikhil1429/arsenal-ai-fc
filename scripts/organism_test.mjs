@@ -2817,12 +2817,25 @@ function path() {
 }
 
 // a throwaway copy of the organism — every mutating test runs HERE, never on live state
+// unit mlink (forks rows 1311 (4) / 1312, 22 Nov 2026) · THE TREE GETS node_modules BY A LINK, NEVER A COPY THROUGH ONE.
+// Measured by the runner on his Windows laptop (Node 24): when ROOT/node_modules is itself a JUNCTION (every LF witness tree
+// carries one; the WITNESSES member links one into each tree it builds), cpSync met the link and re-made it in its onLink
+// step with a plain symlinkSync and NO type — on win32 a non-junction symlink needs a privilege his laptop does not hold, so
+// the sandbox threw EPERM (node:internal/fs/cp onLink) and four mbare clauses went red. Now the tree's node_modules is ONE
+// link to the REAL folder (realpathSync, so a junction pointing at a junction is never made): a junction on win32 (no
+// privilege needed), a dir symlink elsewhere (measured in ci/mlink/PROOF.md: no copy is made on any platform, and the
+// suite's own rm of the tree leaves the real folder whole). The old line, struck, kept beside it (L9, never deleted):
+//   ~~if (existsSync(join(ROOT, "node_modules"))) cpSync(join(ROOT, "node_modules"), join(d, "node_modules"), { recursive: true });~~
+/** @param {string} src a node_modules folder or a link to one @param {string} dest the tree's node_modules path */
+function linkNodeModules(src, dest) {
+  symlinkSync(realpathSync(src), dest, process.platform === "win32" ? "junction" : "dir");
+}
 function sandbox() {
   const d = mkdtempSync(join(tmpdir(), "arsenal-test-"));
   for (const p of ["scripts", "dressing-room", "learning-layer", "package.json"]) {
     if (existsSync(join(ROOT, p))) cpSync(join(ROOT, p), join(d, p), { recursive: true });
   }
-  if (existsSync(join(ROOT, "node_modules"))) cpSync(join(ROOT, "node_modules"), join(d, "node_modules"), { recursive: true });
+  if (existsSync(join(ROOT, "node_modules"))) linkNodeModules(join(ROOT, "node_modules"), join(d, "node_modules"));
   // DORMANT-SAFE MIRROR (7 Aug 2026, the away-day red). dressing-room/state/capsules/
   // is a gitignored mirror (gist = master), so a fresh checkout — which is what the CI
   // runner IS, forever, by design — has none, and the five RE-JIRAH/DEEP cross-checks
