@@ -37,7 +37,13 @@
 //        answers arrive THROUGH :4113/deep-answer, never as a file write).
 //        All five are gitignored
 //        (they carry his words/moments; the public repo holds machinery only).
-//        ONE file outside that five is written, and only as an APPENDER on the
+//        SOLE WRITER of thalamus_config.json too (unit mq2, forks row 1175 F1 A)
+//        — through three named lane exports and no other door (see THE ONE WRITER OF
+//        THE CONFIG, above the 818 setter); the tuner and the watchman probe call
+//        them, each touching only its own keys, in one format, refused on a stale read.
+//        (Until mq2 this paragraph said one file outside the five was written; since
+//        unit 818 that was false, and mq2 corrects it — forks row 1175 F6 A.)
+//        One more file is written, and only as an APPENDER on the
 //        DOCUMENTED shared lane: brain_ledger.jsonl, where the ε-band
 //        adjudicator bills its own `claude -p` (10 Aug 2026 — see THE
 //        ADJUDICATOR METERS ITSELF). brain.mjs still owns that schema; this
@@ -63,8 +69,9 @@
 //        node scripts/thalamus.mjs selftest   → deterministic bar (§4.7)
 //        node scripts/thalamus.mjs status     → workspace + today's gate ledger
 //        node scripts/thalamus.mjs config adjudicator-role <role> --why "<text>" [--config <path>]
-//                                             → THE OWNER SETTER (unit 818): the SOLE writer of the
-//                                               adjudicator block; it never writes `enabled`
+//                                             → THE OWNER SETTER (unit 818): the one CLI door to the
+//                                               adjudicator block, writing through setAdjudicatorRole
+//                                               (unit mq2); it never writes `enabled`
 // ----------------------------------------------------------------------------
 // ORGANISM REPAIR 4 Aug 2026 — THE NUCLEUS HEARS HIM (issues #1 #2 #6 #9 #10 #106).
 // Five cuts, all in this file, all layered (the old engine is frozen beside the
@@ -2162,6 +2169,42 @@ async function selftest() {
     assert("818 SETTER re-run: the same role with nothing left to retire writes NOTHING — sha X -> X, the file byte-for-byte as it was",
       r8.code === 0 && bytes() === once && /nothing to change/.test(said.join("\n"))
       && /^thalamus config: adjudicator\.role thalamus_adjudicator -> thalamus_adjudicator · enabled false · sha ([0-9a-f]{12}) -> \1$/.test(r8.last));
+    // ── UNIT mq2 · THE ONE WRITER — the three lane doors, on the same temp copy ──
+    const plant = JSON.stringify({ tiers: { tau0: 0.25 }, adjudicator: { role: "thalamus_adjudicator", enabled: false }, deep: { est_tokens_per_wake: 1, deadline_ms: 45000 }, weights: { pe: 0.35 } }, null, 1);
+    writeAtomic(tcfg, plant);
+    const tw = applyTiers((c) => { c.tiers.tau0 = 0.3; c._gate_tune_receipt = { id: "plant" }; return c; }, { path: tcfg });
+    const oT = JSON.parse(bytes());
+    assert("mq2 ONE FORMAT: a tiers write through applyTiers lands its keys and leaves the file indent 1 with no trailing newline — the format the 818 round trip demands",
+      tw.ok && tw.wrote && oT.tiers.tau0 === 0.3 && oT._gate_tune_receipt.id === "plant" && bytes() === JSON.stringify(oT, null, 1));
+    const ww = refitWakeEconomy((c) => { c.deep.est_tokens_per_wake = 7; c._wake_economy_refit = { fit: 7 }; return c; }, { path: tcfg });
+    const oW = JSON.parse(bytes());
+    assert("mq2 NESTED LANE: refitWakeEconomy moves deep.est_tokens_per_wake and its receipt, and every other deep key keeps its value and place",
+      ww.ok && ww.wrote && oW.deep.est_tokens_per_wake === 7 && oW.deep.deadline_ms === 45000 && JSON.stringify(Object.keys(oW.deep)) === JSON.stringify(["est_tokens_per_wake", "deadline_ms"]));
+    const held = bytes();
+    const fences = [
+      refitWakeEconomy((c) => { c.tiers.tau0 = 9; return c; }, { path: tcfg }),
+      refitWakeEconomy((c) => { c.deep.deadline_ms = 1; return c; }, { path: tcfg }),
+      applyTiers((c) => { c.adjudicator.enabled = true; return c; }, { path: tcfg }),
+      setAdjudicatorRole((c) => { c.weights.pe = 0.9; return c; }, { path: tcfg }),
+      applyTiers((c) => { delete c.weights; return c; }, { path: tcfg }),
+    ];
+    assert("mq2 LANE FENCE: an edit that touches a key outside its own lane (another lane's key, a sibling deep key, a weight, a deleted key) is REFUSED by name and the file is byte-for-byte as it was",
+      fences.every((r) => r.ok === false && r.wrote === false && /LANE FENCE/.test(r.why)) && bytes() === held);
+    const rPathW = applyTiers((c) => c, { path: join(tdir, "brain_config.json") });
+    assert("mq2 NARROW: no lane door writes a file not named thalamus_config.json, and none takes a lane argument (three named exports, F2 B)",
+      rPathW.ok === false && /must name a thalamus_config\.json/.test(rPathW.why) && applyTiers.length === 2 && refitWakeEconomy.length === 2 && setAdjudicatorRole.length === 2);
+    let inner = /** @type {ReturnType<typeof refitWakeEconomy> | null} */ (null);   // typed: it is assigned inside the edit closure (checkJs)
+    const stale = applyTiers((c) => { inner = refitWakeEconomy((d) => { d.deep.est_tokens_per_wake = 11; return d; }, { path: tcfg }); c.tiers.tau0 = 0.5; return c; }, { path: tcfg });
+    const oS = JSON.parse(bytes());
+    assert("mq2 STALE GUARD: a lane write that lands between another writer's read and its rename makes the first one REFUSE, and the second one's key survives",
+      inner && inner.ok && inner.wrote && stale.ok === false && /STALE GUARD/.test(stale.why) && oS.deep.est_tokens_per_wake === 11 && oS.tiers.tau0 === 0.3);   // no tmp is left: held by the witness (A5), not here — a new fs site would raise xray's budget
+    const lockGone = () => { try { readConfigBytes(tcfg + ".lock"); return false; } catch { return true; } };
+    assert("mq2 THE LOCK (row 1305 (1)): every door call above released its lock — no thalamus_config.json.lock is left behind",
+      lockGone());
+    writeAtomic(tcfg + ".lock", String(process.ppid));   // a LIVE pid that is not this process
+    const heldBytes = bytes(), rLive = applyTiers((c) => { c.tiers.tau0 = 0.9; return c; }, { path: tcfg });
+    assert("mq2 THE LOCK: a lock held by a live pid REFUSES by name, never waits, never writes through — the file byte-unchanged and the holder's lock left in place",
+      rLive.ok === false && /THE LOCK/.test(rLive.why) && /live pid/.test(rLive.why) && bytes() === heldBytes && !lockGone());
     wipe(tdir);
   }
   if (ADJ_ENV) { if (adjEnvSaved === undefined) delete process.env[ADJ_ENV]; else process.env[ADJ_ENV] = adjEnvSaved; }   // unit 818: his env, exactly as found
@@ -2859,6 +2902,110 @@ function statusReport() {
 }
 
 // ---------------------------------------------------------------------------
+// UNIT mq2 · THE ONE WRITER OF THE CONFIG (20 Nov 2026 — forks row 1175)
+// Until this unit thalamus_config.json had THREE writers (ci/mq2/MQ2_SPEC.md §1): gate_tune's apply and
+// auto-revert, this organ's 818 setter, and watchman's wake-economy re-fit. Each rewrote the WHOLE file from
+// its own read, in two formats (indent 2 vs indent 1), with no guard — so one tuner apply left a file the
+// 818 setter then refused, and two writers that overlapped silently dropped each other's keys.
+// Row 1175, as ruled: this organ is the SOLE writer (F1 A); one named export PER LANE, no lane argument,
+// each able to touch only its own keys, and the role verb stays the only command-line door (F2 B, row 834 (3)
+// read strictly); the bytes are re-read and compared before the rename and a change refuses (F3 A); one
+// format, JSON.stringify(o, null, 1) with no trailing newline — the live file's measured format and the one
+// the 818 round trip demands (F4 A); his live file is not written at landing (F7 A).
+// THE CONTRACT of every lane export — laneExport(edit, { path }):
+//   · `path` defaults to the live config and must be NAMED thalamus_config.json (a caller with its own
+//     planted-tree door passes its own; the basename fence is the setter's, unchanged);
+//   · the bytes are read ONCE; `edit(obj, text, buf)` gets a fresh parse and returns the next object, or
+//     null/undefined for "nothing to write" (the caller keeps its own reason);
+//   · THE LANE FENCE: every key outside the lane — its value AND its order — must be byte-identical after
+//     the edit, or the write is refused by name and nothing moves;
+//   · THE LOCK (row 1305 (1), F9 a): `<config>.lock` is taken BEFORE the read and held to the rename; a live
+//     holder REFUSES by name, a dead one is taken over once (see THE LOCK below);
+//   · THE STALE GUARD, inside the lock: just before the write the bytes are read AGAIN, and if they moved since
+//     the first read the write is refused (no retry). Under the lock it can only catch a write by the same process
+//     (a door called inside an edit);
+//   · it returns { ok, wrote, why } and throws on nothing it can refuse.
+// ---------------------------------------------------------------------------
+const CONFIG_LANES = Object.freeze({
+  tiers:        Object.freeze({ name: "tiers (gate_tune.mjs)", top: Object.freeze(["tiers", "_gate_tune_legacy", "_gate_tune_receipt"]), prefix: Object.freeze([]), nested: Object.freeze({}) }),
+  wake_economy: Object.freeze({ name: "wake economy (watchman.mjs probeWakeEconomy)", top: Object.freeze(["_wake_economy_refit"]), prefix: Object.freeze([]), nested: Object.freeze({ deep: Object.freeze(["est_tokens_per_wake"]) }) }),
+  adjudicator:  Object.freeze({ name: "adjudicator (the 818 role verb)", top: Object.freeze(["adjudicator"]), prefix: Object.freeze(["_adjudicator_model_retired_"]), nested: Object.freeze({}) }),
+});
+const isPlainObject = (x) => !!x && typeof x === "object" && !Array.isArray(x);
+// PURE: everything the lane may NOT touch, as one string — order and value both count.
+function outsideLane(o, lane) {
+  const rest = [];
+  for (const [k, v] of Object.entries(o)) {
+    if (lane.top.includes(k) || lane.prefix.some((p) => k.startsWith(p))) continue;
+    const sub = lane.nested[k];
+    if (sub && isPlainObject(v)) { rest.push([k, Object.entries(v).filter(([kk]) => !sub.includes(kk))]); continue; }
+    rest.push([k, v]);
+  }
+  return JSON.stringify(rest);
+}
+// THE LOCK (forks row 1305 (1), F9 a — amending row 1175 (3)): an exclusive file `<config>.lock` beside the config,
+// taken BEFORE the read and held to the rename, released by unlink. It holds the writer's pid. A lock whose pid is
+// not alive is taken over ONCE; a live one REFUSES by name — no wait, no retry, never a write through. A nested door
+// call inside an edit (same process, same pid) proceeds without taking it again: the stale guard inside the lock
+// still catches that write. Liveness is process.kill(pid, 0), which works the same on win32. The lock file is
+// gitignored (`.gitignore` dressing-room/state/*.lock). Named residuals: a pid the OS has reused reads as alive (a
+// stale lock then refuses until that process exits), and an EMPTY lock (a writer between create and its pid write)
+// is read as held, never as stale.
+const pidAlive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return !!e && /** @type {any} */ (e).code === "EPERM"; } };
+function acquireConfigLock(lock) {
+  const mine = String(process.pid);
+  const take = () => { try { writeFileSync(lock, mine, { flag: "wx" }); return true; } catch (e) { if (e && /** @type {any} */ (e).code === "EEXIST") return false; throw e; } };
+  if (take()) return { ok: true, own: true, why: "" };
+  let held = "";
+  try { held = readConfigBytes(lock).toString("utf8").trim(); } catch (e) { swallow("acquireConfigLock: the lock went between create and read", e); held = ""; }
+  if (held === mine) return { ok: true, own: false, why: "" };
+  const pid = Number(held);
+  if (held === "" || (Number.isInteger(pid) && pid > 0 && pidAlive(pid))) return { ok: false, own: false, why: `THE LOCK: ${basename(lock)} is held by ${held ? `live pid ${held}` : "a writer mid-create"}` };
+  rmSync(lock, { force: true });   // stale: its pid is gone (or its bytes are not a pid) — taken over ONCE
+  if (take()) return { ok: true, own: true, why: "" };
+  return { ok: false, own: false, why: `THE LOCK: another writer took the stale ${basename(lock)} first` };
+}
+function releaseConfigLock(lock) {
+  try { if (readConfigBytes(lock).toString("utf8") === String(process.pid)) rmSync(lock, { force: true }); } catch (e) { swallow("releaseConfigLock: the lock is already gone", e); }
+}
+function writeConfigLane(lane, edit, opts = {}) {
+  const path = opts.path || CONFIG;
+  const refuse = (why) => ({ ok: false, wrote: false, why: `${why} — lane ${lane.name}; nothing written` });
+  if (typeof edit !== "function") return refuse("no edit function handed in");
+  if (typeof path !== "string" || basename(path) !== basename(CONFIG)) return refuse(`the path must name a ${basename(CONFIG)} (got ${String(path)})`);
+  const lock = path + ".lock";
+  let lk;
+  try { lk = acquireConfigLock(lock); } catch (e) { return refuse(`THE LOCK: cannot take ${basename(lock)} (${(e && /** @type {any} */ (e).code) || e})`); }
+  if (!lk.ok) return refuse(lk.why);
+  try {
+    let buf;
+    try { buf = readConfigBytes(path); } catch (e) { return refuse(`cannot read ${path} (${(e && e.code) || e})`); }
+    const text = buf.toString("utf8");
+    let o;
+    try { o = JSON.parse(text); } catch (e) { return refuse(`the file is unparsable JSON (${String((e && e.message) || e).slice(0, 160)})`); }
+    if (!isPlainObject(o)) return refuse("the file is not a JSON object");
+    const fence = outsideLane(o, lane);
+    const next = edit(JSON.parse(text), text, buf);
+    if (next === null || next === undefined) return { ok: true, wrote: false, why: "the edit asked for no write" };
+    if (!isPlainObject(next)) return refuse("the edit returned something that is not a JSON object");
+    if (outsideLane(next, lane) !== fence) return refuse("THE LANE FENCE: the edit changed a key outside its own lane");
+    const out = JSON.stringify(next, null, 1);
+    if (out === text) return { ok: true, wrote: false, why: "nothing to change" };
+    try {
+      if (!readConfigBytes(path).equals(buf)) return refuse("THE STALE GUARD: the file moved between this writer's read and its rename");
+      writeAtomic(path, out);   // the organ's own tmp + rename — no new fs site (xray's unresolved budget only falls)
+    } catch (e) {
+      return { ok: false, wrote: false, failed: true, why: `WRITE FAILED — ${(e && e.message) || e} (tmp + rename: the file is as it was) — lane ${lane.name}` };
+    }
+    return { ok: true, wrote: true, why: "written" };
+  } finally { if (lk.own) releaseConfigLock(lock); }
+}
+// The three doors, one per lane, no lane argument (row 834 (3) read strictly — F2 B).
+export function applyTiers(edit, opts) { return writeConfigLane(CONFIG_LANES.tiers, edit, opts); }
+export function refitWakeEconomy(edit, opts) { return writeConfigLane(CONFIG_LANES.wake_economy, edit, opts); }
+export function setAdjudicatorRole(edit, opts) { return writeConfigLane(CONFIG_LANES.adjudicator, edit, opts); }
+
+// ---------------------------------------------------------------------------
 // UNIT 818 · THE OWNER SETTER (13 Nov 2026 — forks rows 826 (ii) / 834 (3))
 //   node scripts/thalamus.mjs config adjudicator-role <role> --why "<text>" [--config <path>]
 // The 29 Aug receipt in thalamus_config.json names the hole: this organ had NO config-setter, so an
@@ -2940,18 +3087,27 @@ function configMain(args, io = {}) {
   if (typeof why !== "string" || !why.trim()) return refuse(`--why "<text>" is required — the retired value's receipt carries it; nothing written`);
   if (typeof path !== "string" || !path) return refuse(`--config needs a path — usage: ${SETTER_USAGE}`);
   if (basename(path) !== basename(CONFIG)) return refuse(`--config must name a ${basename(CONFIG)} (got ${basename(path)}) — this verb writes that one file and no other; nothing written`);
-  let buf;
-  try { buf = readConfigBytes(path); } catch (e) { return refuse(`cannot read ${path} (${(e && e.code) || e}); nothing written`); }
-  const text = buf.toString("utf8");
-  if (!Buffer.from(text, "utf8").equals(buf)) return refuse(`${path} is not valid UTF-8, so no round trip can be byte-equal; nothing written`);
-  const ed = adjudicatorRoleEdit(text, role, why.trim(), io.now || new Date());
-  if (!ed.ok) return refuse(ed.why);
+  // unit mq2: the read, the fence, the stale guard and the write are the lane door's (setAdjudicatorRole);
+  // this verb keeps its own refusals, judged on the very bytes the door read.
+  // typed by cast: all three are assigned inside the door's edit closure, which checkJs cannot follow
+  let ed = /** @type {ReturnType<typeof adjudicatorRoleEdit> | null} */ (null);
+  let buf = /** @type {Buffer | null} */ (null);
+  let early = /** @type {string | null} */ (null);
+  const w = setAdjudicatorRole((_o, text, b) => {
+    buf = b;
+    if (!Buffer.from(text, "utf8").equals(b)) { early = `${path} is not valid UTF-8, so no round trip can be byte-equal; nothing written`; return null; }
+    ed = adjudicatorRoleEdit(text, role, why.trim(), io.now || new Date());
+    if (!ed.ok) return null;
+    return JSON.parse(ed.out);
+  }, { path });
+  if (early) return refuse(early);
+  if (ed && !ed.ok) return refuse(ed.why);
+  if (!w.ok && w.failed) { say(`thalamus config: ${w.why}`); return 1; }
+  if (!w.ok) return refuse(w.why);
+  if (!ed || !ed.ok || !buf) return refuse("the lane door returned without the edit it was handed — nothing written");
   const before = sha12(buf), after = sha12(Buffer.from(ed.out, "utf8"));
-  if (ed.out === text) say(`thalamus config: nothing to change — ${path} not written`);
-  else {
-    try { writeAtomic(path, ed.out); } catch (e) { say(`thalamus config: WRITE FAILED — ${(e && e.message) || e} (tmp + rename: the file is as it was)`); return 1; }
-    if (ed.receiptKey) say(`thalamus config: retired adjudicator.model into ${ed.receiptKey} (directly after the block)`);
-  }
+  if (!w.wrote) say(`thalamus config: nothing to change — ${path} not written`);
+  else if (ed.receiptKey) say(`thalamus config: retired adjudicator.model into ${ed.receiptKey} (directly after the block)`);
   say(`thalamus config: adjudicator.role ${ed.oldRole || "none"} -> ${role} · enabled ${ed.hasEnabled ? JSON.stringify(ed.enabled) : "absent"} · sha ${before} -> ${after}`);
   return 0;
 }
