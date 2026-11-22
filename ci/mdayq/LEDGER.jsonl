@@ -12,3 +12,9 @@
 {"ts":"2026-11-21T14:35:00Z","act":"mbank witness","cmd":"node ci/mbank/witness_mbank.mjs --org <cut> · --org <tip>","last_line":"both: GREEN MBANK … · 21 clause(s)"}
 {"ts":"2026-11-21T14:40:00Z","act":"mday witness","cmd":"node ci/mday/witness_mday.mjs --org <cut> · --org <tip>","last_line":"both: RED MDAY · BOUND (no --base-org); every other clause line identical"}
 {"ts":"2026-11-21T14:09:49Z","act":"canon-count replay","cmd":"replay of LOAD ZERO BLOCK 7 over git show <sha>:<path> of every tracked .md","last_line":"canon-count replay · 112 .md blob(s) · undeclared 0 · declared 1"}
+{"ts":"2026-11-22T04:20:00Z","act":"drop local merge","cmd":"git reset --hard 2a0c80c (the unpushed merge of main a0645d2, fdebec1)","last_line":"row 1280: do NOT merge main yet; the merge was never pushed"}
+{"ts":"2026-11-22T04:50:00Z","act":"build row 1280","cmd":"(2) W15 CONT · (3) W16 CLOSED · (5) W17 READFAIL; (1) (4) as built","last_line":"6e976f4"}
+{"ts":"2026-11-22T05:00:00Z","act":"unit witness both ways","cmd":"node ci/mdayq/witness_mdayq.mjs --org <tip 6e976f4> --base-org <cut f635d68> · --org <cut> --base-org <cut>","last_line":"GREEN MDAYQ … · 17 clause(s) · RED MDAYQ · W1, W2, W3, W4, W5, W5L, W7, W8, W9, W10, W14, W15, W16, W17"}
+{"ts":"2026-11-22T05:05:00Z","act":"mutants","cmd":"node ci/mdayq/run_mutants_mdayq.mjs --org <tip> --base-org <cut>","last_line":"run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-22T05:40:00Z","act":"hermetic profile","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (tip 6e976f4)","last_line":"organism_test: 168 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-22T05:41:00Z","act":"selftests","cmd":"forge_session · study_scope · teaching_gate · gaffer_brain selftest; models.mjs check (2026)","last_line":"250 · 62 · 130 · 198 passed, 0 failed (2026) · models check exit 0"}
