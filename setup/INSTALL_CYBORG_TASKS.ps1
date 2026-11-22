@@ -163,6 +163,10 @@ Mk "ArsenalFC-Daemon-Watchdog" "daemon_watchdog.mjs pass"     @("/SC","MINUTE","
 # writers (nightshift 02:40, conceptgraph 03:00) so the push carries tonight's
 # outputs, and hours before the cloud sentinel's 10:30 read.
 Mk "ArsenalFC-Groundsman-Push" "groundsman.mjs push"          @("/SC","DAILY","/ST","03:45")
+# UNIT muna (ruling row 1301 (3), F4: every 10 minutes) - landing with no session awake: one pass lands at most ONE
+# land tip that lane M's sha gate adopted, through the landing command the door file .git/muna_door.json names.
+# No model call. Revert: setup\UNINSTALL_CYBORG_TASKS.ps1 (its name is in that list).
+Mk "ArsenalFC-Muna"            "muna.mjs pass"                @("/SC","MINUTE","/MO","10")
 
 # POWER CONDITIONS (the E2E scar): clear battery kill-flags on every task
 Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Object {
