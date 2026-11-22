@@ -70,6 +70,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { studyScope, readSitting, readForge, payloadOf, classifyPrompt, unboundVerdict, GUT_BEARING_MOMENTS, BANKED_MOMENTS, bankDueAt, shellInStudySet, humanText, CANON_READ_PATH, NEVER_READ, lessonArtifactOf, LESSON_PUBLISH_TOOLS } from "./study_scope.mjs";
+import { readCracks } from "./forge_session.mjs";   // unit mcrk2 — the crack rows' reader, read only (forge_session.mjs is their SOLE WRITER)
 import { EDIT_TOOLS } from "./rails.mjs";   // forks row 812 (2): the rail's own editor-tool list, never a second copy here
 // L4 (6 Oct 2026): newIdeaOf (THE new_idea definition) and pictureOrder (the picture ORDER) are each defined ONCE, in
 // teaching_audit.mjs — the Stop row records the same two readings; turnMoments rides only the selftest's parity pin
@@ -138,12 +139,12 @@ export const CHECKS = Object.freeze({
   "A.emdash": { fam: "A", mouth: "count", fix: "em-dash ki deewar nahi — paragraph mein ≤ 2, message mein ≤ 4" },
   "A.text-fence": { fam: "A", mouth: "count", fix: "```text fence sirf symbols / ids / arrows ke liye, Hinglish bahar — aur concept mein ek hi baar" },
   "A.buying": { fam: "A", mouth: "count", fix: "kharidaari ki baat ek line mein park — koi price, koi link nahi" },
-  "B.bank": { fam: "B", mouth: "patch", fix: "abhi bank karo, EK tool: node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> [--gut <USKA gut-word>] --asked \"…\" --said \"…\" --surface code [--latency_ms <hook line ka number>] · phir EK line: \"bank mein gaya · axis <x> · judge shaam ko\"" },
+  "B.bank": { fam: "B", mouth: "patch", fix: "abhi bank karo, EK tool: node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> [--gut <USKA gut-word>] --asked \"…\" --said \"<uske shabd — bank unke bytes prompt record se leta hai>\" --surface code [--latency_ms <hook line ka number>] · phir EK line: \"bank mein gaya · axis <x> · judge shaam ko\"" },
   "B.bank-per-idea": { fam: "B", mouth: "count", fix: "\"samajh aaya\" check ka jawab per-idea hai — bank NAHI hota; bank sirf axis ke moments par (sharp check · Bolo · interview line) aur jirah par" },
-  "B.bank-verbatim": { fam: "B", mouth: "count", fix: "bank line mein --gut uska apna gut-word (pakka→knew · shayad→shaky · pata nahi→guessed) — usne gut-word nahi diya to --gut kabhi type mat karo, --said uske shabd verbatim, --asked tumhara sawaal verbatim" },
+  "B.bank-verbatim": { fam: "B", mouth: "count", fix: "bank line mein --gut uska apna gut-word (pakka→knew · shayad→shaky · pata nahi→guessed) — usne gut-word nahi diya to --gut kabhi type mat karo, --said uske shabd verbatim (bank door unhe uske prompt record mein dhoondhta hai — bahar ka copy REFUSED, galat --gut bhi), --asked tumhara sawaal verbatim" },
   "B.latency": { fam: "B", mouth: "count", fix: "--latency_ms wahi number jo hook line ne diya (VERBATIM) — nahi padh sakte to flag hata do" },
-  "B.moment": { fam: "B", mouth: "patch", fix: "abhi EK tool: node scripts/forge_session.mjs moment check_q|pehle_guess|widget_gate|jirah|sharp_check — text mein kuch nahi jodna" },
-  "B.moment-kind": { fam: "B", mouth: "patch", fix: "abhi EK tool: legal moment declare karo (pehle_guess · check_q · widget_gate · jirah · sharp_check) — text mein kuch nahi jodna" },
+  "B.moment": { fam: "B", mouth: "patch", fix: "abhi EK tool: node scripts/forge_session.mjs moment check_q|pehle_guess|widget_gate|jirah|sharp_check|day_close — text mein kuch nahi jodna" },
+  "B.moment-kind": { fam: "B", mouth: "patch", fix: "abhi EK tool: legal moment declare karo (pehle_guess · check_q · widget_gate · jirah · sharp_check · day_close) — text mein kuch nahi jodna" },
   "B.askuser": { fam: "B", mouth: "count", fix: "AskUserQuestion nahi — ek sawaal text mein, woh khud type karega" },
   "B.whole-read": { fam: "B", mouth: "count", fix: "poori file mat padho (REFERENCE / SAMJHAO_MERGED / VISUAL_CONTRACT / forge SKILL / scripts / memory) — digest jo section bataye, sirf wahi, offset+limit se" },
   "B.tools": { fam: "B", mouth: "count", fix: "mid-concept system / tool kaam nahi — park it: ek line, phir micro-question wapas" },
@@ -154,6 +155,12 @@ export const CHECKS = Object.freeze({
   // L4 (6 Oct 2026): the absence case holds EVERY new idea now (row 554's definition, at any step), and its ORDER case — a
   // picture after the text — narrows to count with PICTURE_ORDER_FIX
   "B.widget": { fam: "B", mouth: "patch", fix: "abhi EK tool: mcp__visualize__show_widget — is naye idea ki PICTURE (pehle picture, phir text, dono); text mein kuch nahi jodna" },
+  // unit mcrk2 (forks rows 1243 (2) / 1258 F1 A): a crack row written with a NAMED GAP (moment undeclared, axis none) is the
+  // teacher's miss, never his — a PRESENCE red on the turn whose prompt it answered: logged and drift-counted, never a block
+  "C.crack-gap": { fam: "C", mouth: "count", fix: "agle turn se: answer se PEHLE `forge_session.mjs moment <kind>` (aur `axis <x> now`) — crack ke words likhe gaye, gap teacher ka hai" },
+  // forks row 1281 (2), F12: a crack row written with no calling session id (gap "session-unchecked", gap_owner "organism") —
+  // the organism's miss, never his or the teacher's: counted, never a block
+  "C.crack-unchecked": { fam: "C", mouth: "count", fix: "crack likha gaya bina calling session id ke (CLAUDE_CODE_SESSION_ID nahi mila) — organism ka gap, uske words rakhe gaye; teacher ko kuch nahi karna" },
   "D.digest-first": { fam: "D", mouth: "patch", fix: "abhi chalao: node scripts/learn_digest.mjs — text mein kuch nahi jodna, jab tak uski screen tumhara sawaal na badle" },
   "D.sitting-first": { fam: "D", mouth: "patch", fix: "abhi kholo: node scripts/sitting.mjs open --surface code --no-spawn --task \"<concept> axis <x>\" — text mein kuch nahi jodna" },
   "D.start-once": { fam: "D", mouth: "count", fix: "forge_session start dobara nahi, --force kabhi nahi — khuli session RESUME karo (pointer se)" },
@@ -171,7 +178,7 @@ export const PATCH_OPENER = "PATCH — tumhara jawab uski screen par hai aur rah
 // one-idea 2.86 per 10 turns · bank 6 of 7 missed · too-Hindi 12/35 · position), then the rest in
 // catalogue order. A measured order, not a preference; P4 replaces it with the judge's.
 export const RANK = Object.freeze(["D.unbound", "D.digest-first", "D.sitting-first", "A.text-last", "B.bank", "B.tools", "A.one-question", "A.new-terms", "A.neev-pehle",
-  "A.too-hindi", "A.question-last", "A.gut-by-moment", "A.gut-trio", "B.moment", "A.confusion-literal", "A.position", "A.count-form", "A.codes-at-him"]);
+  "A.too-hindi", "A.question-last", "A.gut-by-moment", "A.gut-trio", "B.moment", "C.crack-gap", "C.crack-unchecked", "A.confusion-literal", "A.position", "A.count-form", "A.codes-at-him"]);
 const rankOf = (id) => { const i = RANK.indexOf(id); return i >= 0 ? i : RANK.length + Object.keys(CHECKS).indexOf(id); };
 // B.widget's presence cases carry their own fix line (the catalogue's is the absence's add-shaped one, row 276 (1)(d))
 // forks row 305 (24 Sep 2026): the test-moment presence case's own fix line, verbatim from the ruling
@@ -388,7 +395,7 @@ const VOICE_REP = /gaffer_brain\.mjs["']?\s+capture\s+voice_rep\b/i;
 // The fence: forge_session's own MOMENTS (the pacer owns the kinds; a copy here keeps the Stop hook from loading the
 // pacer — importing it would also make its turn_hook SHIM a silent no-op). The selftest asserts the two are equal.
 // FIVE since forks row 266 (sharp_check).
-export const MOMENT_KINDS = Object.freeze(["pehle_guess", "check_q", "widget_gate", "jirah", "sharp_check"]);
+export const MOMENT_KINDS = Object.freeze(["pehle_guess", "check_q", "widget_gate", "jirah", "sharp_check", "day_close"]);   // unit mdayq (row 1257): day_close is the sixth
 
 // THE STUDY SET (G3's allowed set, read after the fact for the tools no PreToolUse rail sees). ONE home since P2
 // concern 2: study_scope.mjs (ALLOWED_CMD, the unsafe-shell fence, the canon-read paths — shellInStudySet), which
@@ -459,7 +466,7 @@ export function widgetFindings(turn) {
  * @param {Array} o.logRows   this gate's own earlier rows (for once-per-session blocks)
  * @param {object} o.env
  */
-export function decide({ payload = {}, sitting = null, forge = null, transcript = null, logRows = [], env = {}, unbound = null } = {}) {
+export function decide({ payload = {}, sitting = null, forge = null, transcript = null, logRows = [], env = {}, unbound = null, cracks = [] } = {}) {
   const allow = (why, extra = {}) => ({ decision: "allow", why, reds: [], ...extra });
   if (String(env.ARSENAL_ORGAN || "") === "1") return allow("headless organ", { scope: "organ" });
   const scope = studyScope({ payload, sitting, env });
@@ -516,6 +523,23 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
   if (tf.whole.length) red("B.whole-read", tf.whole.slice(0, 3).join(" · "));
 
   const d = { secondPass, cls: cls.kind, moment, prevMoments };
+  // ── C · THE CRACK GAP (unit mcrk2, forks row 1258 F1 A / F3 A) — the turn is known by the session id of the prompt the
+  // row was written from and a once-latch in this gate's own log (no text join, no time join): a gap row of THIS session
+  // that no earlier row of this session has named reds once, on the first Stop after it is written — that turn's Stop.
+  {
+    const named = new Set(mine.flatMap((r) => (Array.isArray(r.crack_gaps) ? r.crack_gaps : [])));
+    const gapRows = (Array.isArray(cracks) ? cracks : []).filter((c) => c && typeof c.id === "string" && typeof c.gap === "string" && c.gap
+      && sid && c.prompt_session_id === sid && !named.has(c.id));
+    if (gapRows.length) {
+      d.crack_gaps = gapRows.map((c) => c.id);
+      const parts = (c) => String(c.gap).split("+");
+      const teacher = gapRows.filter((c) => parts(c).some((g) => g !== "session-unchecked"));
+      const organism = gapRows.filter((c) => parts(c).includes("session-unchecked"));
+      const tg = (c) => parts(c).filter((g) => g !== "session-unchecked").join("+");
+      if (teacher.length) red("C.crack-gap", teacher.map((c) => `crack ${c.id} written with ${tg(c) === "moment-undeclared" ? `moment undeclared on axis ${c.axis}` : tg(c)} — the teacher's miss`).join(" · "), "count");
+      if (organism.length) red("C.crack-unchecked", organism.map((c) => `crack ${c.id} written with no calling session id — the organism's miss`).join(" · "), "count");
+    }
+  }
   if (cls.kind !== "system") {
     // ── A · the message ──
     const text = finalText;
@@ -798,13 +822,15 @@ export function stopHook({ raw = null, env = process.env, dir = STATE_DIR, now =
     let transcript = null;
     if (inScope) { try { const p = String(payload.transcript_path || ""); transcript = p && existsSync(p) ? readTail(p) : null; } catch { transcript = null; } }
     const unbound = inScope ? null : unboundVerdict({ payload, env, sitting, forge });
-    d = decide({ payload, sitting, forge, transcript, logRows: readLogRows(dir), env, unbound });
+    // unit mcrk2: the crack rows, read only through their owner's reader (forge_session.mjs is cracks.jsonl's SOLE WRITER)
+    const cracks = inScope ? (readCracks(join(dir, "cracks.jsonl")).rows || []) : [];
+    d = decide({ payload, sitting, forge, transcript, logRows: readLogRows(dir), env, unbound, cracks });
   } catch (e) { d = { decision: "allow", scope: "error", reds: [], why: "the gate threw and fails OPEN", error: String((e && e.message) || e).slice(0, 200) }; }
   d.ms = Date.now() - t0;
   if (!d.quiet) {
     try {
       mkdirSync(dir, { recursive: true });
-      appendFileSync(GATE_LOG(dir), JSON.stringify({ ts: now.toISOString(), session: payload.session_id || null, sitting: (readSitting(dir) || {}).id || null, decision: d.decision, scope: d.scope, reds: d.reds || [], patch: d.patch || [], counted: d.counted || [], cls: d.cls || null, moment: d.moment || null, second_pass: !!d.secondPass, surviving: !!d.surviving, d_checked: !!d.d_checked, nudged: !!d.nudged, ms: d.ms, error: d.error || null }) + "\n");
+      appendFileSync(GATE_LOG(dir), JSON.stringify({ ts: now.toISOString(), session: payload.session_id || null, sitting: (readSitting(dir) || {}).id || null, decision: d.decision, scope: d.scope, reds: d.reds || [], patch: d.patch || [], counted: d.counted || [], cls: d.cls || null, moment: d.moment || null, second_pass: !!d.secondPass, surviving: !!d.surviving, d_checked: !!d.d_checked, nudged: !!d.nudged, crack_gaps: Array.isArray(d.crack_gaps) ? d.crack_gaps : [], ms: d.ms, error: d.error || null }) + "\n");
     } catch { /* the log is never a reason to bite his turn */ }
   }
   if (d.decision === "block") process.stdout.write(JSON.stringify({ decision: "block", reason: d.reason }) + "\n");
@@ -879,6 +905,22 @@ async function selftest() {
   assert("SCOPE · the pre-G0 TRANSITION scope (every session) is never gated — it would block engineering work", legacy.decision === "allow");
   assert("SCOPE · a headless organ is never gated", decide({ payload: { session_id: HOST, last_assistant_message: "a? b?" }, sitting: SIT, forge: FORGE, transcript: "", env: { ARSENAL_ORGAN: "1" } }).decision === "allow");
   assert("SCOPE · in scope with the transcript unreadable → fail OPEN, named", decide({ payload: { session_id: HOST }, sitting: SIT, forge: FORGE, transcript: null, env: {} }).decision === "allow");
+  // 0b — unit mcrk2 (forks row 1258 F1 A / F3 A): a crack row with a named gap reds C.crack-gap on its turn — a count, once
+  {
+    const tx = [...BOOT, U("ok"), ...TURN_OK, TXT(GOOD)].join("\n");
+    const gapRow = { id: "ck-gap-1", kind: "crack", axis: "c", moment: "undeclared", gap: "moment-undeclared", gap_owner: "teacher", prompt_session_id: HOST };
+    const dg = (cracks, logRows = [{ session: HOST, d_checked: true }]) => decide({ payload: { session_id: HOST, transcript_path: "x", last_assistant_message: GOOD }, sitting: SIT, forge: FORGE, transcript: tx, logRows, env: {}, cracks });
+    const g1 = dg([gapRow]), g2 = dg([gapRow], [{ session: HOST, d_checked: true, crack_gaps: ["ck-gap-1"] }]), g3 = dg([{ ...gapRow, prompt_session_id: ARCH }]), g4 = dg([{ ...gapRow, gap: null }]);
+    assert("C.crack-gap (unit mcrk2) — a gap row of THIS session reds by name on its turn, a COUNT (the turn is allowed: no block, no card); its id rides the log row (crack_gaps)",
+      g1.decision === "allow" && has(g1, "C.crack-gap") && (g1.crack_gaps || []).includes("ck-gap-1") && /ck-gap-1 written with moment undeclared on axis c — the teacher's miss/.test(String((g1.detail || {})["C.crack-gap"] || ""))
+      && CHECKS["C.crack-gap"].mouth === "count" && RANK.includes("C.crack-gap"), JSON.stringify(g1).slice(0, 300));
+    assert("C.crack-gap (unit mcrk2) — the once-latch: a gap this session's log already named does not red again; another session's gap row and a row with no gap never red",
+      !has(g2, "C.crack-gap") && !has(g3, "C.crack-gap") && !has(g4, "C.crack-gap"));
+    const u1 = dg([{ ...gapRow, gap: "session-unchecked", gap_owner: "organism" }]), u2 = dg([{ ...gapRow, gap: "moment-undeclared+session-unchecked", gap_owner: "teacher+organism" }]);
+    assert("C.crack-unchecked (forks row 1281 (2)) — a row written with no calling session id reds the organism's count, never the teacher's; joined with a teacher gap, both count; the turn is allowed",
+      u1.decision === "allow" && has(u1, "C.crack-unchecked") && !has(u1, "C.crack-gap") && CHECKS["C.crack-unchecked"].mouth === "count"
+      && has(u2, "C.crack-unchecked") && has(u2, "C.crack-gap") && u2.decision === "allow", JSON.stringify([u1.reds, u2.reds]));
+  }
   // 1 — the unbound nudge, once per session
   const nudge = decide({ payload: { session_id: ARCH }, sitting: null, forge: FORGE, transcript: "", env: {}, unbound: { line: "STUDY SCOPE NOT BOUND — learn_digest first, then sitting open" }, logRows: [] });
   const nudge2 = decide({ payload: { session_id: ARCH }, sitting: null, forge: FORGE, transcript: "", env: {}, unbound: { line: "STUDY SCOPE NOT BOUND" }, logRows: [{ session: ARCH, nudged: true }] });
@@ -1266,8 +1308,14 @@ async function selftest() {
     const pacer = await import("./forge_session.mjs");
     const skKinds = ((/moment ((?:[a-z_]+\|)+[a-z_]+)`?\s*$/m.exec(sk.split("\n").find((l) => /\[EK CHECK\]/.test(l)) || "") || [])[1] || "").split("|");
     const same = (a, b) => a.length === b.length && a.every((k) => b.includes(k));
-    assert(`FENCE · the pacer's ${pacer.MOMENTS.length} legal kinds = the gate's MOMENT_KINDS = the kinds the skeleton's [EK CHECK] prints (sharp_check included, row 266)`,
-      Array.isArray(pacer.MOMENTS) && same(pacer.MOMENTS, [...MOMENT_KINDS]) && same(skKinds, [...MOMENT_KINDS]) && pacer.MOMENTS.includes("sharp_check"), JSON.stringify({ pacer: pacer.MOMENTS, gate: MOMENT_KINDS, skeleton: skKinds }));
+    // unit mdayq (row 1257, FORK mdayq-1 in ci/mdayq/PROOF.md): `day_close` is legal at the pacer and the gate, and is the
+    // ONE kind the teaching skeleton's [EK CHECK] does not print — it is asked by code at his day end (`day.mjs end` step
+    // 0 names `moment day_close`), never as a mid-lesson check. The skeleton's list is still asserted EXACT: the gate's
+    // kinds minus that one, no more, no fewer.
+    const SKELETON_KINDS = MOMENT_KINDS.filter((k) => k !== "day_close");
+    assert(`FENCE · the pacer's ${pacer.MOMENTS.length} legal kinds = the gate's MOMENT_KINDS; the kinds the skeleton's [EK CHECK] prints = those minus day_close (sharp_check included, row 266; day_close by unit mdayq)`,
+      Array.isArray(pacer.MOMENTS) && same(pacer.MOMENTS, [...MOMENT_KINDS]) && same(skKinds, SKELETON_KINDS) && pacer.MOMENTS.includes("sharp_check")
+      && pacer.MOMENTS.includes("day_close") && SKELETON_KINDS.length === MOMENT_KINDS.length - 1, JSON.stringify({ pacer: pacer.MOMENTS, gate: MOMENT_KINDS, skeleton: skKinds }));
     const q = (rx) => { const m = rx.exec(sk); return m ? m[1] : null; };
     const ranLine = q(/first line names it: "([^"]+)"/), bankLine = q(/the text's first line: "([^"]+)"/);
     const position = (q(/\[POSITION\] (.+?) — never a count/) || "").replace("<the idea, BY NAME>", "pair-merge");
