@@ -31,8 +31,9 @@
 //                      scripts/*.mjs no other file names that log on a code line; its code calls no model, fetches nothing, moves no ref;
 //                      the row's keys are the named ones and every clause carries {n,status} only (no reason text)
 //     BOUND            tracked text outside dressing-room/state differs between --org and --base-org ONLY in the unit's
-//                      files (CRLF folded to LF; listed by git ls-files when the dir is a repo, else walked); with no
-//                      --base-org (the suite member's bare `plants`) the base is ci/mrehearse/BASE read through git in --org
+//                      files (CRLF folded to LF; listed by git ls-files when the dir is a repo, else walked). Judged ONLY
+//                      when --base-org names the base tree (the adoption re-run, the mutant runner); the bare `plants` the
+//                      suite runs prints `CLAUSE BOUND NOT JUDGED` on its own line and the verdict line says so (row 1307 (1))
 //     LAST             no node process naming this run's temp root survives; <org>'s own state dir is byte-identical
 // PORT CLASS (row 1053): no port is bound, no service named, nothing POSTed, nothing restarted; no model is called. Every
 //   child is a finite CLI (git, node) with no service to wait on — no wait on a service exists to bound, no timeout typed.
@@ -223,21 +224,11 @@ function tracked(dir) {
   walk(dir); return out;
 }
 const hashText = (p) => { try { return createHash("sha256").update(readFileSync(p, "utf8").replace(/\r\n/g, "\n")).digest("hex"); } catch { return null; } };
-/** BOUND with no --base-org (the suite member's call, `plants` alone): the base is ci/mrehearse/BASE, read through git in
- *  <org> — tracked changes since it plus untracked files. Unresolvable (no repo, no such commit) → RED, never green. */
-function boundByGit(org) {
-  let sha = ""; try { sha = readFileSync(join(org, "ci", "mrehearse", "BASE"), "utf8").trim(); } catch { /* absent: named below */ }
-  if (!SHA.test(sha)) return { ok: false, detail: "--base-org absent and ci/mrehearse/BASE carries no sha" };
-  const g = (args) => spawnSync("git", ["-C", org, ...args], { encoding: "utf8", windowsHide: true, maxBuffer: 1 << 26 });
-  const d = g(["diff", "--name-only", "-z", sha, "--", "."]), u = g(["ls-files", "--others", "--exclude-standard", "-z"]);
-  if (d.status !== 0 || u.status !== 0) return { ok: false, detail: `--base-org absent and BASE ${sha.slice(0, 7)} is not readable here` };
-  const differ = [...new Set([...d.stdout.split("\0"), ...u.stdout.split("\0")])].filter(Boolean).filter((f) => !f.startsWith("dressing-room/state/"));
-  const outside = differ.filter((f) => !UNIT_FILES.some((x) => (x.endsWith("/") ? f.startsWith(x) : f === x)));
-  return { ok: outside.length === 0, detail: `base ${sha.slice(0, 7)} (git) · ${differ.length} file(s) differ · outside the unit: ${outside.slice(0, 8).join(", ") || "none"}` };
-}
+/** BOUND, judged ONLY when the caller names the base tree (--base-org: the adoption re-run and the mutant runner). The bare
+ *  form the suite runs never judges a file bound against a frozen sha (row 1307 (1)): plants() prints BOUND NOT JUDGED. */
+export const BOUND_NOT_JUDGED = "CLAUSE BOUND NOT JUDGED · no --base-org named: the bare form never judges BOUND against a frozen sha (row 1307 (1))";
 function bound(org, base) {
-  if (!base) return boundByGit(org);
-  if (!existsSync(base)) return { ok: false, detail: "--base-org absent" };
+  if (!existsSync(base)) return { ok: false, detail: `--base-org ${base} does not exist` };
   const keep = (f) => !f.startsWith("dressing-room/state/");
   const a = new Set(tracked(org).filter(keep)), b = new Set(tracked(base).filter(keep));
   const differ = [...new Set([...a, ...b])].filter((f) => !a.has(f) || !b.has(f) || hashText(join(org, f)) !== hashText(join(base, f)));
@@ -268,15 +259,17 @@ function plants({ org, base, only }) {
       let r; try { r = fn(TMP, org); } catch (e) { r = { ok: false, detail: `threw: ${String(e && e.message).slice(0, 160)}` }; }
       res.push({ id, ...r });
     }
-    res.push({ id: "BOUND", ...bound(org, base) });
+    if (base) res.push({ id: "BOUND", ...bound(org, base) });
   } finally { rmSync(TMP, { recursive: true, force: true }); }
   const left = procsNaming(TMP);
   const after = stateHash(org);
   res.push({ id: "LAST", ok: left.length === 0 && before === after, detail: `${left.length} process(es) name the temp root · org state ${before === after ? "byte-identical" : "CHANGED"}` });
   for (const r of res) console.log(`CLAUSE ${r.id} ${r.ok ? "GREEN" : "RED"} · ${r.detail}`);
+  if (!base) console.log(BOUND_NOT_JUDGED);
   const red = res.filter((r) => !r.ok).map((r) => r.id);
+  const nj = base ? "" : " · BOUND NOT JUDGED";
   console.log(`PLANTS mrehearse · ${res.length - red.length} of ${res.length} plant(s) as expected`);   // the suite member's line (unit mmeter)
-  console.log(red.length ? `RED MREHEARSE · ${red.join(",")}` : `GREEN MREHEARSE night-replay · ${res.length} clause(s)`);
+  console.log(red.length ? `RED MREHEARSE · ${red.join(",")}${nj}` : `GREEN MREHEARSE night-replay · ${res.length} clause(s)${nj}`);
   return red.length ? 1 : 0;
 }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ci/mrehearse/run_mutants_mrehearse.mjs --org <build dir> --base-org <base dir>
-// One mutant per witness clause (W1-W6). Each is a COPY of --org's tracked files under os.tmpdir() (git ls-files; of the state
+// One mutant per witness clause (W1-W6, and BOUND under the named --base-org: row 1307 (1) (c)). Each is a COPY of --org's tracked files under os.tmpdir() (git ls-files; of the state
 // dir only the tracked registry.json the plants read) with ONE edit; the witness of THAT copy, run with
 // `plants --only <clause>`, must read RED on the clause that names it. The control (the copy, unedited) runs the WHOLE
 // witness and must read GREEN. The edit site is matched in the file's OWN line ending and must be unique, or the mutant is
@@ -25,6 +25,7 @@ const MUTANTS = [
   { clause: "W3", file: W, own: true, from: "if (rr.code_sha !== mark.head) return", to: "if (false) return", what: "code_sha not compared with the night's head" },
   { clause: "W4", file: "scripts/rehearse.mjs", from: "export const CARRIED = Object.freeze([9, 10, 11]);", to: "export const CARRIED = Object.freeze([]);", what: "F4 A dropped: 9-11 read off the snapshot's machine" },
   { clause: "W5", file: "scripts/rehearse.mjs", from: "if (!n || !n.begun || n.closed) return", to: "if (!n || n.closed) return", what: "a night no runner began is rehearsed" },
+  { clause: "BOUND", file: W, own: true, from: 'export const UNIT_FILES = Object.freeze(["scripts/rehearse.mjs", "scripts/night.mjs", "ci/witness/mrehearse/", "ci/mrehearse/"]);', to: 'export const UNIT_FILES = Object.freeze(["scripts/rehearse.mjs", "ci/witness/mrehearse/", "ci/mrehearse/"]);', what: "BOUND under a named base: night.mjs (a file that differs) no longer counted as the unit's" },
   { clause: "W6", file: "scripts/rehearse.mjs", from: 'clauses.push({ n, status: s || "UNREAD" });', to: 'clauses.push({ n, status: s || "UNREAD", why: "reason" });', what: "the reason text reaches the log" },
 ];
 

@@ -40,3 +40,9 @@
 {"ts":"2026-11-21T07:36:16.306Z","act":"mutants","cmd":"node ci/mrehearse/run_mutants_mrehearse.mjs --org . --base-org <base 7bf008b>","last_line":"run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-21T08:06:51.042Z","act":"ci","cmd":"curl api.github.com/.../commits/28f455ff330c5c58eaf43600a68ea36a1db4ea34/check-runs ; NODE_USE_ENV_PROXY=1 node scripts/ci_verdict.mjs 28f455ff330c5c58eaf43600a68ea36a1db4ea34","last_line":"PENDING — 4 checks queued (runs 136776115989, 136776115720, 136776115946, 136776115982)"}
 {"ts":"2026-11-21T08:06:51.042Z","act":"checkpoint","cmd":"forks rows 1233 (2) / 1236","last_line":"CHECKPOINT · MERGED 7bf008b · merge c955adc · work tip 28f455f · legs PENDING · STOPPED"}
+{"ts": "2026-11-22T11:26Z", "act": "merge", "cmd": "git merge --no-edit origin/main (84cbc031)", "last_line": "3f6880c clean"}
+{"ts": "2026-11-22T11:26Z", "act": "fix", "cmd": "row 1307 (1): bare plants prints BOUND NOT JUDGED; BOUND only under --base-org; BOUND mutant added", "last_line": "bare: PLANTS mrehearse · 7 of 7 · GREEN … · BOUND NOT JUDGED [exit 0]"}
+{"ts": "2026-11-22T11:26Z", "act": "witness-both", "cmd": "plants --org . / --org <base> with --base-org <git archive 84cbc03>", "last_line": "GREEN MREHEARSE night-replay · 8 clause(s) / RED MREHEARSE · W1,W2,W3,W4,W5,W6"}
+{"ts": "2026-11-22T11:26Z", "act": "mutants", "cmd": "node ci/mrehearse/run_mutants_mrehearse.mjs --org . --base-org <base 84cbc03>", "last_line": "run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts": "2026-11-22T11:26Z", "act": "measure", "cmd": "ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all", "last_line": "organism_test: 174 passed, 0 failed · CLAUSE WITNESSES 10/10 ok [exit 0]"}
+{"ts": "2026-11-22T11:26Z", "act": "checkpoint", "cmd": "runner order rows 1300 / 1307", "last_line": "CHECKPOINT · RE-BASED · merge 3f6880c · BASE 84cbc03 · STOPPED"}

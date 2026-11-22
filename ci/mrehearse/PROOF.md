@@ -197,3 +197,33 @@ node scripts/lawpack.mjs gate      build: lawpack: GREEN — no law's finding co
 ```
 
 CHECKPOINT · MERGED 7bf008b at 2026-11-21T08:06Z · merge commit `c955adc` (main `7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f` into `393584c`, clean, no conflicted file) · BASE `7bf008b` · work tip `28f455ff330c5c58eaf43600a68ea36a1db4ea34` · witness `GREEN MREHEARSE night-replay · 8 clause(s)` (build) / `RED MREHEARSE · W1,W2,W3,W4,W5,W6` (base) · mutants `run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN` · neutral legs of `28f455f`, read by curl (public API, no token) 45+ minutes after the push: PENDING, all four checks still queued (`npm test · node 22` run 136776115989, `npm test · node 24` run 136776115720, `hermetic twice · node 22` run 136776115946, `hermetic twice · node 24` run 136776115982); `ci_verdict.mjs 28f455f…` → PENDING. No red was read; no retry is made. The commit carrying this line touches only this proof and the ledger, and its own legs judge the same code. STOPPED.
+
+## Re-base on main 84cbc03 + row 1307 (1) (runner orders rows 1300 (2)/(3), amended by row 1307; 22 Nov 2026)
+
+The car `land/mrehearse 41ccae0` read RED on both legs (runs 137178554772 / 137178554751). The cause was BOUND alone: the bare
+`plants` judged BOUND against the frozen `ci/mrehearse/BASE` (7bf008b), so 138 files landed by other units read as "outside the unit".
+Reproduced here on a land-like clone, before the fix: `CLAUSE BOUND RED · base 7bf008b (git, ci/mrehearse/BASE) · 139 file(s) differ`.
+Fixed by row 1307 (1): the bare form never judges BOUND. It prints `CLAUSE BOUND NOT JUDGED · …` on its own line, and the verdict
+line says so. BOUND is judged only under a named `--base-org`, and it now has its own mutant (UNIT_FILES loses night.mjs).
+Merge commit `3f6880c` (origin/main `84cbc03126eddb85c7d5cf54b51610068800315c` into `870d5d0`): clean, no conflicted file.
+BASE is set to `84cbc03`. Branch: `claude/mrehearse-build` (row 1307 (a)).
+
+```
+node ci/witness/mrehearse/witness_rehearse.mjs plants                                   (bare, merged tree)
+CLAUSE BOUND NOT JUDGED · no --base-org named: the bare form never judges BOUND against a frozen sha (row 1307 (1))
+PLANTS mrehearse · 7 of 7 plant(s) as expected
+GREEN MREHEARSE night-replay · 7 clause(s) · BOUND NOT JUDGED                            exit 0
+node ci/witness/mrehearse/witness_rehearse.mjs plants --org . --base-org <git archive 84cbc03>
+PLANTS mrehearse · 8 of 8 plant(s) as expected
+GREEN MREHEARSE night-replay · 8 clause(s)                                               exit 0
+node ci/witness/mrehearse/witness_rehearse.mjs plants --org <base 84cbc03> --base-org <base 84cbc03>
+PLANTS mrehearse · 2 of 8 plant(s) as expected
+RED MREHEARSE · W1,W2,W3,W4,W5,W6                                                        exit 1
+node ci/mrehearse/run_mutants_mrehearse.mjs --org . --base-org <base 84cbc03>
+run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all
+organism_test: 174 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)   exit 0
+  CLAUSE WITNESSES: 10 of 10 witness(es) ok, ci/witness/mrehearse/witness_rehearse.mjs among them
+```
+
+CHECKPOINT · RE-BASED at 2026-11-22T11:26Z · merge `3f6880c` · BASE `84cbc03` · bare `PLANTS mrehearse · 7 of 7 plant(s) as expected` + `BOUND NOT JUDGED` (exit 0) · named base `GREEN MREHEARSE night-replay · 8 clause(s)` / base `RED MREHEARSE · W1,W2,W3,W4,W5,W6` · mutants `7 of 7 … · control GREEN` · WITNESSES 10/10 ok · pushed [skip ci] · STOPPED.
