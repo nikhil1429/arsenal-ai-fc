@@ -37,6 +37,7 @@
 //   G2   ONE-LINE (carried) done.mjs line --hermetic prints ONE `DONE · ` line holding `rungs UNREAD` (both trees)
 //   G3   LAWPACK (ruling forks row 1130 (1)) every count on the law pack's findings line (node scripts/lawpack.mjs report)
 //        of the --org copy is no higher than the same count on --base-org — the build raises no law pack count (GREEN on both)
+//        + unit mpin-law (row 1316 (1)): a count BORN at --org (its BASELINE key absent at --base-org) is read against --org's BASELINE
 //   BOUND only the named files differ from --base-org (ci/mrung/** is this unit's own output)
 //   LAST  no node process naming the temp root survives
 // LAST LINE: GREEN MRUNG <what> · <n> clause(s) (exit 0) or RED MRUNG · <clauses> (exit 1)
@@ -285,7 +286,14 @@ try {
       return { line: L, c };
     };
     const a = counts(P), b = BASE_ORG ? counts(BASE_ORG) : { line: null, c: null };
-    const higher = a.c && b.c ? Object.keys(a.c).filter((k) => !(k in b.c) || a.c[k] > b.c[k]) : null;
+    // RE-CUT by unit mpin-law (forks row 1316 (1), spec ci/mpinl/AMENDMENT_1315.md A4); the struck text, kept as written:
+    //   const higher = a.c && b.c ? Object.keys(a.c).filter((k) => !(k in b.c) || a.c[k] > b.c[k]) : null;
+    // A count is BORN when the --org copy's BASELINE holds its key and --base-org's does not: it is read against --org's BASELINE
+    // for it. A count --base-org prints keeps --base-org's number.
+    const tableOf = (dir) => { const r = run("--input-type=module", ["-e", `const m = await import(${JSON.stringify(pathToFileURL(join(dir, "scripts", "lawpack.mjs")).href)}); console.log(JSON.stringify(m.BASELINE));`], { cwd: dir }); try { return JSON.parse(lines(r.stdout).filter(Boolean).at(-1)); } catch { return null; } };
+    const TA = tableOf(P), TB = BASE_ORG ? tableOf(BASE_ORG) : null;
+    const bornOf = (k) => (TA && TB && !(k in TB) && Number.isSafeInteger(TA[k]) ? TA[k] : 0);
+    const higher = a.c && b.c ? Object.keys(a.c).filter((k) => (k in b.c ? a.c[k] > b.c[k] : a.c[k] > bornOf(k))) : null;
     clause("G3", !!higher && higher.length === 0 && Object.keys(a.c).length > 0,
       !a.c || !b.c ? `the law pack's findings line is unreadable (${!a.c ? "--org" : "--base-org"})` : `${Object.keys(a.c).length} count(s) · higher than BASE: ${higher.length ? higher.map((k) => `${k} ${a.c[k]} > ${b.c[k]}`).join(", ") : "none"} · jugad ${a.c["jugad-literal-subject-list"]} vs ${b.c["jugad-literal-subject-list"]} · depcruise ${a.c.depcruise_errors} vs ${b.c.depcruise_errors}`);
   }

@@ -93,6 +93,8 @@ export function parseLawpack(text) {
  *  whose count is higher at the head than at the merge base is a NEW red named by law and numbers. The base's count is its own
  *  machine line; a base with NO such line is compared against `baseline` — lawpack.mjs's frozen BASELINE, read from that file by
  *  the caller, never typed. A law the base does not count compares against the baseline's, else 0 (nothing is grandfathered).
+ *  Unit mpin-law (forks row 1316 (1)): a base WITH a line that does not count a law is handed the baseline too (the caller,
+ *  main()'s compare): that law is BORN at the head and is read against the head's own BASELINE for it.
  *  Stricter only: an equal or a lower count adds nothing. No head line ⇒ nothing to judge; a base with no line and no readable
  *  baseline is itself a NEW red (never GREEN by absence).
  *  @param {Record<string, number> | null | undefined} headLp @param {Record<string, number> | null | undefined} baseLp
@@ -516,6 +518,15 @@ function selftest() {
     && noBase(null).v === "RED" && /^LAW PACK BASELINE UNREADABLE/.test(noBase(null).fresh[0] || ""));
   ok("PLANTED mlaw · a law the base does not count is judged against the baseline, else 0 (nothing grandfathered); no head line judges nothing",
     lawpackRises({ fresh: 1 }, { jugad: 90 }).length === 1 && lawpackRises({ fresh: 0 }, { jugad: 90 }).length === 0 && lawpackRises(null, null).length === 0);
+  // unit mpin-law (forks row 1316 (1), AMENDMENT_1315.md §3 V1-V3): a rule BORN with its baseline is not a rise
+  const vh = { jugad: 90, "own-literal-pin": 39 }, vb = { jugad: 90 };
+  ok("V1 · mpin-law · a law BORN at the head (the base's line does not count it) is read against the head's BASELINE: at it GREEN, one above RED by numbers",
+    lawpackRises(vh, vb, { jugad: 90, "own-literal-pin": 39 }).length === 0
+    && lawpackRises({ ...vh, "own-literal-pin": 40 }, vb, { jugad: 90, "own-literal-pin": 39 })[0] === "LAW PACK ROSE · own-literal-pin 39 → 40");
+  ok("V2 · mpin-law · a baseline RAISED LATER is still a rise: a law the base counts keeps the base's number, whatever the baseline says",
+    JSON.stringify(lawpackRises({ "own-literal-pin": 45 }, { "own-literal-pin": 39 }, { "own-literal-pin": 45 })) === '["LAW PACK ROSE · own-literal-pin 39 → 45"]');
+  ok("V3 · mpin-law · a law with NO baseline key, counted at the head and not at the base, reads 0 and is RED (nothing grandfathered)",
+    JSON.stringify(lawpackRises({ "x-new": 2 }, { jugad: 90 }, { jugad: 90 })) === '["LAW PACK ROSE · x-new 0 → 2"]');
   const many = Array.from({ length: 14 }, (_, i) => `red-${i}`);
   const a = annotate("warning", "BASE RED", many);
   ok("annotate: 14 reds ride 10 annotations, the tenth carrying the last five — every red emitted", a.length === 10 && many.every((n) => a.some((l) => l.includes(n))) && a[9].includes("red-13"));
@@ -626,7 +637,11 @@ async function main() {
     const folded = mergeParts(read(flag("head")), flags("head-part").map(read));
     const head = folded.suite, base = parseSuite(read(flag("base")));
     // unit mlaw (F3 A): only a base with no law pack line needs the frozen baseline, read from lawpack.mjs itself (never typed here)
-    const baseline = head && head.lawpack && base && !base.lawpack ? await frozenBaseline() : null;
+    // STRUCK by unit mpin-law (forks row 1316 (1), spec ci/mpinl/AMENDMENT_1315.md A2), kept as written:
+    //   const baseline = head && head.lawpack && base && !base.lawpack ? await frozenBaseline() : null;
+    // A base WITH a line that does not count a law the head counts (a rule BORN at the head) is handed the baseline too, so
+    // lawpackRises reads that law against the head's own BASELINE (row 1137 (2)); every law the base counts keeps the base's number.
+    const baseline = head && head.lawpack && base && (!base.lawpack || Object.keys(head.lawpack).some((k) => !(k in base.lawpack))) ? await frozenBaseline() : null;
     const { lines, verdict } = compareLines(head, base, flag("label") || "suite", flag("head-sha") || "", flag("base-sha") || "", read(flag("base-instrument")), baseline, workspaceSrc,
       { readFile: workspaceFile, tracked: workspaceTracked, text: { head: read(flag("head")), base: read(flag("base")) } }, folded.shards);   // unit mdtl2: the workspace doors
     for (const l of lines) console.log(l);
