@@ -1,0 +1,11 @@
+{"ts":"2026-11-22T14:42:10.565Z","act":"cut","cmd":"git checkout -b claude/mg9-build 84cbc03 (forks rows 1314 (2) / 1315 (4))","last_line":"84cbc03 · BASE written"}
+{"ts":"2026-11-22T14:42:10.565Z","act":"build","cmd":"ci/witness/mcrk2/witness_crack_gap.mjs: archive returns lastAt; compile hands compileDay now = max(real, lastAt + 1); 5 calls pass it; the old helper struck in place","last_line":"no product byte"}
+{"ts":"2026-11-22T14:42:10.565Z","act":"measure","cmd":"node ci/witness/mcrk2/witness_crack_gap.mjs plants --only G8,G9","last_line":"PLANTS mcrk2 · 2 of 2 plant(s) as expected"}
+{"ts":"2026-11-22T14:42:10.565Z","act":"build","cmd":"ci/mg9/witness_mg9.mjs (FAST · STRUCK · BOUND · LAST)","last_line":""}
+{"ts":"2026-11-22T14:42:10.565Z","act":"measure","cmd":"node ci/mg9/run_mutants_mg9.mjs (first FAST: the product's default clock lagged only)","last_line":"run_mutants: 2 of 4 mutant(s) RED · control GREEN — M2 / M3 slipped: FAST widened (records 100x further ahead)"}
+{"ts":"2026-11-22T14:42:10.565Z","act":"measure","cmd":"node ci/mg9/witness_mg9.mjs --org <tip> --base-org <84cbc03>","last_line":"GREEN MG9 … · 4 clause(s)"}
+{"ts":"2026-11-22T14:42:10.565Z","act":"measure","cmd":"node ci/mg9/witness_mg9.mjs --org <84cbc03> --base-org <same>","last_line":"RED MG9 · FAST, STRUCK"}
+{"ts":"2026-11-22T14:42:10.565Z","act":"measure","cmd":"node ci/mg9/run_mutants_mg9.mjs --org <tip> --base-org <84cbc03>","last_line":"run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-22T14:42:10.565Z","act":"measure","cmd":"G9 repaired 50 × three ways → ci/mg9/G9_50.txt","last_line":"(a) GREEN 50 RED 0 · (b) GREEN 50 RED 0 · (c) GREEN 50 RED 0"}
+{"ts":"2026-11-22T14:42:10.565Z","act":"measure","cmd":"mcap 50 × three ways → ci/mg9/MCAP_50.txt","last_line":"(a) GREEN 50 RED 0 · (b) GREEN 0 RED 50 (base 5759cce, 38 of 86 each run, by contract) · (c) GREEN 50 RED 0 · no flip in 150"}
+{"ts":"2026-11-22T14:42:10.565Z","act":"measure","cmd":"mdayv 50 × three ways → ci/mg9/MDAYV_50.txt","last_line":"(a) GREEN 50 RED 0 · (b) GREEN 0 RED 50 (base 7bf008b, 4 of 27 each run, by contract) · (c) GREEN 50 RED 0 · no flip in 150"}
