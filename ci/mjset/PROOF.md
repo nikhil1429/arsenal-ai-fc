@@ -180,6 +180,30 @@ mclk, mdet, mdtl2), so files beyond its named list differ; the same line at the 
   - hermetic suite, 22 Nov 2026 (a local clone at 5b564cb): `organism_test: 168 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 125` — the one FAIL
     is the GATES member, fork (4); the mjset clause witness member reads `ok`.
 
+## 10 · MBANK LANDED — MERGE OF MAIN d585648 (runner M, rows 1279 (5) / 1284 (2), 22 Nov 2026)
+
+- `git config core.autocrlf false && git config core.eol lf`, then `git fetch origin main` → `d585648e3438147d97140248c69f900af7327d58`
+  (mbank landed as a re-cut on mt1 727ba23, so f635d68 itself is not an ancestor; its content is). Merged by a merge commit,
+  `700c2a3`. `ci/mjset/BASE` = `d585648e3438147d97140248c69f900af7327d58` from this commit on.
+- **Conflicts, 3, each in a file of mbank's own (no mjset commit ever touched one), each taken from main — the landed record:**
+  - `scripts/organism_test.mjs` — one hunk, the B20 lane's `LANE_ENV` line: main builds the env with `ARSENAL_ORGAN` filtered out
+    (mbank's checkJs fix, the diagnostic of §8 / fork (4)); the provisional side's line is gone.
+  - `ci/mbank/PROOF.md` and `ci/mbank/LEDGER.jsonl` — add/add, the provisional f635d68 text against the landed text.
+- **Auto-merged, 4:** `.claude/skills/forge/SKILL.md`, `scripts/forge_session.mjs`, `scripts/notes_compiler.mjs` — each now byte-equal
+  to main; `scripts/gaffer_brain.mjs` — main's file (byte-equal to f635d68's) plus mjset's own hunks, the same changed lines as
+  before the merge (`git diff` line sets hashed and compared, 22 Nov 2026). After the merge, `git diff --name-only d585648` names
+  only mjset's 9 files.
+- Each line by its command, 22 Nov 2026, the base leg the export of d585648 itself:
+  - head: `node ci/mjset/witness_mjset.mjs --org <700c2a3> --base-org <d585648>` → `GREEN MJSET … · 15 clause(s)` (BOUND: 9 file(s) differ, every one named)
+  - base: `--org <d585648> --base-org <d585648>` → `RED MJSET · W1, W2, W3, W4, W5, W6, W7, W8, W9, W11, W12, W13, W14`
+  - mutants: `run_mutants: 16 of 16 mutant(s) RED by the clause that names them · control GREEN`
+  - gates (an LF tree: `git ls-files --eol` → `i/lf w/lf`): `other checkJs diagnostics 296 (baseline 296, may only fall)` — main
+    d585648's own export reads the same 296 · lint `no-empty 262 · no-unused-vars 82 · (directive) 2` = frozen · last line
+    `gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides, and every schema'd state file matches`.
+    **Fork (4) mjset-gates is closed as ruled: 296.**
+  - members, 22 Nov 2026: `gaffer_brain selftest: 206 passed, 0 failed` · postmatch and claudegen `ALL CHECKS PASSED` · `node scripts/models.mjs check` exit 0
+  - hermetic suite, 22 Nov 2026 (a local clone at 700c2a3): `organism_test: 171 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125`
+
 ## CHECKPOINT
 
-CHECKPOINT · 2026-11-22 · row 1279 (1)-(3) built (W13 both ways, W14 + M14, claudegen's one line) on 1d8af54, 16 of 16 mutants · resume from: the runner's message naming the main that carries mbank — merge it (a merge commit), re-read the gates (expected 296, fork (4)), re-run the witness and mutants at the merge, push; then the re-cut above mbank in his study order (row 1279 (5)). Earlier: main a0645d2 merged (1d8af54) · 2026-11-21 F1 C · F2 B · F3 A · F4 A · F5 A · F6 A · row 1245 (1) (2) (3) · row 1260 (2).
+CHECKPOINT · 2026-11-22 · mbank LANDED: main d585648 merged (700c2a3), BASE = d585648, witness GREEN against it (RED on it), 16 of 16 mutants, gates GREEN at 296, the suite green · resume from: the architect's own legs on this tip; then mdayq, mcrk2 in his study order (row 1279 (5)). Earlier: row 1279 (1)-(3) built on 1d8af54 · main a0645d2 merged (1d8af54) · 2026-11-21 F1 C · F2 B · F3 A · F4 A · F5 A · F6 A · row 1245 (1) (2) (3) · row 1260 (2).
