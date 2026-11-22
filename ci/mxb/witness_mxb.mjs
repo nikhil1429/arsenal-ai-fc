@@ -22,8 +22,8 @@
 //   W1-W6 B1-B6     the declared sole writer is the IR's ONE writer of its state file (models.json · sitting.json ·
 //                   brain_outcomes.jsonl · manager_notes.json · rails_blind.jsonl · teaching_gate.jsonl)
 //   W7    Q6        Q6 is exactly usage_reading.json<usage_tap.mjs (D1, kept outside the repo by F11 A)
-//   W8    GUARD     no writer invented: Q2 rows = the base's, Q5 = 0, every ADDED writer edge lands on an unshared file
-//   W9    GUARD     no organ's unresolved sites rise, base → org
+//   W8 BOUND  GUARD     (row 1311 (1): a base-vs-head whole-tree count, judged at adoption, dropped by the member) no writer invented: Q2 rows = the base's, Q5 = 0, every ADDED writer edge lands on an unshared file
+//   W9 BOUND  GUARD     (row 1311 (1), same shape) no organ's unresolved sites rise, base → org
 //   W10   GUARD     P10, a planted idiom: a selftest's `facts({ stateDir: bare })` never makes the test dir a live read
 //   W11   SELFTEST  xray's own selftest: the three NUL asserts (calibration · dmn · rejirah) read ok — main holds the
 //                   `\u0000` escape and no raw NUL byte (forks row 616; lawpack raw-nul-in-source)
@@ -150,14 +150,14 @@ try {
       return { ok: same && O.q5 === 0 && shared.length === 0,
         s: `Q2 ${same ? "= base" : `[${O.q2.join(" | ")}] vs base [${Bf.q2.join(" | ")}]`} · Q5 ${O.q5} · added writer edges ${added.length}, onto a shared file ${shared.length}${shared.length ? " " + shared.map((e) => `${e.p}<${e.o}`).join(",") : ""}` };
     });
-    clause("W8", rs.map((r) => r.ok), say(rs));
+    clause("W8 BOUND", rs.map((r) => r.ok), say(rs));
   }
   {
     const rs = per(({ O, Bf }) => {
       const up = Object.keys(O.organs).filter((o) => o in Bf.organs && O.organs[o] > Bf.organs[o]).map((o) => `${o}:${Bf.organs[o]}->${O.organs[o]}`);
       return { ok: up.length === 0, s: `unresolved ${Bf.total} -> ${O.total}; organs that rose [${up.join(" ")}]` };
     });
-    clause("W9", rs.map((r) => r.ok), say(rs));
+    clause("W9 BOUND", rs.map((r) => r.ok), say(rs));
   }
   {
     const rs = per(({ P }) => {

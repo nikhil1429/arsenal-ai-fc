@@ -48,9 +48,9 @@ const MUTANTS = [
     from: "      if (!isBlock) return evalNode(fv.body, s);", to: "      if (!isBlock) return UNKNOWN;" },
   { id: "M7", kills: "W7", why: "`probe` is a test word again (finishProbe's write is a fixture, B1 stays in Q6) — F-CTX0 reversed",
     from: "const FIX_CTX = /selftest|selfTest|_test|fixture|demo|canary/i;", to: "const FIX_CTX = /selftest|selfTest|_test|fixture|demo|canary|probe/i;" },
-  { id: "M8", kills: "W8", why: "openSync is a WRITE whatever its flag (the naive sink-class fix for B5: a read-open becomes a writer)",
+  { id: "M8", kills: "W8 BOUND", why: "openSync is a WRITE whatever its flag (the naive sink-class fix for B5: a read-open becomes a writer)",
     from: "            if (isC(v)) scope.set(`${n.id.name}#fd`, v);", to: "            if (isC(v)) { scope.set(`${n.id.name}#fd`, v); addSink(writes, v.v, n.loc.start.line, \"openSync\"); }" },
-  { id: "M9", kills: "W9", why: "a writeSync on a descriptor the IR cannot follow is counted as an unresolved site",
+  { id: "M9", kills: "W9 BOUND", why: "a writeSync on a descriptor the IR cannot follow is counted as an unresolved site",
     from: "            if (isC(v)) addSink(writes, v.v, line, \"writeSync→WRITE(fd)\");", to: "            if (isC(v)) addSink(writes, v.v, line, \"writeSync→WRITE(fd)\"); else noteUnresolved(line, name, \"fd\");" },
   { id: "M10", kills: "W10", why: "an object value built at a TEST call site binds a production parameter (G-FIX off)",
     from: "            const fixSite = FIX_CTX.test(String(CTX));", to: "            const fixSite = false;" },
@@ -69,7 +69,7 @@ const MUTANTS = [
 const judge = (org) => {
   const r = spawnSync(process.execPath, [join(HERE, "witness_mxb.mjs"), "--org", org, "--base-org", BASE], { encoding: "utf8", env: { ...process.env, MXB_WITNESS_TMP: T, ANTHROPIC_API_KEY: "" } });
   const ls = lines(r.stdout);
-  return { red: ls.filter((l) => /^\s+RED\s+\S/.test(l)).map((l) => l.trim().split(/\s+/)[1]), last: ls[ls.length - 1] || "(no output)", code: r.status };
+  return { red: ls.filter((l) => /^\s+RED\s+\S/.test(l)).map((l) => l.trim().replace(/^RED\s+/, "").split(" · ")[0].trim()), last: ls[ls.length - 1] || "(no output)", code: r.status };
 };
 
 const ctl = judge(ORG);
