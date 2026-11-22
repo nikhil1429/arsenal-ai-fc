@@ -533,9 +533,46 @@ function autocloseDecision(prior, lastTs) {
   return { act: "unsettled", prev, redo: [...(prev.compile_done ? [] : ["compile"]), ...(prev.judge_settled ? [] : ["judge"])] };
 }
 
+// ── unit mjset · row 1245 (1) · THE JUDGE LINE IS KEPT PER CARRIER (law L9: layering, never replace) ───────────────────────
+// MEASURED (MJSET_SPEC §15.5 N1): the unsettled re-run replaced the record's ONE `JUDGE:` line in place (`text.replace`), so the
+// evening try of 19 Nov was lost to the morning try of 20 Nov — a re-run overwrote the earlier receipt of the same day. Now every
+// try is ALSO a line of its own, `JUDGE TRY · <anchor> · <ISO instant> · <the JUDGE line it wrote>`, appended and never replaced;
+// the newest try stays the one `^JUDGE: ` line, so judge_settled and the redo read the NEWEST try and every reader of `^JUDGE: `
+// is unchanged (`^JUDGE: ` never matches a `JUDGE TRY` line). A record written before this clause (no try line) keeps its old
+// JUDGE line as a try of its own carrier, the record's CLOSED-BY anchor and instant, the moment a later try lands.
+const JUDGE_TRY_HEAD = "JUDGE TRY · ";
+/** judgeTryLine — ONE kept try: its carrier (the anchor), its instant (the close's clock) and the JUDGE line it wrote, byte for byte. */
+function judgeTryLine(anchor, at, judgeLine) { return `${JUDGE_TRY_HEAD}${anchor} · ${at} · ${judgeLine}`; }
+/** judgeTriesOf — every kept try line of a record, in order. */
+function judgeTriesOf(text) { return String(text == null ? "" : text).split(/\r?\n/).filter((l) => l.startsWith(JUDGE_TRY_HEAD)); }
+/** priorTriesOf — the tries a rewrite of `prior` must carry: its kept tries, plus its JUDGE line as a try of its own carrier when no
+ *  kept try holds it (a record written before this clause). Pending lines are not tries. */
+function priorTriesOf(prior) {
+  const prev = parseMachineRecord(prior);
+  const tries = judgeTriesOf(prior);
+  if (!prev || !prev.judge_line || prev.judge_line === PENDING_JUDGE) return tries;
+  return tries.some((l) => l.endsWith(` · ${prev.judge_line}`)) ? tries : [judgeTryLine(prev.anchor, prev.at, prev.judge_line), ...tries];
+}
+/** keepJudgeTry — PURE: the record `text` after a later try: its `JUDGE:` line becomes `newLine` (the newest), and the new try is
+ *  APPENDED below every earlier one, each earlier line byte for byte (an old record's own JUDGE line kept first as a try). */
+function keepJudgeTry(text, newLine, carrier) {
+  const t = String(text), prev = parseMachineRecord(t);
+  if (!prev || !prev.judge_line) return t;
+  const keep = priorTriesOf(t).filter((l) => !judgeTriesOf(t).includes(l));   // the old JUDGE line as a try, when no try holds it
+  const add = [...keep, judgeTryLine(carrier.anchor, carrier.at, newLine)];
+  const lines = t.split("\n");
+  const ji = lines.findIndex((l) => l.replace(/\r$/, "") === prev.judge_line);
+  if (ji < 0) return t;
+  lines[ji] = newLine;
+  let last = ji;
+  for (let i = ji + 1; i < lines.length && lines[i].startsWith(JUDGE_TRY_HEAD); i++) last = i;
+  lines.splice(last + 1, 0, ...add);
+  return lines.join("\n");
+}
+
 /** renderMachineRecord — post_match/D.md written by CODE: his two lines NAMED absent, never fabricated (F1: no legal RESULT;
  *  the KAL-LINE carries a colon, so KAL_RE — manager.mjs's and daily_green's parser — never matches it). */
-function renderMachineRecord({ day, anchor, at, ev, tt, archiveLine, compileLine, judgeLine, queueLine = null }) {
+function renderMachineRecord({ day, anchor, at, ev, tt, archiveLine, compileLine, judgeLine, queueLine = null, judgeTries = [] }) {
   const L = [];
   L.push(`${BADGE} POST-MATCH · ${day} · closed by code — his word not given`);
   L.push("");
@@ -552,6 +589,7 @@ function renderMachineRecord({ day, anchor, at, ev, tt, archiveLine, compileLine
   L.push(`ARCHIVE: ${oneLine(archiveLine, 220)}`);
   L.push(compileLine);
   L.push(judgeLine);
+  for (const l of judgeTries) L.push(l);   // mjset row 1245 (1): every try kept, a line of its own (absent ⇒ the bytes stay as before)
   L.push("");
   L.push("His half stays his: his full time (/full-time) writes his RESULT and KAL-line on top of this record, and this block stays below it (L9).");
   return L.join("\n") + "\n";
@@ -774,7 +812,7 @@ async function autoclose(argv) {
   // later child's slot. A call that does not fit is not started, and its line says so: UNSETTLED, not reached.
   const dl = autocloseDeadline({ at: clock.at });
   if (dl.door) console.error(`postmatch: autoclose deadline door ${dl.door}`);
-  const { fits, spawnMs } = closeTimer({ at: clock.at, dlMs: dl.ms });   // the ONE clock: every time left below is read through it
+  const { fits, spawnMs, stepNow } = closeTimer({ at: clock.at, dlMs: dl.ms });   // the ONE clock: every time left below is read through it
   const { spawnSync } = await import("node:child_process");
   const run = (file, args, { env = process.env, timeout = CHILD_TIMEOUT_MS } = {}) => spawnSync(process.execPath, [join(__dirname, file), ...args],
     { cwd: join(__dirname, ".."), encoding: "utf8", windowsHide: true, timeout, env });
@@ -865,7 +903,8 @@ async function autoclose(argv) {
     if (dry) { console.log(`autoclose · ${day} · unsettled (${dec.redo.join(" + ")}) · --dry: would re-run ${dec.redo.join(" + ")} and refresh only that line · nothing written`); return 0; }
     let text = prior;
     if (dec.redo.includes("compile")) { const l = compileRun(); text = text.replace(dec.prev.compile_line, () => l); }
-    if (dec.redo.includes("judge")) { const l = judgeRun(); text = text.replace(dec.prev.judge_line, () => l); }
+    // mjset row 1245 (1): the later try is a line of its own — the earlier one is KEPT, never replaced (keepJudgeTry)
+    if (dec.redo.includes("judge")) { const l = judgeRun(); text = keepJudgeTry(text, l, { anchor, at: new Date(stepNow()).toISOString() }); }
     if (text === prior) { console.log(`autoclose · ${day} · unsettled (${dec.redo.join(" + ")}) · re-run, the same answer · nothing written`); return 0; }
     try { writeAtomic(pmFile, text); } catch (e) { console.error(`postmatch: autoclose — the refreshed line could NOT be written (${oneLine((e && e.message) || e, 120)})`); return 1; }
     const after = parseMachineRecord(text) || {};
@@ -875,7 +914,11 @@ async function autoclose(argv) {
 
   // (v) THE MACHINE RECORD — written first; the compile and the judge fill their lines as they finish
   const at = clock.at.toISOString();
-  const record = (compileLine, judgeLine) => renderMachineRecord({ day, anchor, at, ev, tt, archiveLine, compileLine, judgeLine, queueLine: queueOnly ? queueEvidenceLine(day, queue) : null });
+  // mjset row 1245 (1): a refreshed record carries every earlier try of the day (kept, never replaced), and this close's own try
+  const priorTries = dec.act === "refresh" ? priorTriesOf(prior) : [];
+  let ownTry = null;
+  const record = (compileLine, judgeLine) => renderMachineRecord({ day, anchor, at, ev, tt, archiveLine, compileLine, judgeLine, queueLine: queueOnly ? queueEvidenceLine(day, queue) : null,
+    judgeTries: [...priorTries, ...(ownTry ? [ownTry] : [])] });
   if (dry) { console.log("--- AUTOCLOSE DRY RUN (nothing written) ---\n" + record(PENDING_COMPILE, PENDING_JUDGE)); return 0; }
   const did = dec.act === "refresh" ? "refreshed" : "closed";
   try { writeAtomic(pmFile, record(PENDING_COMPILE, PENDING_JUDGE)); }
@@ -887,6 +930,7 @@ async function autoclose(argv) {
   try {
     writeAtomic(pmFile, record(compileLine, PENDING_JUDGE));
     judgeLine = judgeRun();
+    ownTry = judgeTryLine(anchor, new Date(stepNow()).toISOString(), judgeLine);
     writeAtomic(pmFile, record(compileLine, judgeLine));
   } catch (e) { console.error(`postmatch: autoclose — a line of the record could NOT be written (${oneLine((e && e.message) || e, 120)}); the next anchor finishes it`); return 1; }
   // (viii) HIS HALF — ONE card, after an evening close only; a KEPT card names every day still open (mcard, dayCloseCard)
@@ -1130,6 +1174,19 @@ async function selftest() {
       && /^JUDGE: NOT BANKED/.test(judgeLineOf({ status: 1, stdout: "gaffer_brain: the judge lane did not answer (x) — the round STAYS in the queue and nothing was invented. Run judge-round again.\n" }))
       && /^JUDGE: NOT BANKED/.test(judgeLineOf({ status: 1, stdout: "gaffer_brain: \"day.close\" is not a declared code trigger (sitting.close | pacer) — an undeclared door mints no stamp\n" }))
       && /^JUDGE: NOT BANKED · partly/.test(judgeLineOf({ status: 0, stdout: "gaffer_brain: 1 item(s) graded in ONE Opus call · types: x · 1 still outstanding\n" })));
+    {
+      // unit mjset · row 1245 (1) — the evening try, then the morning try of the same day: BOTH kept, each with its carrier and
+      // instant, the evening's byte for byte; the decision reads the morning's (the newest `JUDGE:` line)
+      const ev1 = "JUDGE: NOT BANKED · exit 1 · gaffer_brain: RED · ONE CAPTURE PAST THE BUDGET — killed";
+      const mo1 = "JUDGE: NOT BANKED · exit 1 · gaffer_brain: RED · NO BATCH FITS THE BUDGET — cannot fit";
+      const evTry = judgeTryLine("evening", "2026-11-13T18:10:12.000Z", ev1);
+      const after = keepJudgeTry(recWith(ev1).replace(`${ev1}\n`, `${ev1}\n${evTry}\n`), mo1, { anchor: "morning", at: "2026-11-14T03:45:00.000Z" });
+      const old = keepJudgeTry(recWith(ev1), mo1, { anchor: "morning", at: "2026-11-14T03:45:00.000Z" });   // a record written before the clause
+      assert("mjset row 1245 (1) · a later try never replaces an earlier one: evening then morning → both JUDGE TRY lines (the evening's byte for byte), the newest is the one JUDGE line",
+        judgeTriesOf(after).length === 2 && judgeTriesOf(after)[0] === evTry && judgeTriesOf(after)[1] === judgeTryLine("morning", "2026-11-14T03:45:00.000Z", mo1)
+        && parseMachineRecord(after).judge_line === mo1 && (after.match(/^JUDGE: /gm) || []).length === 1
+        && judgeTriesOf(old).length === 2 && judgeTriesOf(old)[0].endsWith(` · ${ev1}`) && judgeTriesOf(old)[0].startsWith("JUDGE TRY · evening · "));
+    }
     assert("AUTOCLOSE — the compile line is DONE only when BOTH of the compiler's own runs (the --session seed, then fulltime) exit 0; anything else says NOTES NOT DONE",
       /^COMPILE: DONE/.test(compileLineOf({ status: 0, stdout: "notes_compiler: 2026-11-13 IST · compiled 1\n", sessions: 1 }, { status: 0, stdout: "notes_compiler: 2026-11-13 IST · compiled 0 · unchanged 1\n" }))
       && /^COMPILE: NOTES NOT DONE · fulltime exit 1/.test(compileLineOf({ status: 0, stdout: "", sessions: 1 }, { status: 1, stdout: "notes_compiler: x\n" }))
@@ -1605,4 +1662,5 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
+export { judgeTryLine, judgeTriesOf, keepJudgeTry, parseMachineRecord, renderMachineRecord, judgeLineOf };   // unit mjset row 1245 (1): the kept-try door, read by its witness
 export { renderPostMatch, updateSeason, updateNotebook, pickBallsToRoute, readRoutedLedger, pendingThrowIns, KAL_RE, renderSeasonMd, seasonStreak };
