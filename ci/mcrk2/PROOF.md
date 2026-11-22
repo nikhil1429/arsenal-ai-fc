@@ -341,6 +341,47 @@ forge_session 252 passed, 0 failed · notes_compiler 58 passed, 0 failed · teac
 WITNESSES member over 333c38a (row 1292 (3))                         WITNESSES · 63 unit(s) judged · 63 GREEN at head against its BASE · organism_test: 133 passed, 0 failed
 ```
 
+## 17. G9 FIFTY TIMES THREE WAYS (architect row 1314 (2), 22 Nov 2026 IST) — branch claude/mcrk2-g9 from main 84cbc03
+
+No code and no witness text changed in this pass. Every run's line is in `ci/mcrk2/G9_50.txt`; the clock probe's lines are in
+`ci/mcrk2/G9_PROBE.txt`. Each run is the LANDED unit witness, `node ci/mcrk2/witness_mcrk2.mjs --only G9`, over LF archives,
+with no session id.
+
+```
+(a) G9 alone, main 84cbc03 against its BASE 3d059d0                     50 runs · GREEN 50 · RED 0
+(b) G9 alone, on the BASE tree 3d059d0 itself                           50 runs · GREEN 0  · RED 50  (by contract: at the base the
+                                                                          verb refuses an axis-none crack, so no row is written)
+(c) G9 beside ci/witness/mbank/witness_bank.mjs plants, at the same time 50 runs · GREEN 50 · RED 0
+the clause prints no settle wait of its own (it has none)
+```
+
+On this machine the race did not fire in 100 product runs. The mhot seat's reds are explained by the clock probe: a scratch
+copy of the clause witness (never committed) that pins ONLY the clock its part (ii) hands to compileDay, which takes a `now`.
+
+```
+G9_PROBE=fast     compile's now = tB − 1 ms (a faster machine)  20 runs · RED 20   · c:skipped (no archived word of this axis …) · (ii) NOT PLACED
+G9_PROBE=measure  compile's real now                             20 runs · GREEN 20 · slack (compile now − tB) measured 0 … 15 ms
+G9_PROBE=slow     compile's now = nB0 + 1 ms                     20 runs · GREEN 20
+```
+
+**THE RACE IS THE WITNESS'S OWN WAIT, not the product's settle.**
+- `ci/witness/mcrk2/witness_crack_gap.mjs:344` plants window c's only two archived records in the FUTURE:
+  `const tB = later(20), nB0 = later(40);` with `later = (ms) => new Date(Date.now() + ms)` at `:135`. It is a fixed-offset
+  wait: it assumes at least 20 ms pass before the compile reads its clock.
+- The product does what it should: `scripts/notes_compiler.mjs:556` takes `now()`, `:560` reads each window up to it, and
+  `scripts/exchanges.mjs:129` drops a record stamped after it. When fewer than 20 ms have passed, window c holds no word, the
+  group is skipped at `notes_compiler.mjs:562`, and the crack is NOT PLACED. The measured slack sits only 0–15 ms over that
+  bound here, so a faster machine (or a warm cache) falls under it.
+- The settle itself (`settleCrackAxis`, a pure function of the pacer ledger and the turn's end) never ran wrong: in every
+  red the probe shows, the group was skipped before any crack was placed. It is **not** a study-facing defect.
+- **The same latent class in G8**: `:315` `const tDiff = later(10);`, and G8 requires that diff on the note's crack item.
+  (i) at `:333` and (iv) at `:364` do not depend on the future record reaching the compile.
+
+**The proposed repair (not built):** the witness hands compileDay its own clock, which the product already takes:
+`compile(N, p, arc, D, at)` at `:307` passes `now: () => new Date(<the last planted record's time> + 1)` for G8 and every G9
+part, so no planted record is ever after the compile's now, whatever the machine. A mutant that drops the passed clock must
+read RED under a forced fast clock, using the same probe shape. No product code changes.
+
 ## 11. CHECKPOINT
 
 CHECKPOINT · merge c0d1a6f (main 3d059d0, mdayq; after b744a25, main 462bf6c) · BASE 3d059d0 · conflicts none · auto-merged:
