@@ -2193,7 +2193,7 @@ async function selftest() {
     const rPathW = applyTiers((c) => c, { path: join(tdir, "brain_config.json") });
     assert("mq2 NARROW: no lane door writes a file not named thalamus_config.json, and none takes a lane argument (three named exports, F2 B)",
       rPathW.ok === false && /must name a thalamus_config\.json/.test(rPathW.why) && applyTiers.length === 2 && refitWakeEconomy.length === 2 && setAdjudicatorRole.length === 2);
-    let inner = null;
+    let inner = /** @type {ReturnType<typeof refitWakeEconomy> | null} */ (null);   // typed: it is assigned inside the edit closure (checkJs)
     const stale = applyTiers((c) => { inner = refitWakeEconomy((d) => { d.deep.est_tokens_per_wake = 11; return d; }, { path: tcfg }); c.tiers.tau0 = 0.5; return c; }, { path: tcfg });
     const oS = JSON.parse(bytes());
     assert("mq2 STALE GUARD: a lane write that lands between another writer's read and its rename makes the first one REFUSE, and the second one's key survives",
@@ -3049,7 +3049,10 @@ function configMain(args, io = {}) {
   if (basename(path) !== basename(CONFIG)) return refuse(`--config must name a ${basename(CONFIG)} (got ${basename(path)}) — this verb writes that one file and no other; nothing written`);
   // unit mq2: the read, the fence, the stale guard and the write are the lane door's (setAdjudicatorRole);
   // this verb keeps its own refusals, judged on the very bytes the door read.
-  let ed = null, buf = null, early = null;
+  // typed by cast: all three are assigned inside the door's edit closure, which checkJs cannot follow
+  let ed = /** @type {ReturnType<typeof adjudicatorRoleEdit> | null} */ (null);
+  let buf = /** @type {Buffer | null} */ (null);
+  let early = /** @type {string | null} */ (null);
   const w = setAdjudicatorRole((_o, text, b) => {
     buf = b;
     if (!Buffer.from(text, "utf8").equals(b)) { early = `${path} is not valid UTF-8, so no round trip can be byte-equal; nothing written`; return null; }
@@ -3061,6 +3064,7 @@ function configMain(args, io = {}) {
   if (ed && !ed.ok) return refuse(ed.why);
   if (!w.ok && w.failed) { say(`thalamus config: ${w.why}`); return 1; }
   if (!w.ok) return refuse(w.why);
+  if (!ed || !ed.ok || !buf) return refuse("the lane door returned without the edit it was handed — nothing written");
   const before = sha12(buf), after = sha12(Buffer.from(ed.out, "utf8"));
   if (!w.wrote) say(`thalamus config: nothing to change — ${path} not written`);
   else if (ed.receiptKey) say(`thalamus config: retired adjudicator.model into ${ed.receiptKey} (directly after the block)`);

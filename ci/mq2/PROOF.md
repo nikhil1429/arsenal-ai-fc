@@ -259,3 +259,51 @@ run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control RED (
 CHECKPOINT · MERGED main 7bf008b at a0b39c6 · witness RED MQ2 · A9 (F9) · mutants 8 of 8, control RED (A9) · legs of a0b39c6: run 44879636984 (npm test node 22 + node 24, hermetic twice node 22 + node 24) queued at 2026-11-21 · resume from: read those legs, then await the F9 ruling
 
 CHECKPOINT · 2026-11-21 · MERGED main 7bf008b at a0b39c6 (pushed tip 159e430) · legs of 159e430, run 44879917708: npm test node 22 136772774840 success · npm test node 24 136772775069 success · hermetic twice node 22 136772775068 success · hermetic twice node 24 136772775061 success (a0b39c6 run 44879636984 cancelled, superseded) · witness RED MQ2 · A9 (F9) · mutants 8 of 8, control RED (A9) · resume from: the F9 ruling
+
+## 11 · CHECKPOINT · forks row 1298 (1): main 84cbc03 merged, the 10 checkJs diagnostics fixed (2026-11-22)
+
+- **Merge:** `git fetch origin main` → 84cbc03126eddb85c7d5cf54b51610068800315c; `git merge FETCH_HEAD` → **7cc2b3f**
+  (parents 501bc83 · 84cbc03). No conflict: main never moved the three named scripts.
+  `git diff 84cbc03 HEAD --stat` lists only them and `ci/mq2/**`.
+- **`ci/mq2/BASE` = 84cbc03126eddb85c7d5cf54b51610068800315c**, by this order.
+- **The 10 diagnostics, fixed in the organ** (`@ts-check` kept, the frozen 296 kept). All were checkJs failing to
+  follow a variable assigned inside a lane door's edit closure:
+  - `configMain`: six TS18047 (`ed` is possibly 'null') and two TS2339 on 'never' (`ok`, `why`). `ed`, `buf` and
+    `early` are now typed by a JSDoc cast on their initializer. A null guard was added before the success path; it
+    refuses by name, never with a silent default.
+  - The selftest's `inner`: two TS2339 on 'never' (`ok`, `wrote`), typed the same way.
+  - No behaviour moved. The thalamus selftest still passes ALL CHECKS (185 ✓, exit 0). The errors left in
+    thalamus.mjs (TS2362/TS2363 on date arithmetic, TS2339 `code` on Error) are main's, inside the frozen 296.
+- **Gates** (`node scripts/gates.mjs`, this tree):
+
+```
+gates types  · 21 organ(s) @ts-check'd (baseline 14, may only grow) · undefined-symbol family 0 (must be 0) · other checkJs diagnostics 296 (baseline 296, may only fall)
+gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides, and every schema'd state file matches
+```
+
+- **The witness** (`node ci/mq2/witness/witness_mq2.mjs --org . --base-org <84cbc03 tree>`):
+  `RED MQ2 · A9`. A1–A7 held both ways · A8 GREEN (law pack rose: none · unresolved sinks 2128 → 2124) · BOUND GREEN
+  (10 paths, none beyond the named files) · LAST GREEN. A9 is RED, which is fork F9 (§6), unruled.
+- **The mutants** (`node ci/mq2/run_mutants_mq2.mjs --org . --base-org <84cbc03 tree>`):
+  `run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control RED (A9)`.
+- **The WITNESSES member**, run here with the neutral flags
+  (`ORGANISM_TEST_PROFILE=hermetic GITHUB_ACTIONS=true GITHUB_WORKSPACE=$PWD node scripts/organism_test.mjs witnesses`):
+
+```
+organism_test: 121 passed, 6 failed · ruled 0 · UNRULED 6 · LIVE 0 (hermetic: named, not run)
+```
+  - mq2 is NOT a member. Its witness sits at `ci/mq2/witness/witness_mq2.mjs` (the spec's path, which the runner
+    ruled wins), and the member looks for `ci/<unit>/witness_<unit>.mjs`. That matters at landing: if mq2 joins the
+    member, A9 makes it RED until F9 is ruled.
+  - Five of the six FAILs are this container's clone, not this unit: `mr3`, `mrf`, `mrj`, `mrt`, `mrv` · "its BASE is
+    in the clone". Their BASE commits are absent from a shallow clone (`git rev-parse --is-shallow-repository` → true),
+    and the neutral machine fetches full history.
+  - The sixth is `mday` W7.1, a TIMING clause: the Skill-door start against a measured bound. It never names
+    thalamus, gate_tune or watchman (grep count 0). Re-run alone on this tree
+    (`node ci/mday/witness_mday.mjs --org . --base-org <669200d tree>`) it is `GREEN W7.1 · … planted SLOW by 445 ms
+    (the old single-sample bound was 421 ms) … settled after 854 ms`. The RED came from running under the member's
+    own load, so the member does not hold it against this unit.
+- **The push:** once, `[skip ci]` in the head commit message, by this order. So this tip has no neutral legs. The
+  last legs read are those of 159e430 (§10), all four success.
+
+CHECKPOINT · 2026-11-22 · MERGED main 84cbc03 at 7cc2b3f · checkJs 296 = baseline (gates GREEN) · witness RED MQ2 · A9 (F9) · mutants 8 of 8, control RED (A9) · WITNESSES member 121 passed, 6 failed (5 shallow-clone BASE, 1 mday timing, none mq2) · pushed once [skip ci] · resume from: the F9 ruling
