@@ -770,7 +770,10 @@ function contractLines(s, now = new Date(), clock = undefined, owed = null) {   
     // unit mtrap (mtrap-4 a / mtrap-7 b): the ON axis's note is under the bar — the owed count, and that a new day's note counts only its own day's windows
     + (owed && owed.owed > 0 && owed.axis === s.current_axis && !s.axes_done.includes(owed.axis) && !s.axes_deferred.includes(owed.axis)
       ? ` · note ${owed.axis}: ${owed.have}/${owed.need} traps — ${owed.owed} trap owed (from the lesson's own bait, never made up; a new day's note counts only the windows that touched its day)` : ""));
-  L.push(`  question-moments used: ${MOMENTS.map((m) => `${m} ${s.question_moments[m] || 0}`).join(" · ")} (only these ${MOMENTS.length} are legal — no quiz-dump)${CRACK_CONTRACT}`);
+  // unit mdayq (row 1280 (1)): `day_close` is asked by code at his day end, never mid-lesson — the contract is a mid-lesson
+  // surface like the skeleton, so it prints the lesson's kinds only (its line byte-identical to before mdayq)
+  const lesson = MOMENTS.filter((m) => m !== DAY_CLOSE);
+  L.push(`  question-moments used: ${lesson.map((m) => `${m} ${s.question_moments[m] || 0}`).join(" · ")} (only these ${lesson.length} are legal — no quiz-dump)${CRACK_CONTRACT}`);
   // forks row 276 (1)(a): the per-axis count of step 3's per-idea pictures — said, never gated (the ORDER rides the
   // TURN SKELETON's line 0, the one home of the checkable rules)
   if (n === 3) L.push(`  pictures per axis (picture first at every new idea): ${Object.entries(s.pictures_by_axis || {}).map(([a, k]) => `${a} ${k}`).join(" · ") || "none yet"}`);
