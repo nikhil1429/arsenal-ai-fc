@@ -157,7 +157,7 @@ const CLAUSES = {
   LEDGER(tree) {
     const a = sandbox(tree); const [T, TOP] = a.cars(2); a.pushLand("x", T); a.pushTrain(TOP);
     const r1 = a.land(["x", "--train-top", TOP], TOP); const row1 = a.ledger().pop() || {};
-    const b = sandbox(tree); b.cars(1); const [U] = [b.git(["rev-parse", "HEAD"]).out]; b.pushLand("x", U);
+    const b = sandbox(tree); const [U] = b.cars(1); b.pushLand("x", U);
     const b0 = b.main(); b.pushTrain(b0);
     b.land(["x", "--train-top", b0], "ALL"); const row2 = b.ledger().pop() || {};
     const c = sandbox(tree); const [V] = c.cars(1); c.pushLand("x", V);
