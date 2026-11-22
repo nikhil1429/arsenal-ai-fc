@@ -311,5 +311,7 @@ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all   organism_tes
 ## 11. CHECKPOINT
 
 CHECKPOINT · RE-CUT on main d585648 (mbank LANDED) at 2026-11-22T05:45Z · BASE d585648 · witness GREEN at the tip, RED at the
-base · 24 of 24 mutants RED, control GREEN · mbank M17 re-anchored (RED by B17) · gates checkJs 296 / lint frozen · resume from:
-the architect's own legs on this tip; any message (a new main → merge it the same way, regenerate MERGED.json, re-run, name it)
+base · 24 of 24 mutants RED, control GREEN · mbank M17 re-anchored (RED by B17) · gates checkJs 296 / lint frozen · WITNESSES
+member (row 1292 (3)) over this tree, unshallowed clean clone, the neutral machine's flags, 2026-11-22: 59 of 59 unit(s) GREEN at
+head against their BASE, 0 failed (organism_test: 125 passed, 0 failed) · resume from: the architect's own legs on this tip; any
+message (a new main → merge it the same way, regenerate MERGED.json, re-run, name it)
