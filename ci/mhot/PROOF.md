@@ -633,3 +633,64 @@ mlv3   at 1a502c7: RED MLV3 · BOUND                                            
   three by name, and on nothing this unit's own files cause.
 
 CHECKPOINT · MERGED 7bf008b at 1a502c7 · 07:57 UTC 2026-11-21 · legs of 1a502c7 (run 44877720834): hermetic twice node 22 success, node 24 success · npm test node 22 failure, node 24 failure (new reds: WITNESS ‹mcov› ‹mprk› ‹mdtl2›, ‹mlv3› node 24 only) · resume from: the ruling on MHOT-M2 (mcov, mprk, mdtl2)
+
+## 18 · RESUMED (forks row 1304 (2), 2026-11-22) — the merge of main 84cbc03, BASE moved by order, the fold, WITNESSES
+
+**The merge.** Merge commit `87d327c` (parents `33f674e`, this branch, and `84cbc03`, main), a merge commit, never a rebase.
+It came after 13 landings since `7bf008b` (mshard, mgat, mciq, mpres2, mdayv, mtrap, mt1, mbank, maud43, mq3, mjset, mdayq, mcrk2).
+One conflicted hunk:
+- **`scripts/organism_test.mjs`, `main()`'s verb dispatch.** *Main meant:* unit mshard's `witness-plan` verb, a read
+  outside `MODES`. *This unit meant:* the `chain` and `roll` verbs. *Both kept:* mhot's, then mshard's, then mdet's `census`.
+- `package.json` merged clean, and so did every other landed line (mgat's removal of `gates` from `LIVE_MODES` among them).
+
+**BASE.** `ci/mhot/BASE` is set to `84cbc03126eddb85c7d5cf54b51610068800315c` by runner M's order under row 1304 (2). That
+order postdates row 1200 (2)'s "no BASE file is rewritten" and is followed as the newer ruling. The clauses are therefore
+judged against `84cbc03`, and BOUND against the same commit (the land commit's parent).
+
+**The fold: every suite member is a member file; nothing dropped.**
+
+```
+$ node -e '<scripts of 7bf008b vs 84cbc03, per suite string: added / removed members>'
+(no difference: no suite member landed in the strings since 7bf008b — 0 to fold from those 13 landings)
+$ node scripts/organism_test.mjs roll --json | <count per suite>
+organism:selftest 89 · squad:selftest 33 · audit:selftest 11 · total 133 · defects 0
+$ node ci/mhot/witness_mhot.mjs … (H7, against BASE 84cbc03)
+build: 133 base member(s) · lost 0 · changed 0 · un-LIVEd since (stricter) 0 · non-member LIVE reasons lost 0
+$ node <scratchpad>/removed.mjs 7bf008b 84cbc03 87d327c
+REMOVED mgat a0645d2 LIVE_MODES "gates" · at main out · at tip out
+REMOVED_SCAN 7bf008b..84cbc03 landings 13 removed 1 still-out-at-main-and-tip 1 back 0
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs coverage
+organism_test: 13 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)
+```
+
+So the count folded is the whole of main's three strings: 133 members, each with its suite and argv byte-faithful (H7).
+The list is `git ls-tree --name-only 87d327c suite/members/`. Of those 133, the ones landed since `7bf008b` number zero. The
+ones landed since this unit's cut (`5759cce`) are the eleven folded at §11-§17:
+`done`, `deck_lint`, `home_pin`, `probe`, `study_scope`, `senses`, `witness_cause`, `parked`, `red_cause`, and the moved
+`lawpack` (live null) — with `home_pin` and `lawpack` counted once each.
+
+**The witness both ways, the mutants, the WITNESSES member** (git clones; `--base-org` = `--bound-base` = `84cbc03`):
+
+```
+$ node ci/mhot/witness_mhot.mjs --org <clone 87d327c> --base-org <clone 84cbc03> --bound-base <clone 84cbc03>
+GREEN MHOT the member roll · 12 clause(s)                                    (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <clone 84cbc03> --base-org <clone 84cbc03>
+RED MHOT · H1, H2, H3, H4, H5, H6, H7, H8, H9                                (exit 1)
+$ node ci/mhot/run_mutants_mhot.mjs --org <clone 87d327c> --base-org <clone 84cbc03> --bound-base <clone 84cbc03>
+  ok   MLAW CONTROL · the unmutated copy → RED MLAW · JUGAD · BOUND        (mlaw judged over this unit's BASE, not its own)
+  ok   CONTROL · the unmutated witness over --org → exit 0 · GREEN MHOT the member roll · 12 clause(s)
+run_mutants: 14 of 14 mutant(s) RED by the clause that names them · control GREEN
+$ GITHUB_ACTIONS=true GITHUB_WORKSPACE=<clone> ORGANISM_TEST_PROFILE=hermetic ORGANISM_WITNESS_SHARD=k node scripts/organism_test.mjs witnesses   # k = 1, 2, 3
+at 87d327c (59 units):  shard 1 36 passed, 1 failed · shard 2 48 passed, 2 failed · shard 3 47 passed, 5 failed   → 131 passed, 8 failed
+at 84cbc03 (58 units): shard 1 38 passed, 0 failed · shard 2 47 passed, 2 failed · shard 3 46 passed, 4 failed → 131 passed, 6 failed
+  witness ‹mhot› 21.3 s · GREEN MHOT the member roll · 12 clause(s)          (inside the member, at 87d327c)
+```
+
+The reds, by name:
+- **"its BASE is in the clone":** ‹mr3› ‹mrf› ‹mrj› ‹mrt› ‹mrv› on BOTH trees. Their BASE commits are not in this
+  container's local clone (the member never fetches): environment.
+- **‹mlv2›:** red at main only, not from this fold.
+- **The three new at `87d327c`:** ‹mcov›, ‹mprk›, ‹mdtl2›. This is fork MHOT-M2 exactly as §17 names it (landed witnesses
+  that read or plant through the `&&` strings; their files are not named to this unit), awaiting its ruling.
+
+CHECKPOINT · 11:22 UTC 2026-11-22 · tip = the commit carrying this line (merge 87d327c) · BASE 84cbc03 · folded 133 member files (0 new since 7bf008b) · witness GREEN 12 / base RED H1-H9 · mutants 14/14 control GREEN · WITNESSES 131 passed 8 failed at the tip (131 / 6 at main; new: ‹mcov› ‹mprk› ‹mdtl2› = MHOT-M2) · resume from: the next merge of main, and the ruling on MHOT-M2
