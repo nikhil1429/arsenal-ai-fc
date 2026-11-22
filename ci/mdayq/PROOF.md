@@ -24,6 +24,14 @@ no merge, nothing moved on main. No live model call anywhere (every model spawn 
   W9, W10, W14, W15, W16, W17` · `run_mutants: 15 of 15 … · control GREEN` · `gates.mjs report` other checkJs diagnostics
   296 (baseline 296) on both, lint frozen counts equal, `gates: GREEN`.
 
+- **THE WITNESSES MEMBER, 22 Nov 2026 (row 1292 (3)):** run over the tip as the neutral machine does (hermetic, its own
+  three-shard plan, each unit's ci/<unit>/BASE fetched into the clone by sha). The first run found TWO landed reds of this
+  branch's making: mtrap W5 and mcrk K2c read the pacer contract's question-moments line byte for byte against their base,
+  and it printed `day_close 0` / "only these 6". Fixed in `scripts/forge_session.mjs` (the contract is a mid-lesson surface:
+  it prints the lesson's kinds only, by row 1280 (1)); its line is byte-identical to main's again. Re-run at the fix, shard by
+  shard: 15 + 22 + 22 = 59 unit(s) judged, 0 red (`organism_test: 35 / 50 / 50 passed, 0 failed`, 22 Nov 2026). On the same day main
+  `d585648` itself read mclk `M:midnight` red under the same member (run in parallel with the tip, not this unit's).
+
 ## 2 · WHAT IS BUILT (the ruling, row 1257)
 
 | fork | ruled | built at |
