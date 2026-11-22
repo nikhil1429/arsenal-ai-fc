@@ -111,17 +111,32 @@ moved gaffer_brain.mjs by about 51 lines above the judge; no line the spec cites
 The mbank witness's BOUND reads RED at the cut already: its base 5301f15 predates the main its tip f635d68 carries (units
 mclk, mdet, mdtl2), so files beyond its named list differ; the same line at the tip, every B clause GREEN at both.
 
-## 7 · FORKS (written, not edited)
+## 7 · FORKS — RULED by forks row 1279 (22 Nov 2026, 10:04 IST); the old text struck in place, the ruling under it
 
-- **FORK mjset-cost** · `scripts/claudegen.mjs` parseOut reads the envelope (`JSON.parse(stdout)`) and drops
+- **FORK mjset-cost** · ~~`scripts/claudegen.mjs` parseOut reads the envelope (`JSON.parse(stdout)`) and drops
   `j.total_cost_usd` (it appears there only in a fixture string). Until ONE line hands it back on the result
   (`total_cost_usd: j.total_cost_usd ?? null`), every live judge row carries `total_cost_usd: null` — honestly absent, never 0
   (W13 (b) reads exactly that through a planted CLI whose envelope carries the field). A file beyond the named list: the
-  architect rules whether mjset gains it or another unit carries it.
-- **FORK mjset-floor** · an unreadable `game_on_epoch` (registry.mjs throws, "may never silently pass as no floor") sets
+  architect rules whether mjset gains it or another unit carries it.~~
+  **RULED A (row 1279 (1)), BUILT:** mjset gains `scripts/claudegen.mjs` for ONE line in parseOut's result — the envelope's own
+  `total_cost_usd`, unchanged, null when the envelope has none (or is not JSON), never 0. W13 holds both through the planted CLI:
+  an envelope carrying 0.4321 → the ledger row reads `0.4321`; an envelope with none → `null`. Mutants M13b (claudegen drops it)
+  and M13c (claudegen reads an absent cost as 0) are RED by W13. The bound names the file. `node scripts/claudegen.mjs selftest`
+  → `ALL CHECKS PASSED` at the base and the tip (22 Nov 2026).
+- **FORK mjset-floor** · ~~an unreadable `game_on_epoch` (registry.mjs throws, "may never silently pass as no floor") sets
   nothing aside and is NAMED on the receipt and the CLI line; the round still judges. The stricter reading — refuse the round
-  until the floor reads — would stop every judge round on a broken registry row. The architect rules.
-- **FORK mjset-rotate** · F3 A's outcome list includes `refused` and `killed` beyond the spec's three (§4); strike either by ruling.
+  until the floor reads — would stop every judge round on a broken registry row. The architect rules.~~
+  **RULED: THE STRICTER READING (row 1279 (2)), BUILT:** an unreadable floor REFUSES the round before any call —
+  `reason: "judge-floor-unreadable"`, `RED · THE FLOOR IS UNREADABLE` on the receipt and the CLI line (`say`, exit 1), every
+  capture stays outstanding (no row written), and ONE card through the captain's-call door, key `judge:floor:<IST day>`. A round
+  over PLANTED rows with no planted floor is the fixture seam, not an unreadable floor, and is not refused. The card door
+  (cardsOwner / cardFile / cardRetire) moved up, unchanged, so the refusal can file its card. Clause W14, mutant M14 (the
+  refusal removed) RED by W14; one selftest assert added.
+- **FORK mjset-rotate** · ~~F3 A's outcome list includes `refused` and `killed` beyond the spec's three (§4); strike either by ruling.~~
+  **RULED (row 1279 (3)): both stay** — one item that can hold a queue for ever is the class. Nothing changed in the code.
+- **FORK mjset-gates** (§8) · **RULED (row 1279 (4)): moot once the seat merges a main that carries mbank; it re-reads 296.**
+  Not merged now (the runner's order: mbank is not on main); re-read after that merge.
+- **Row 1279 (5)**, for the runner: the seats re-cut above mbank after it lands, in his study order — mjset, mdayq, mcrk2.
 - **OWED BY THE RUNNER (his laptop, counts only, never guessed here):** whether his CLI prints `total_cost_usd` (the newest
   `gaffer_judge` row after the first ordinary round, and after FORK mjset-cost); N6 the login, read by the first judge round
   after landing (K3's card if it refuses); the first round's `settled_nothing` reason if it settles nothing; the count of
@@ -153,6 +168,18 @@ mclk, mdet, mdtl2), so files beyond its named list differ; the same line at the 
   one FAIL is the GATES member (`TYPE COUNT ROSE — 297 checkJs diagnostics, baseline 296`), the diagnostic named above; the
   mjset clause witness member reads `ok`.
 
+## 9 · ROW 1279 BUILT (22 Nov 2026, on 1d8af54 = provisional mbank f635d68 + main a0645d2; no new merge)
+
+- Base leg as in §8 (f635d68 + a0645d2 without mjset). Each line by its command, 22 Nov 2026:
+  - head: `node ci/mjset/witness_mjset.mjs --org <5b564cb> --base-org <f635d68+a0645d2>` → `GREEN MJSET … · 15 clause(s)` (W1-W9, W11-W14, BOUND 9 file(s) differ, LAST)
+  - base: `--org <f635d68+a0645d2> --base-org <f635d68+a0645d2>` → `RED MJSET · W1, W2, W3, W4, W5, W6, W7, W8, W9, W11, W12, W13, W14`
+  - mutants: `run_mutants: 16 of 16 mutant(s) RED by the clause that names them · control GREEN` (+ M13b, M13c, M14)
+  - members, 22 Nov 2026: `gaffer_brain selftest: 206 passed, 0 failed` · postmatch `ALL CHECKS PASSED` · claudegen `ALL CHECKS PASSED` · `node scripts/models.mjs check` exit 0
+  - gates: `other checkJs diagnostics 297 (baseline 296)` and lint `no-empty 262 · no-unused-vars 82 · (directive) 2` — unchanged
+    from §8 (mbank's line, fork (4)); the claudegen line adds no diagnostic; last line `gates: 1 RED — a gate may only get stricter (§10-D rule 6)`
+  - hermetic suite, 22 Nov 2026 (a local clone at 5b564cb): `organism_test: 168 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 125` — the one FAIL
+    is the GATES member, fork (4); the mjset clause witness member reads `ok`.
+
 ## CHECKPOINT
 
-CHECKPOINT · 2026-11-22 · main a0645d2 merged (1d8af54), witness + mutants green at the merge, the gates' one RED is mbank's line (FORK mjset-gates) · earlier, 2026-11-21 · done: F1 C · F2 B · F3 A · F4 A · F5 A · F6 A (on mbank f635d68) · row 1245 (1) (2) (3) · row 1260 (2) · witness both ways · 13 of 13 mutants · the hermetic suite green at cut and tip · resume from: a message naming a re-cut mbank tip or a main carrying mbank (merge it, re-run the unit witness and mutants, push), or the architect's ruling on FORKS mjset-cost / mjset-floor / mjset-rotate / mjset-gates.
+CHECKPOINT · 2026-11-22 · row 1279 (1)-(3) built (W13 both ways, W14 + M14, claudegen's one line) on 1d8af54, 16 of 16 mutants · resume from: the runner's message naming the main that carries mbank — merge it (a merge commit), re-read the gates (expected 296, fork (4)), re-run the witness and mutants at the merge, push; then the re-cut above mbank in his study order (row 1279 (5)). Earlier: main a0645d2 merged (1d8af54) · 2026-11-21 F1 C · F2 B · F3 A · F4 A · F5 A · F6 A · row 1245 (1) (2) (3) · row 1260 (2).
