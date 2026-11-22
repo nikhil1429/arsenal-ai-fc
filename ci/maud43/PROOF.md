@@ -102,6 +102,23 @@ measured there, by the runner's hand.
 On his laptop, by the owner CLI, once: the dry run first (its line quoted into the landing row beside C3), then `--apply`
 once. Nothing here ran against his state.
 
+## 8 · THE SUITE'S WITNESSES MEMBER over this tree (forks row 1292 (3), 22 Nov 2026)
+
+This run uses every landed unit's witness at head against its own BASE, as the neutral machine runs them. Every unit BASE
+was made present in the clone first: main unshallowed, plus three base commits fetched by sha. The member runs only where
+the neutral machine's two variables are set, so they were set for this one local run. It stays hermetic by its own
+design: temp trees, ports picked by the OS, and `claude` / `gemini` shims that refuse.
+
+```
+$ GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo> ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses
+  ok   WITNESSES · 59 unit(s) judged in 1511.6 s (B5: the member's own seconds, measured every run)
+  ok   WITNESS ‹maud43› · GREEN at head against its BASE
+organism_test: 125 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)
+```
+
+CHECKPOINT · 2026-11-22 (UTC) · tip f3c06b2 + this proof line · WITNESSES member: 59 of 59 units GREEN (maud43 included),
+exit 0 · seat pushes carry [skip ci] (row 1289 (2))
+
 CHECKPOINT · BUILT at 2026-11-22 (UTC) on claude/maud43-build · witness GREEN (W1-W14 + BOUND) · mutants 14 of 14 RED ·
 gates 296 = baseline, lint unchanged · resume from: the neutral machine's verdict on this tip, then the landing row
 (runner) and the laptop run (§7)
