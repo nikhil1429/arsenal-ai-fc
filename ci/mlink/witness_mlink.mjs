@@ -63,7 +63,7 @@ const LOG = process.env.MLINK_PROBE_LOG, EMU = process.env.MLINK_PROBE_WIN32 ===
 if (EMU && process.platform !== "win32") Object.defineProperty(process, "platform", { value: "win32" });
 const o = { cpSync: fs.cpSync, symlinkSync: fs.symlinkSync, mkdtempSync: fs.mkdtempSync, spawnSync: cp.spawnSync };
 const lstat = fs.lstatSync, readlink = fs.readlinkSync, realpath = fs.realpathSync, write = fs.writeFileSync;
-let sandboxMade = false;
+let sandboxMade = false, inCp = false;   // inCp: node's own cp may call the fs export it re-makes a link with; that call is cp's, not the helper's
 const isStep = (p) => basename(String(p)) === "node_modules" && basename(dirname(String(p))).startsWith("arsenal-test-");
 const look = (p) => { try { const l = lstat(p); const link = l.isSymbolicLink();
   return { exists: true, link, dir: !link && l.isDirectory(), target: link ? readlink(p) : null, real: realpath(p) }; }
@@ -76,12 +76,13 @@ fs.cpSync = function (src, dest, ...a) {
   if (!isStep(dest)) return o.cpSync.call(this, src, dest, ...a);
   let srcLink = false; try { srcLink = lstat(src).isSymbolicLink(); } catch { /* absent */ }
   const rec = { step: "cpSync", src: String(src), srcLink, type: null, error: null };
+  inCp = true;
   try { if (EMU && srcLink) throw eperm("cp meets a link and re-makes it with no type, node:internal/fs/cp onLink"); o.cpSync.call(this, src, dest, ...a); }
-  catch (e) { rec.error = errOf(e); }
+  catch (e) { rec.error = errOf(e); } finally { inCp = false; }
   done({ ...rec, dest: look(dest) });
 };
 fs.symlinkSync = function (target, path, type) {
-  if (!isStep(path)) return o.symlinkSync.apply(this, arguments);
+  if (!isStep(path) || inCp) return o.symlinkSync.apply(this, arguments);
   const rec = { step: "symlinkSync", src: String(target), type: type === undefined ? null : type, error: null };
   try { if (EMU && type !== "junction") throw eperm("a non-junction symlink needs a privilege"); o.symlinkSync.apply(this, arguments); }
   catch (e) { rec.error = errOf(e); }
