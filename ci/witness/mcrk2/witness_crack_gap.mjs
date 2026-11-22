@@ -48,6 +48,9 @@
 //                  note, by names the declaration; (iii) no axis in the ledger / two axes in the turn → in no note, the compile
 //                  result names it unplaced with its why
 //   G10 READERS    readCracks hands a gap row back unchanged (kind crack, gap kept); the verb's line prints GAP <gap>
+//   G13 UNCHECKED  (forks row 1281 (2)) no calling session id → `crack` writes his words with gap "session-unchecked", owner
+//                  "organism" (joined "+" with a teacher gap); teaching_gate counts C.crack-unchecked and allows; the teacher's
+//                  drift counts only a teacher part; `start` writes calling_session_id_present, a boolean, never the id
 //   G12 DOOR       the crack case reads his words only through readHisPrompt (no loadAuditLast, no `.prompt` read in the case);
 //                  a session with its own record writes ITS words even when the shared slot is another session's
 //   MCRK CARRY     the tree's ci/witness/mcrk/witness_crack.mjs narrows K3 citing row 1243 and its plants read k of k on the
@@ -92,6 +95,9 @@ const lines = (s) => String(s || "").split(/\r?\n/);
 const fold = (s) => String(s || "").replace(/\s+/g, " ").trim();
 const SAID = "shaky — ek word ek token hota hai\n  (jaise 'tokenization' = 1)";
 const HOST = "11111111-2222-3333-4444-555555555555", OTHER = "a8909716-3d43-4752-b3af-40613f4814d4";
+// forks row 1281 (1): a witness plants its own session and names it — every pacer call runs as WSID, and the prompt record
+// carries WSID's own entry, unless a clause names another (G4 (e), G6, G7, G12) or none (G13, the F12 leg)
+const WSID = "sess-witness";
 
 let seq = 0;
 /** plant — a fresh copy of <tree>'s scripts under TMP with an empty planted state dir */
@@ -107,16 +113,18 @@ function plant(name) {
     const r = spawnSync(process.execPath, [join(dir, "scripts", file), ...a], { cwd: dir, env: envOf(sid), encoding: "utf8", windowsHide: true, ...(input !== undefined ? { input } : {}) });
     return { code: r.status, out: String(r.stdout || ""), err: String(r.stderr || ""), all: `${r.stdout || ""}${r.stderr || ""}` };
   };
-  const run = (...a) => node("forge_session.mjs", a);
+  const run = (...a) => node("forge_session.mjs", a, { sid: WSID });
   const at = (f) => join(state, f);
   const json = (f) => { try { return JSON.parse(text(at(f))); } catch { return null; } };
   const write = (f, o) => writeFileSync(at(f), typeof o === "string" ? o : JSON.stringify(o, null, 2) + "\n");
   const cracks = () => { const t = text(at("cracks.jsonl")); return t === null ? null : lines(t).filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return { torn: l }; } }); };
-  /** prompt — the shared slot only, as a record written before unit mbank (no own record) */
-  const prompt = (txt = SAID, when = new Date(), extra = {}) => write("teaching_audit_last.json", { prompt: { text: txt, step: 3, moments: 1, reps: 0, session_id: "sess-witness", at: when.toISOString(), ...extra }, checked_rules: [] });
+  /** prompt — the planted session's record: the shared slot AND its own entry (prompts_by_session[WSID]), as teaching_audit writes them */
+  const prompt = (txt = SAID, when = new Date(), extra = {}) => { const rec = { text: txt, step: 3, moments: 1, reps: 0, session_id: WSID, at: when.toISOString(), ...extra }; write("teaching_audit_last.json", { prompt: rec, prompts_by_session: { [WSID]: rec }, checked_rules: [] }); };
+  /** promptShared — the shared slot only (a record written before unit mbank, or by a session with no readable id) */
+  const promptShared = (txt = SAID, when = new Date()) => write("teaching_audit_last.json", { prompt: { text: txt, step: 3, moments: 1, reps: 0, session_id: WSID, at: when.toISOString() }, checked_rules: [] });
   /** hook — his prompt (or a Stop) through the REAL teaching_audit hook, as session sid */
   const hook = (sid, o) => node("teaching_audit.mjs", ["hook"], { sid, input: JSON.stringify({ session_id: sid, ...o }) });
-  return { dir, state, node, run, at, json, write, cracks, prompt, hook };
+  return { dir, state, node, run, at, json, write, cracks, prompt, promptShared, hook };
 }
 /** open — the real pacer path to an open session at step 3, optionally an axis and moments */
 function open(p, { axis = null, moments = [] } = {}) {
@@ -174,7 +182,7 @@ await clause("G3b", () => {
 
 await clause("G4", () => {
   const cases = [];
-  const expect = (name, p, re, sid = null) => {
+  const expect = (name, p, re, sid = WSID) => {
     const r = p.node("forge_session.mjs", ["crack"], { sid });
     const ok = r.code === 1 && re.test(r.err) && !existsSync(p.at("cracks.jsonl"));
     cases.push(`${name} ${ok ? "refused" : `NOT REFUSED (exit ${r.code}${existsSync(p.at("cracks.jsonl")) ? ", a row written" : ""})`}`);
@@ -272,11 +280,15 @@ await clause("G7", async () => {
   const ev = i >= 0 ? String((last.evidence || [])[i] || "") : "";
   const staged = (last.staged || []).some((x) => x && x.rule === "crack-gap");
   const A = await imp(p.dir, "teaching_audit.mjs");
+  // forks row 1281 (3): the ONE seed row is in teaching_contract.mjs and the declared gap is gone; the contract CLI on an
+  // empty planted state lists the rule, and its autohit counts it (exit 0)
   const seeded = (text(join(p.dir, "scripts", "teaching_contract.mjs")) || "").includes('r("crack-gap"');
-  const declared = Array.isArray(A.CHECKED_RULES) && A.CHECKED_RULES.includes("crack-gap") && (seeded || (Array.isArray(A.SEED_GAP) && A.SEED_GAP.includes("crack-gap")));
+  const list = p.node("teaching_contract.mjs", ["list"]), hit = p.node("teaching_contract.mjs", ["autohit", "crack-gap", "--why", "witness plant"]);
+  const cli = list.code === 0 && /crack-gap/.test(list.out) && hit.code === 0 && /"crack-gap" auto-counted/.test(hit.out);
+  const declared = Array.isArray(A.CHECKED_RULES) && A.CHECKED_RULES.includes("crack-gap") && seeded && Array.isArray(A.SEED_GAP) && !A.SEED_GAP.includes("crack-gap") && cli;
   const cards = readdirSync(p.state).filter((f) => /^captains_call/i.test(f));
   const ok = s.code === 0 && i >= 0 && ev.includes(String(row.id)) && !ev.includes(SAID) && !ev.includes(fold(SAID)) && staged && declared && cards.length === 0;
-  return { ok, why: `stop hook exit ${s.code} · drifts [${(last.drifts || []).join(",")}] · evidence ${i >= 0 ? (ev.includes(String(row.id)) ? "names the row" : "NO ROW") : "-"}${ev.includes(SAID) ? " · HIS WORDS IN EVIDENCE" : ""} · staged ${staged} · rule ${declared ? (seeded ? "seeded" : "declared in SEED_GAP") : "UNWIRED"} · cards ${cards.length}` };
+  return { ok, why: `stop hook exit ${s.code} · drifts [${(last.drifts || []).join(",")}] · evidence ${i >= 0 ? (ev.includes(String(row.id)) ? "names the row" : "NO ROW") : "-"}${ev.includes(SAID) ? " · HIS WORDS IN EVIDENCE" : ""} · staged ${staged} · rule ${declared ? "seeded, the contract CLI lists and auto-counts it" : `NOT WIRED (seed ${seeded} · SEED_GAP ${Array.isArray(A.SEED_GAP) && A.SEED_GAP.includes("crack-gap") ? "still declares it" : "clear"} · list exit ${list.code} · autohit exit ${hit.code})`} · cards ${cards.length}` };
 });
 
 /** archiveTurn — the word lane of the archive for one IST day: records [{rid, at, role, text}] */
@@ -366,8 +378,38 @@ await clause("G10", async () => {
   const F = await imp(p.dir, "forge_session.mjs");
   const back = F.readCracks(p.at("cracks.jsonl"));
   const w = back.rows && back.rows[0];
-  const ok = r.code === 0 && !!w && w.kind === "crack" && w.gap === "moment-undeclared" && back.rows.length === 1 && /· GAP moment-undeclared \(the teacher's miss/.test(r.out) && !r.out.includes(SAID);
-  return { ok, why: `crack exit ${r.code} · readCracks ${w ? `kind ${w.kind} gap ${w.gap}` : "NO ROW"} · the verb line ${/· GAP moment-undeclared/.test(r.out) ? "prints GAP" : "SILENT"}${r.out.includes(SAID) ? " · HIS WORDS ECHOED" : ""}` };
+  // forks row 1281 (6): the close report's crack count names the gaps beside it
+  const cl = p.run("close", "--no-rep-why", "witness plant: nothing is banked in a plant"), suffix = /cracks this session: 1 \(one row per broken answer[^\n]*\(1 with a named gap — the teacher's miss/.test(cl.out);
+  const ok = r.code === 0 && !!w && w.kind === "crack" && w.gap === "moment-undeclared" && back.rows.length === 1 && /· GAP moment-undeclared \(the teacher's miss/.test(r.out) && !r.out.includes(SAID) && suffix && !cl.out.includes(SAID);
+  return { ok, why: `crack exit ${r.code} · readCracks ${w ? `kind ${w.kind} gap ${w.gap}` : "NO ROW"} · the verb line ${/· GAP moment-undeclared/.test(r.out) ? "prints GAP" : "SILENT"}${r.out.includes(SAID) ? " · HIS WORDS ECHOED" : ""} · close report ${suffix ? "names the gap" : `SILENT (exit ${cl.code})`}` };
+});
+
+await clause("G13", async () => {
+  // forks row 1281 (2), F12: no calling session id → never refused; gap session-unchecked, owner organism; the gate counts it
+  // (C.crack-unchecked), the teacher's drift does not; the pacer's boolean says whether the id was present, once, no id
+  const p = plant("g13"); const o = open(p, { axis: "c", moments: ["check_q"] }); if (!o.ok) return o;
+  p.promptShared(SAID, later());
+  const k = p.node("forge_session.mjs", ["crack"]), w = (p.cracks() || [])[0] || {};
+  const q = plant("g13-teacher"); if (!open(q, { axis: "d" }).ok) return { ok: false, why: "setup (teacher+organism)" };
+  q.promptShared(SAID, later());
+  const kq = q.node("forge_session.mjs", ["crack"]), wq = (q.cracks() || [])[0] || {};
+  const okRow = k.code === 0 && w.words === SAID && w.gap === "session-unchecked" && w.gap_owner === "organism"
+    && kq.code === 0 && wq.gap === "moment-undeclared+session-unchecked" && wq.gap_owner === "teacher+organism";
+  const G = await imp(p.dir, "teaching_gate.mjs"), A = await imp(p.dir, "teaching_audit.mjs");
+  const sit = { id: "sit_witness", closed_at: null, host_session_id: HOST };
+  const d = G.decide({ payload: { session_id: HOST, transcript_path: "x", last_assistant_message: GOOD }, sitting: sit, forge: p.json("forge_session.json"), transcript: TX, logRows: [{ session: HOST, d_checked: true }], env: {}, cracks: [{ ...w, prompt_session_id: HOST }] });
+  const okGate = (d.reds || []).includes("C.crack-unchecked") && !(d.reds || []).includes("C.crack-gap") && d.decision === "allow";
+  const okDrift = typeof A.crackGapDrift === "function" && A.crackGapDrift({ rows: [w], sessionId: w.prompt_session_id, promptAt: w.prompt_at }) === null
+    && !!A.crackGapDrift({ rows: [wq], sessionId: wq.prompt_session_id, promptAt: wq.prompt_at });
+  // the pacer's boolean: written at start, as a boolean only, never the id
+  const n = plant("g13-absent"); n.node("forge_session.mjs", ["start", "tokenization"]);
+  const sNo = n.json("forge_session.json") || {};
+  const y = plant("g13-present"); y.node("forge_session.mjs", ["start", "tokenization"], { sid: HOST });
+  const sYes = y.json("forge_session.json") || {};
+  const yRaw = text(y.at("forge_session.json")) || "";
+  const okPacer = sNo.calling_session_id_present === false && sYes.calling_session_id_present === true && !yRaw.includes(HOST);
+  return { ok: okRow && okGate && okDrift && okPacer,
+    why: `no id → exit ${k.code} gap ${w.gap} owner ${w.gap_owner} words ${w.words === SAID ? "kept" : "LOST"} · with a teacher gap → ${wq.gap} (${wq.gap_owner}) · gate ${okGate ? "counts C.crack-unchecked, allows" : `reds [${(d.reds || []).join(",")}] ${d.decision}`} · teacher drift ${okDrift ? "only for the teacher's part" : "WRONG"} · pacer boolean ${sNo.calling_session_id_present}/${sYes.calling_session_id_present}${yRaw.includes(HOST) ? " · THE ID WRITTEN" : ""}` };
 });
 
 await clause("G12", () => {

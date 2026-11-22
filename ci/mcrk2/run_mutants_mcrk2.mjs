@@ -22,7 +22,7 @@ if (!ORG || !BASE) { console.log("run_mutants: usage --org <dir> --base-org <dir
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WITNESS = join(HERE, "witness_mcrk2.mjs");
 const NM = [ORG, join(HERE, "..", "..")].map((t) => join(t, "node_modules")).find((p) => existsSync(p)) || null;
-const FS = "scripts/forge_session.mjs", NC = "scripts/notes_compiler.mjs", TG = "scripts/teaching_gate.mjs", TA = "scripts/teaching_audit.mjs", CW = "ci/witness/mcrk/witness_crack.mjs";
+const FS = "scripts/forge_session.mjs", NC = "scripts/notes_compiler.mjs", TG = "scripts/teaching_gate.mjs", TA = "scripts/teaching_audit.mjs", TC = "scripts/teaching_contract.mjs", CW = "ci/witness/mcrk/witness_crack.mjs";
 const ROOT = mkdtempSync(join(os.tmpdir(), "mutants-mcrk2-"));
 /** [clause id, mutant name, file, anchor, replacement] */
 const MUTANTS = [
@@ -37,7 +37,7 @@ const MUTANTS = [
   ["G6", "M6b the once-latch dropped", TG, "&& sid && c.prompt_session_id === sid && !named.has(c.id));", "&& sid && c.prompt_session_id === sid);"],
   ["G6", "M6c the turn joined by text, not the session id (another session's gap reds)", TG, "&& sid && c.prompt_session_id === sid && !named.has(c.id));", "&& sid && !named.has(c.id));"],
   ["G7", "M7a the drift emitter dropped", TA, "    if (gapDrift) res.drifts.push(gapDrift);\n", "\n"],
-  ["G7", "M7b crack-gap undeclared (no seed row, no SEED_GAP)", TA, 'export const SEED_GAP = ["act-mueywvag", "crack-gap"];', 'export const SEED_GAP = ["act-mueywvag"];'],
+  ["G7", "M7b the ONE seed row of crack-gap dropped (forks row 1281 (3))", TC, '      r("crack-gap", ', '      r("crack-gap-unseeded", '],
   ["G7", "M7c the emitter files a card", TA, "    if (gapDrift) res.drifts.push(gapDrift);\n", "    if (gapDrift) { res.drifts.push(gapDrift); try { writeFileSync(join(STATE_DIR, \"captains_call.json\"), \"{}\\n\"); } catch { /* mutant */ } }\n"],
   ["G8", "M8 a group holding a gap row is skipped (a note blocked)", NC, "    const note = buildNote({ concept: c, axis: a, ex, bank, capsule,", "    if (cracks.some((r) => r.gap)) { results.push({ concept: c, axis: a, op: \"skipped\", why: \"a gap\" }); continue; }\n    const note = buildNote({ concept: c, axis: a, ex, bank, capsule,"],
   ["G8", "M8b the gap is not named in GAPS", NC, "    if (stamp.gap) gaps.push(", "    if (false) gaps.push("],
@@ -45,6 +45,9 @@ const MUTANTS = [
   ["G9", "M9b settling dropped", NC, "    const st = settleCrackAxis(r, pacer, { turnEnd });", '    const st = { axis: null, why: "settling dropped" };'],
   ["G10", "M10 readCracks drops gap rows", FS, '!Array.isArray(o) && o.kind === "crack");', '!Array.isArray(o) && o.kind === "crack" && !o.gap);'],
   ["G10", "M10b the verb line does not print the gap", FS, "        + (row.gap ? ` · GAP ${row.gap}", "        + (false ? ` · GAP ${row.gap}"],
+  ["G10", "M10c the close report's crack count does not name the gaps (forks row 1281 (6))", FS, "${g ? ` (${g} with a named gap", "${false ? ` (${g} with a named gap"],
+  ["G13", "M13 a crack with no calling session id carries no gap (forks row 1281 (2))", FS, "  const unchecked = !(sessionChecked !== undefined ? sessionChecked : sessionId);", "  const unchecked = false;"],
+  ["G13", "M13b the pacer's boolean not written at start", FS, "const s = { ...blank(concept), calling_session_id_present: !!process.env.CLAUDE_CODE_SESSION_ID };", "const s = blank(concept);"],
   ["G12", "M12e a direct record read back in the crack case", FS, "      const r = crackRow({ session: s, prompt: door,", "      const r = crackRow({ session: s, auditLast: loadAuditLast(), prompt: undefined,"],
   ["MCRK CARRY", "M-carry the seat's session id reaches the mcrk plants again", CW, "const ENV = (() => { const e = { ...process.env }; delete e.CLAUDE_CODE_SESSION_ID; const pk", "const ENV = (() => { const e = { ...process.env }; const pk"],
 ];

@@ -11,9 +11,10 @@
 // checkout), else from --org (the suite member copies only ci/mcrk2/ beside it) — never a pass-through: it is always run
 // over --org, so the base leg judges the base's own pacer, gate, audit and compiler.
 //   G2 UNDECLARED · G3 NOAXIS · G3b ORDER · G4 REFUSE · G5 SESSION · G6 GATE · G7 DRIFT · G8 NOTE · G9 SETTLE · G10 READERS ·
-//   G12 DOOR · MCRK CARRY — the clause witness's own, one line each (its header names each plant)
+//   G13 UNCHECKED · G12 DOOR · MCRK CARRY — the clause witness's own, one line each (its header names each plant)
 //   BOUND     only the named files differ between --base-org and --org (scripts/forge_session.mjs ·
 //             scripts/notes_compiler.mjs · scripts/teaching_gate.mjs · scripts/teaching_audit.mjs ·
+//             scripts/teaching_contract.mjs (forks row 1281 (3): the ONE seed row of crack-gap) ·
 //             .claude/skills/forge/REFERENCE.md · ci/witness/mcrk/witness_crack.mjs · ci/witness/mcrk2/ · ci/mcrk2/), by text,
 //             CRLF folded; a file outside them is accepted ONLY when its LF bytes are git's own merge of BASE and a main
 //             merged into the build, listed in ci/mcrk2/MERGED.json (the class of row 1200 (2), ci/mgat/MERGED.json)
@@ -35,7 +36,7 @@ const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.a
 const ORG = resolve(arg("--org") || "."), BASE = arg("--base-org") ? resolve(arg("--base-org")) : null;
 const ONLY = arg("--only") ? arg("--only").split(",").map((s) => s.trim()).filter(Boolean) : null;
 const UNIT = "MCRK2", HERE = dirname(fileURLToPath(import.meta.url));
-const NAMED = (f) => ["scripts/forge_session.mjs", "scripts/notes_compiler.mjs", "scripts/teaching_gate.mjs", "scripts/teaching_audit.mjs",
+const NAMED = (f) => ["scripts/forge_session.mjs", "scripts/notes_compiler.mjs", "scripts/teaching_gate.mjs", "scripts/teaching_audit.mjs", "scripts/teaching_contract.mjs",
   ".claude/skills/forge/REFERENCE.md", "ci/witness/mcrk/witness_crack.mjs"].includes(f) || /^ci\/(witness\/mcrk2|mcrk2)\//.test(f);
 const TMP = mkdtempSync(join(tmpdir(), "mcrk2-witness-"));
 const results = [];
@@ -43,7 +44,7 @@ const record = (id, ok, why) => { if (ONLY && !ONLY.includes(id) && id !== "LAST
 
 const CW = [join(HERE, "..", "witness", "mcrk2", "witness_crack_gap.mjs"), join(ORG, "ci", "witness", "mcrk2", "witness_crack_gap.mjs")].find((p) => existsSync(p)) || null;
 console.log(`witness mcrk2 · org ${ORG}${BASE ? ` · base ${BASE}` : ""} · clause witness ${CW || "ABSENT"}`);
-const IDS = ["G2", "G3", "G3b", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G12", "MCRK CARRY"];
+const IDS = ["G2", "G3", "G3b", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G13", "G12", "MCRK CARRY"];
 const want = IDS.filter((id) => !ONLY || ONLY.includes(id));
 if (!CW) for (const id of want) record(id, false, "the clause witness ci/witness/mcrk2/witness_crack_gap.mjs is in neither this checkout nor --org");
 else if (want.length) {
