@@ -124,8 +124,9 @@ import { observe as observeLegacy, supervise as superviseLegacy, emptyState, isS
 // against the ground it was given. It lives in its own file, not here, because its
 // hedge regex DOES test his words — a measurement he designed, never a gate — and
 // this file's own law (selftest: "not one regex here tests HIS words") stays whole.
-import { lazySubjects } from "./registry.mjs";   // A3 (4 Sep 2026) — the probe/register vocabularies are ROWS, never literals (his 11-Aug jugad law)
+import { lazySubjects, gameOnEpoch } from "./registry.mjs";  // A3 (4 Sep 2026) — the probe/register vocabularies are ROWS, never literals (his 11-Aug jugad law)
 import { countHedges, REGISTER_TYPES, validateRegister, registerLine } from "./register.mjs";
+import { classifyPrompt, answerOf, readHisPrompt } from "./study_scope.mjs";   // unit mbank (row 1230): his gut-word read off HIS message (mbank-5 b), and his answer with the gut-word lead stripped for the hedge meter (mbank-7 a) — study_scope is a leaf
 import { generate as modelsGenerate, loadKeys as modelsLoadKeys, resolveSync as modelsResolve } from "./models.mjs";   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — the Watcher names the ROLE `text`; the resolver picks the live model + key and says why (models.mjs imports no organ — the import graph stays tiny)
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -1319,6 +1320,43 @@ export function capsuleGround(concept, deps = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// THE CODE DOOR'S WORDS (unit mbank, forks rows 1189 (1) / 1194 (2) / 1230) — HIS bytes, never a teacher copy
+// ---------------------------------------------------------------------------
+// On the code surface (a call carrying --said or --surface code) his words are the prompt record's text, taken through
+// the ONE door (study_scope.mjs hisPrompt, read by readHisPrompt). PURE: `prompt` is that door's ok:true result.
+//   mbank-4 b — no --said: the whole message. --said given: a SELECTOR only — it must sit inside his message with the
+//               whitespace folded, and the bytes kept are the matching slice OF HIS MESSAGE, never the argument.
+//   mbank-5 b — the gut-word is read off his message by study_scope's classifier; a --gut that disagrees, or a --gut on a
+//               message that carries none (row 270, an invented calibration), is REFUSED.
+//   mbank-2 a — nothing of the teacher's copy is stored.
+export const GUT_FLAG = Object.freeze({ pakka: "knew", shayad: "shaky", "pata nahi": "guessed", knew: "knew", shaky: "shaky", guessed: "guessed" });
+/** sliceOf — the bytes of `text` that `sel` names with whitespace folded on both sides, or null when it is not inside. */
+export function sliceOf(text, sel) {
+  const src = String(text || ""), want = String(sel || "").replace(/\s+/g, " ").trim();
+  if (!want) return null;
+  let folded = "", map = [];
+  for (let i = 0; i < src.length; i++) {
+    if (src[i].trim() === "") { if (folded && folded[folded.length - 1] !== " ") { folded += " "; map.push(i); } continue; }
+    folded += src[i]; map.push(i);
+  }
+  const at = folded.indexOf(want);
+  return at < 0 ? null : src.slice(map[at], map[at + want.length - 1] + 1);
+}
+/** codeDoorWords — {ok, spoken, gut} from his prompt record, or the refusal: never a byte from the teacher's argument. */
+export function codeDoorWords({ prompt, said, gut } = /** @type {any} */ ({})) {
+  if (!prompt || prompt.ok !== true || typeof prompt.text !== "string") return { ok: false, reason: "no-prompt", say: "gaffer_brain: his words are not on disk — the bank takes them from the prompt record, never from a typed copy; nothing banked" };
+  const spoken = said === undefined ? prompt.text : sliceOf(prompt.text, said);
+  if (spoken === null) return { ok: false, reason: "not-his-words", say: "gaffer_brain: --said is not inside his message — the bank keeps HIS bytes from the prompt record, and a copy that is not in it is refused before the write (drop --said to bank his whole message); nothing banked" };
+  const his = classifyPrompt(prompt.text).gut, hisFlag = his ? GUT_FLAG[his] || null : null;
+  const typed = gut === undefined || gut === null ? "" : String(gut).trim().toLowerCase();
+  if (typed && !hisFlag) return { ok: false, reason: "gut-invented", say: `gaffer_brain: --gut ${typed} but his message carries no gut-word — an invented calibration is refused (row 270); nothing banked` };
+  if (typed && typed !== hisFlag) return { ok: false, reason: "gut-not-his", say: `gaffer_brain: --gut ${typed} but he said "${his}" (= ${hisFlag}) — the gut-word is HIS, read off his message; nothing banked` };
+  return { ok: true, spoken, gut: hisFlag || undefined };
+}
+/** spokenSrcOf — the stdin doors keep their own words and say which door they are (mbank-3 a). */
+export const spokenSrcOf = (note) => { const n = String(note || ""); return n.startsWith("dugout-voice") || n.startsWith("scrimmage-voice") ? "voice" : n.startsWith("sitting ") ? "sitting" : "stdin"; };
+
+// ---------------------------------------------------------------------------
 // CAPTURE — the fast half. NO MODEL, NO NETWORK, NO SUBPROCESS.
 // ---------------------------------------------------------------------------
 // THE GUT-WORD LAW IS HELD AT THIS DOOR TOO. capture.mjs refuses a rep without one
@@ -1329,8 +1367,10 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
   if (!VERDICT_TYPES[type]) return { ok: false, reason: "unknown-type", say: `gaffer_brain: unknown verdict type "${type}". Legal: ${Object.keys(VERDICT_TYPES).join(", ")}.` };
   const word = String(gut || "").trim().toLowerCase();
   if (!["knew", "shaky", "guessed"].includes(word)) return { ok: false, reason: "no-gut", say: "gaffer_brain: --gut is required and must be knew|shaky|guessed, committed BEFORE the answer. GUT-WORD LAW: no gut-word, no rep." };
-  const said = String(spoken || "").trim();
-  if (said.length < 10) return { ok: false, reason: "empty", say: "gaffer_brain: nothing was said — an empty answer is not a failed one, and guessing which it was is exactly what this lane must never do." };
+  // unit mbank: the prompt door's bytes are kept as he typed them (no trim, no fold); every other door as before
+  const fromPrompt = deps.src === "prompt";
+  const said = fromPrompt ? String(spoken || "") : String(spoken || "").trim();
+  if (said.trim().length < 10) return { ok: false, reason: "empty", say: "gaffer_brain: nothing was said — an empty answer is not a failed one, and guessing which it was is exactly what this lane must never do." };
   const mat = deps.material !== undefined ? deps.material : gradeMaterial(type, ref, deps);
   if (!mat) return { ok: false, reason: "no-material", say: `gaffer_brain: nothing on disk for ${type} "${ref}" — grading needs HIS page, and inventing one is the single thing this lane must never do.` };
   // ── A3 · THE SAME LAW AT EVERY DOOR ──────────────────────────────────────────
@@ -1354,6 +1394,17 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
   const probeRaw = String(deps.probe === undefined || deps.probe === null ? "" : deps.probe).trim();
   if (probeRaw && !PROBE_KINDS.includes(probeRaw.toLowerCase())) {
     return { ok: false, reason: "bad-probe", say: `gaffer_brain: --probe must be one of ${PROBE_KINDS.join("|")} (got "${clip(probeRaw, 40)}"). A probe kind nobody recognises would count as "some probe" at the LOCK gate and prove nothing.` };
+  }
+  // unit mdayq (forks rows 1241 (1) / 1257 F3 B / F10 A): `--moment` names the moment a row answered — ONE legal value,
+  // `day_close`, and a word outside it is refused like a bad probe (absent → null, never guessed). A day-close answer is
+  // banked only through the code door WITH a session id (F10 A: no session id refuses — the per-session record is the
+  // one place his words of THIS session live; without the id the shared slot could hand over another session's text).
+  const momentRaw = String(deps.moment === undefined || deps.moment === null ? "" : deps.moment).trim().toLowerCase();
+  if (momentRaw && momentRaw !== "day_close") {
+    return { ok: false, reason: "bad-moment", say: `gaffer_brain: --moment must be day_close (got "${clip(momentRaw, 40)}") — the per-axis banked moments are identified as before; a moment word nobody reads proves nothing.` };
+  }
+  if (momentRaw === "day_close" && !(fromPrompt && deps.sessionChecked === true)) {
+    return { ok: false, reason: "no-session", say: "gaffer_brain: a `--moment day_close` answer is banked only through the code door with this session's id (CLAUDE_CODE_SESSION_ID) — without it his words could be another session's; nothing banked." };
   }
   const regRaw = String(deps.register === undefined || deps.register === null ? "" : deps.register).trim();
   if (regRaw && !REGISTERS.includes(regRaw.toLowerCase())) {
@@ -1392,12 +1443,24 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
     surface: deps.surface ? String(deps.surface).trim().toLowerCase() : null,
     probe: PROBE_KINDS.includes(String(deps.probe || "").trim().toLowerCase()) ? String(deps.probe).trim().toLowerCase() : null,
     register: REGISTERS.includes(String(deps.register || "").trim().toLowerCase()) ? String(deps.register).trim().toLowerCase() : null,
+    moment: momentRaw === "day_close" ? "day_close" : null,   // unit mdayq — the axis-done gate and the LOCK's negative-space count skip it (F3 B)
     spoken: clip(said, 4000),
     // §9.4 — HEDGES ARE COUNTED HERE, at the moment of capture, by code (register.mjs's
     // meter — the scrimmage's own). Every banked answer, every surface, no model. The
     // judge is later told this number exists and is not its to produce.
-    hedges: countHedges(said),
+    // unit mbank (mbank-7 a): over his ANSWER — a leading gut-word (`shayad -`) is his calibration, not a hedge.
+    hedges: countHedges(answerOf(said)),
+    // unit mbank: which door his words came through, and the turn they answer (joined by turn_id, never by time or text)
+    spoken_src: fromPrompt ? "prompt" : (deps.src === "voice" || deps.src === "sitting" ? deps.src : "stdin"),
+    turn_id: fromPrompt && deps.prompt && typeof deps.prompt.turn_id === "string" ? deps.prompt.turn_id : null,
+    prompt_at: fromPrompt && deps.prompt && typeof deps.prompt.at === "string" ? deps.prompt.at : null,
+    session_checked: fromPrompt ? deps.sessionChecked === true : null,
   };
+  // unit mbank — ONE ANSWER, ONE REP: a code-door capture of a turn + slice already banked writes nothing (a re-run)
+  if (fromPrompt && row.turn_id && Array.isArray(deps.prior)) {
+    const dup = deps.prior.find((r) => r && r.kind === "capture" && r.turn_id === row.turn_id && r.spoken === row.spoken);
+    if (dup) return { ok: true, already: true, row: dup, captured: dup.id, type: dup.type, has_key: !!dup.key };
+  }
   // ── THE BANK WRITE (L2 · fate 14, 6 Oct 2026) — A FAILED WRITE OF HIS ANSWER IS ok:false ──────
   // This line sat in a bare catch and returned ok:true whatever happened: the CLI printed
   // "captured", sitting.mjs bank() counted it and cleared pending_question so the question could
@@ -1418,7 +1481,8 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
 // outstandingGrades — captures with no settlement row after them. Derived, never
 // stored, so a crash between judging and recording cannot lose his spoken answer.
 export function outstandingGrades(rows) {
-  const settled = new Set((rows || []).filter((r) => r && (r.kind === "settled" || r.kind === DISPATCHING_KIND)).map((r) => r.of));
+  // unit mjset · F5 A — a capture set aside by a `pre_cyborg` row (gradeJudge, PRE_CYBORG_KIND) is kept and never outstanding
+  const settled = new Set((rows || []).filter((r) => r && (r.kind === "settled" || r.kind === DISPATCHING_KIND || r.kind === PRE_CYBORG_KIND)).map((r) => r.of));
   return (rows || []).filter((r) => r && r.kind === "capture" && !settled.has(r.id));
 }
 // unit mjd3 (forks row 1025 (4)) — THE WRITE-AHEAD ROW. Before a verdict is handed to its owner, a `dispatching` row naming the
@@ -2004,15 +2068,18 @@ export function judgeBatchSize({ rates = [], floors = [], remainingMs, left }) {
     return { size, from_rows: 0, from_floors: 0, rate_ms: null, margin_ms: null, per_capture_ms: null, floor_ms: null, remaining_ms: remainingMs,
       why: size ? "no judge row has returned ok — the batch is ONE capture (row 999 (2))" : "no budget remains" };
   }
-  const seen = [...rates, ...floors];
-  const slow = Math.max(...seen), fast = Math.min(...seen);
-  const margin = slow - fast;
+  // unit mjset · F1 C (forks row 1244) — A FLOOR IS NEVER A FAST OBSERVATION. A killed row proves its captures took LONGER than
+  // duration/items: a lower bound. It may raise the SLOWEST rate (a capture is at least that slow), and it never enters the fast
+  // end: the margin is the spread of the OK rates alone. At base `fast = min(rates ∪ floors)` let a batch killed at a SHORT bound
+  // (a floor of 15000 ms) open a spread no ok row ever measured, and the round blocked for ever (ci/mjset/MJSET_SPEC.md §2).
+  const slow = Math.max(...rates, ...floors);
+  const margin = rates.length ? Math.max(...rates) - Math.min(...rates) : 0;
   const per = slow + margin;
   let size = Math.max(0, Math.min(left, Math.floor(remainingMs / per)));
   const floor = floors.length ? Math.max(...floors) : null;
   if (floor !== null) size = Math.min(size, Math.max(0, Math.ceil(remainingMs / floor) - 1));   // strictly below remaining / floor
   return { size, from_rows: rates.length, from_floors: floors.length, rate_ms: Math.round(slow), margin_ms: Math.round(margin), per_capture_ms: Math.round(per), floor_ms: floor === null ? null : Math.round(floor), remaining_ms: remainingMs,
-    why: `${rates.length} ok judge row(s)${floors.length ? ` + ${floors.length} killed row(s) as floors (slowest floor ${Math.round(floor)} ms/capture, the size held strictly below it)` : ""}: slowest ${Math.round(slow)} ms/capture + margin ${Math.round(margin)} ms (the rows' own spread) against ${Math.round(remainingMs)} ms left` };
+    why: `${rates.length} ok judge row(s)${floors.length ? ` + ${floors.length} killed row(s) as floors (slowest floor ${Math.round(floor)} ms/capture, the size held strictly below it)` : ""}: slowest ${Math.round(slow)} ms/capture + margin ${Math.round(margin)} ms (the ok rows' own spread; a floor is never a fast observation) against ${Math.round(remainingMs)} ms left` };
 }
 // ── unit mjd3 (forks row 1025 (4), branch B1 of ci/mtail/FD_SPEC.md) · THE SETTLE TAIL IS RESERVED INSIDE THE BUDGET ──────
 // The settle of a batch spawns, per item, at most: ONE key_doubt card (cardFile, JUDGE_DISPATCH_MS), and then EITHER the owner
@@ -2052,6 +2119,71 @@ export function judgeOrder(queued) {
   return (queued || []).map((it, i) => ({ it, i, k: at(it) }))
     .sort((a, b) => (a.k === b.k ? a.i - b.i : a.k < b.k ? -1 : 1)).map((x) => x.it);
 }
+// ── unit mjset · F3 A (forks row 1244) · A DECLINED CAPTURE GOES BEHIND THE REST ───────────────────────────────────────────
+// MEASURED at base (MJSET_SPEC §3 H7): the queue is judged oldest day first and the measured budget fits one capture, so a head
+// capture the judge declines (no legal verdict: `missed`), the clock could not fit (`deferred`), two families disagreed on (a 💎)
+// or whose write-ahead row was refused (`refused`) was the head of EVERY round — one capture held the whole queue, silently, for
+// ever. A queue one item can hold for ever is a class (row 1244). Now every such outcome appends ONE `attempted` row (this organ's
+// own file, checked) naming the capture, its outcome and the round's instant; the next round orders the captures it has never
+// attempted first (oldest day first among them, judgeOrder unchanged) and then the attempted ones, the LEAST recently attempted
+// first — a rotation, never a drop: an attempted capture stays outstanding, and no count of attempts is typed anywhere.
+export const ATTEMPTED_KIND = "attempted";
+/** lastAttempts — PURE: capture id → the instant (ms) of its newest `attempted` row. */
+export function lastAttempts(rows) {
+  const m = new Map();
+  for (const r of rows || []) if (r && r.kind === ATTEMPTED_KIND && r.of) { const t = Date.parse(String(r.ts || "")); if (Number.isFinite(t) && !(m.get(r.of) > t)) m.set(r.of, t); }
+  return m;
+}
+/** declinedLast — PURE: `ordered` (judgeOrder's) with every capture an earlier round attempted moved behind the never-attempted
+ *  ones, the least recently attempted first; ties keep `ordered`'s own order. */
+export function declinedLast(ordered, rows) {
+  const last = lastAttempts(rows);
+  return (ordered || []).map((it, i) => ({ it, i, k: last.has(it.id) ? last.get(it.id) : -Infinity }))
+    .sort((a, b) => (a.k === b.k ? a.i - b.i : a.k < b.k ? -1 : 1)).map((x) => x.it);
+}
+// ── unit mjset · F5 A (forks row 1244) · THE CAPTURES BEFORE HIS FLOOR ARE SET ASIDE BY A CODE ROW, KEPT, NEVER JUDGED ─────
+// His 30 Aug word (canon 7744acf1, GAME ON): every learning record before the epoch is PRE-CYBORG — it measures the instrument,
+// not him. A capture whose own instant (captureDay, the mjday rule) is before the epoch (registry.mjs gameOnEpoch, ONE reader)
+// is never handed to the judge: ONE `pre_cyborg` row (of, ts, floor = the epoch's instant, why naming the canon) is appended to
+// this organ's own queue, checked, and outstandingGrades reads the capture as not outstanding. The capture row is never
+// rewritten or deleted (L9). A capture with only a day is before the floor when its IST day is before the epoch's IST day.
+export const PRE_CYBORG_KIND = "pre_cyborg";
+/** beforeFloor — PURE: is this capture before the floor `floorMs` (an instant), by its own capture instant? */
+export function beforeFloor(it, floorMs) {
+  if (!Number.isFinite(floorMs)) return false;
+  const c = captureDay(it);
+  if (c.at) { const t = Date.parse(c.at); return Number.isFinite(t) && t < floorMs; }
+  if (c.day) return c.day < istDay(new Date(floorMs));
+  return false;
+}
+
+// ── the judge's ONE brain-ledger row (the shape was inline in gradeJudge's `gen`; moved here byte for byte, field for field, so
+// a witness can read it without a model) + unit mjset · row 1260 (2) · THE COST FIELD THE CLI ALREADY PRINTS ─────────────────
+// The CLI's result envelope carries `total_cost_usd`. It is carried onto the row UNCHANGED, under the CLI's own name: the number
+// exactly as the CLI printed it, and null when the result does not carry it — never 0, never computed from a typed price (a
+// measurement, needing no key). The first ordinary round then says what one judged capture costs (the field ÷ `items`).
+// forks row 1279 (1): claudegen.mjs parseOut (its leaf) hands the envelope's field back on its result — ONE line there, null
+// when the envelope carries none — so a live row reads the CLI's own number.
+/** judgeLedgerRow — PURE: the judge's brain-ledger row for one call's result `r` (claudegen's shape). ledgerForensics is spread
+ *  after it by the caller (the WIRE scan of claudegen.mjs pins that spread on every brain_ledger row builder). */
+export function judgeLedgerRow(r, { rides = false, head = "", items = null, ts = new Date().toISOString() } = {}) {
+  const o = r || {};
+  return {
+    ts, job: JUDGE_JOB, engine: "claude", model: "opus",
+    input_tokens: o.input_tokens ?? null, output_tokens: o.output_tokens ?? null,
+    cache_creation_tokens: o.cache_creation_tokens ?? null, cache_read_tokens: o.cache_read_tokens ?? null,
+    total_tokens: o.total_tokens || 0,
+    tokens_estimated: o.tokens_estimated !== false && !(o.input_tokens || o.output_tokens),
+    duration_ms: o.duration_ms || 0,
+    ok: !!o.ok, error: o.error || null, limit_hit: !!o.limit_hit,
+    // WHETHER THE HEAD ACTUALLY RODE IS PART OF THE RECORD. Without it, a row
+    // with no cache_read is unreadable after the fact: it could be a cold first
+    // call, or it could be a box where the split silently never applied.
+    head_cached: !!rides, head_chars: String(head || "").length, items,
+    // mjset · row 1260 (2) — the CLI's own cost field, unchanged; null when absent, never 0
+    total_cost_usd: typeof o.total_cost_usd === "number" && Number.isFinite(o.total_cost_usd) ? o.total_cost_usd : null,
+  };
+}
 
 export async function gradeJudge(deps = {}) {
   const now = deps.now || new Date();
@@ -2062,11 +2194,57 @@ export async function gradeJudge(deps = {}) {
     ? { judged_by: "code", judged_by_code_at: now.toISOString(), fired_by: String(deps.firedBy) }
     : { judged_by: "hand", judged_by_code_at: null, fired_by: "cli" };
   const rows = deps.rows !== undefined ? deps.rows : readJournal(GRADE_QUEUE, 800);
-  const queued = judgeOrder(outstandingGrades(rows));   // mjdg — OLDEST DAY FIRST (judgeOrder above)
+  // unit mjset · F5 A — HIS FLOOR, read by its ONE reader (registry.mjs gameOnEpoch). A round over PLANTED rows reads no live
+  // registry: its floor is planted with them (`deps.gameOnEpoch`, a reader; absent = no floor), so no fixture ever reads his state.
+  // An unreadable floor REFUSES the round (forks row 1279 (2), below) — never a silent "no floor".
+  // (unit mjset, forks row 1279 (2): the card door below is hoisted above the floor read, unchanged, so the floor's refusal can file its card)
+  // ONE spawn of the card owner (captains_call.mjs), two of its verbs: `file` mints, `retire` (mjd5) retires at source.
+  const cardsOwner = (argv) => {
+    try {
+      const out = execFileSync(process.execPath, [join(HERE, "captains_call.mjs"), ...argv], { encoding: "utf8", timeout: JUDGE_DISPATCH_MS, windowsHide: true });
+      return { ok: true, out: String(out || "") };
+    } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) }; }
+  };
+  const cardFile = deps.fileCard || ((line, key, why = null) => cardsOwner(["file", "--line", line, "--key", key, ...(why ? ["--why-code-cannot-decide", why] : [])]));
+  const cardRetire = deps.retireCard || ((key, why) => cardsOwner(["retire", "--key", key, "--why", why]));
+  const floorRead = (() => {
+    const reader = deps.gameOnEpoch !== undefined ? deps.gameOnEpoch : (deps.rows !== undefined ? null : gameOnEpoch);
+    if (!reader) return { ms: null, why: "no floor planted with the planted rows", planted: true };
+    try { const ms = reader(); return Number.isFinite(ms) ? { ms, why: null } : { ms: null, why: `the floor reader gave ${clip(String(ms), 40)}` }; }
+    catch (e) { return { ms: null, why: `the floor is unreadable (${clip((e && e.message) || e, 160)})` }; }
+  })();
+  const outstanding0 = outstandingGrades(rows);
+  // unit mjset · forks row 1279 (2) — THE STRICTER READING: an UNREADABLE floor REFUSES the round. Nothing is judged as his
+  // without the floor (canon 7744acf1; registry.mjs gameOnEpoch: an unreadable floor "may never silently pass as no floor"). The
+  // refusal is named on the receipt and the CLI line, every capture stays outstanding (no row is written), and ONE card is filed
+  // through the captain's-call door, one key per IST day. A round over PLANTED rows with no planted floor is the fixture seam
+  // (`planted`), not an unreadable floor, and is not refused.
+  if (floorRead.ms === null && !floorRead.planted && (outstanding0.length || inDoubtDispatches(rows).length)) {
+    const key = `judge:floor:${istDay(now)}`;
+    const line = "RED · judge ka GAME ON floor (registry game_on_epoch) padha nahi gaya — koi capture judge nahi hua, sab queue mein hain. Registry row theek hote hi agla round chalega.";
+    const card = deps.dry && !deps.fileCard ? { filed: false, dry: true, key }
+      : (() => { const c = cardFile(line, key, "nothing is judged as his without the floor (canon 7744acf1); the registry row is his act, code cannot invent it (forks row 1279 (2))"); return { filed: !!c.ok, key, out: c.ok ? clip(String(c.out || "").trim(), 200) : null, error: c.ok ? null : c.error }; })();
+    return { ok: false, reason: "judge-floor-unreadable", red: "RED · THE FLOOR IS UNREADABLE", card, graded: 0, calls: 0, outstanding: outstanding0.length, ...stamp,
+      pre_cyborg: { floor: null, set_aside: 0, rows: [], why: floorRead.why, planted: false },
+      say: `gaffer_brain: RED · THE FLOOR IS UNREADABLE — ${floorRead.why}. The round was REFUSED before any call: nothing was judged, ${outstanding0.length} capture(s) stay outstanding, ${card.dry ? "DRY RUN — no card filed" : card.filed ? `ONE card at his anchor (${key})` : `⚠ the card could NOT be filed (${card.error})`} (forks row 1279 (2)).` };
+  }
+  const before = outstanding0.filter((it) => beforeFloor(it, floorRead.ms));
+  const setAside = [];
+  for (const it of before) {
+    const row = { v: 1, kind: PRE_CYBORG_KIND, of: it.id, ts: now.toISOString(), floor: new Date(floorRead.ms).toISOString(), captured_at: captureDay(it).at || null,
+      why: "captured before his GAME ON floor (canon 7744acf1, his 30 Aug 2026 word): pre-cyborg, it measures the instrument, not him — kept, never judged (forks row 1244 F5 A)" };
+    if (deps.dry) { setAside.push({ of: it.id, ref: `${it.type}:${it.ref}`, written: false, dry: true }); continue; }
+    const w = (deps.appendRow || appendRowChecked)(GRADE_QUEUE, row);
+    setAside.push({ of: it.id, ref: `${it.type}:${it.ref}`, written: !!(w && w.ok), ...(w && w.ok ? {} : { error: clip((w && w.error) || "the writer gave no answer", 160) }) });
+  }
+  const preCyborg = { floor: Number.isFinite(floorRead.ms) ? new Date(floorRead.ms).toISOString() : null, set_aside: setAside.length, rows: setAside, why: floorRead.why, planted: !!floorRead.planted };
+  const asideIds = new Set(before.map((it) => it.id));
+  // mjdg — OLDEST DAY FIRST (judgeOrder above) · mjset F3 A — then every capture an earlier round attempted goes behind the rest
+  const queued = declinedLast(judgeOrder(outstanding0.filter((it) => !asideIds.has(it.id))), rows);
   // mjd3 — a capture whose dispatch began and never settled (a kill mid-settle) is NAMED on every receipt and never re-dispatched
   let inDoubt = inDoubtGrades(rows).map((r) => ({ of: r.id, ref: `${r.type}:${r.ref}` }));
   const pend = inDoubtDispatches(rows);   // mjd4 — re-dispatched once below, after the owner doors are built
-  if (!queued.length && !pend.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0, in_doubt: inDoubt };
+  if (!queued.length && !pend.length) return { ok: true, skipped: `nothing captured since the last judge — the round is already settled${setAside.length ? ` · ${setAside.length} pre-cyborg capture(s) set aside, kept, never judged (floor ${preCyborg.floor})` : ""}`, graded: 0, in_doubt: inDoubt, pre_cyborg: preCyborg };
 
   // §9.1 — THE EXTERNAL CHECK runs FIRST, so its result is ground the judge reads,
   // never a second opinion it hears afterwards. One search call per round at most;
@@ -2105,28 +2283,22 @@ export async function gradeJudge(deps = {}) {
   // shared append lane whose SCHEMA belongs to brain.mjs and to no appender.
   // mjdg — ONE ROW PER BATCH (its own `items`, the batch's), and the call is killed at what remains of the round's ONE
   // budget (`call.budget_ms`, never above JUDGE_BUDGET_MS). No field is added to the row: brain.mjs owns its schema.
-  const gen = deps.generate || (async (p, call = {}) => {
-    const { claudeGen, ledgerForensics } = await import("./claudegen.mjs");
-    const budgetMs = Math.max(1, Math.min(JUDGE_BUDGET_MS, Number.isFinite(call.budget_ms) ? Math.floor(call.budget_ms) : JUDGE_BUDGET_MS));
-    const r = await claudeGen(p, "opus", budgetMs, ["--effort", "max"], rides ? head : null);
-    try {
-      appendFileSync(BRAIN_LEDGER, JSON.stringify({
-        ts: new Date().toISOString(), job: JUDGE_JOB, engine: "claude", model: "opus",
-        input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null,
-        cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
-        total_tokens: r.total_tokens || 0,
-        tokens_estimated: r.tokens_estimated !== false && !(r.input_tokens || r.output_tokens),
-        duration_ms: r.duration_ms || 0,
-        ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit,
-        // WHETHER THE HEAD ACTUALLY RODE IS PART OF THE RECORD. Without it, a row
-        // with no cache_read is unreadable after the fact: it could be a cold first
-        // call, or it could be a box where the split silently never applied.
-        head_cached: !!rides, head_chars: head.length, items: Number.isInteger(call.items) ? call.items : items.length,
-        ...ledgerForensics(r),
-      }) + "\n");
-    } catch { /* an unmetered call is still a made call — never fail the round on the meter */ }
-    return r;
-  });
+  // unit mjset · F4 A (forks row 1244) — `--dry` PROMISES TOUCH NOTHING, AND THE CALL WAS NOT IN IT. At base the default `gen`
+  // was not gated by `dry`: a rehearsal spent a live Opus call and appended an ok ledger row that then fed judgeRates — a dry run
+  // that moved the sizing history (MJSET_SPEC §3 H1). Now, under dry, an un-injected `gen` calls NOTHING and writes no row: it
+  // answers DRY (no grades), the round settles nothing and its receipt says `settled_nothing: "dry"`. An INJECTED generate still
+  // runs under dry — that is a selftest's own stub, the thing being tested (the rule the dispatch above already keeps).
+  const gen = deps.generate || (deps.dry
+    ? async () => ({ ok: true, dry: true, text: JSON.stringify({ grades: [] }), duration_ms: 0, note: "DRY RUN — no judge call was made and no ledger row was written" })
+    : async (p, call = {}) => {
+      const { claudeGen, ledgerForensics } = await import("./claudegen.mjs");
+      const budgetMs = Math.max(1, Math.min(JUDGE_BUDGET_MS, Number.isFinite(call.budget_ms) ? Math.floor(call.budget_ms) : JUDGE_BUDGET_MS));
+      const r = await claudeGen(p, "opus", budgetMs, ["--effort", "max"], rides ? head : null);
+      try {
+        appendFileSync(BRAIN_LEDGER, JSON.stringify({ ...judgeLedgerRow(r, { rides, head, items: Number.isInteger(call.items) ? call.items : items.length }), ...ledgerForensics(r) }) + "\n");
+      } catch { /* an unmetered call is still a made call — never fail the round on the meter */ }
+      return r;
+    });
 
   const second = deps.secondOpinion || ((it, bound = {}) => secondOpinion(it, { ...deps, ...bound }));
   // mjd3 — THE SECOND OPINION IS HANDED A DEADLINE CLIPPED TO WHAT THE ROUND HAS LEFT. models.mjs's walk has no total deadline
@@ -2153,15 +2325,6 @@ export async function gradeJudge(deps = {}) {
     try { return await Promise.race([Promise.resolve().then(() => second(item, bound)), late]); }
     finally { timer.clear(h); ctrl.abort(); }
   };
-  // ONE spawn of the card owner (captains_call.mjs), two of its verbs: `file` mints, `retire` (mjd5) retires at source.
-  const cardsOwner = (argv) => {
-    try {
-      const out = execFileSync(process.execPath, [join(HERE, "captains_call.mjs"), ...argv], { encoding: "utf8", timeout: JUDGE_DISPATCH_MS, windowsHide: true });
-      return { ok: true, out: String(out || "") };
-    } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) }; }
-  };
-  const cardFile = deps.fileCard || ((line, key, why = null) => cardsOwner(["file", "--line", line, "--key", key, ...(why ? ["--why-code-cannot-decide", why] : [])]));
-  const cardRetire = deps.retireCard || ((key, why) => cardsOwner(["retire", "--key", key, "--why", why]));
   // THREE NAMED SPAWNS, NOT ONE DYNAMIC ONE. `execFileSync(…, [join(HERE, cmd.organ)])`
   // is one line and it is an Unknown to the static analyser — the organ→organ edge
   // simply vanishes from the graph, and the per-organ sink ratchet charges for it.
@@ -2226,7 +2389,7 @@ export async function gradeJudge(deps = {}) {
   }
   const settledNow = new Set(resolved.map((x) => x.of));
   inDoubt = inDoubt.filter((x) => !settledNow.has(x.of));
-  if (!queued.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0, resolved_in_doubt: resolved, in_doubt: inDoubt };
+  if (!queued.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0, resolved_in_doubt: resolved, in_doubt: inDoubt, pre_cyborg: preCyborg };
 
   // ── ONE BATCH, SETTLED AS IT RETURNS — the pre-mjdg round body, run per batch (`items` = this batch's captures) ──
   const settleBatch = async (items, prompt, r) => {
@@ -2239,7 +2402,7 @@ export async function gradeJudge(deps = {}) {
     // would otherwise shift every verdict by one and mark the wrong things — plausible,
     // silent, and completely wrong. An item with no grade, or with a verdict outside
     // its type's legal set, stays OUTSTANDING and is judged again; it is never coerced.
-    const settled = [], missed = [];
+    const settled = [], missed = [], missedIds = [];   // mjset F3 A — the ids ride beside the refs, so the round can name each attempt
     // §9.4 — THE CORPUS the judge was given is the only legal source of "expected":
     // head + body (the head rides again inside the body when inlined; a substring
     // test does not mind the repeat).
@@ -2247,7 +2410,7 @@ export async function gradeJudge(deps = {}) {
     for (const it of items) {
       const g = grades.find((x) => x && String(x.id) === it.id);
       const verdict = g && isVerdict(it.type, g.verdict) ? String(g.verdict).trim().toLowerCase() : null;
-      if (!verdict) { missed.push(`${it.type}:${it.ref}`); continue; }
+      if (!verdict) { missed.push(`${it.type}:${it.ref}`); missedIds.push(it.id); continue; }
       const cap = captureDay(it);   // mjday — the day of ITS capture, never the judge's clock (see captureDay above)
       settled.push({
         v: 2, kind: "settled", of: it.id, ts: now.toISOString(), day: cap.day,
@@ -2290,7 +2453,7 @@ export async function gradeJudge(deps = {}) {
         // (invented terms dropped and NAMED in `dropped`), recomputes `missing`, and the
         // hedge count is the capture row's own (code, at bank time) — never the model's.
         register: REGISTER_TYPES.includes(it.type)
-          ? { ...validateRegister(g.register, { spoken: it.spoken, corpus }), hedges: Number.isInteger(it.hedges) ? it.hedges : countHedges(it.spoken) }
+          ? { ...validateRegister(g.register, { spoken: it.spoken, corpus }), hedges: Number.isInteger(it.hedges) ? it.hedges : countHedges(answerOf(it.spoken)) }
           : null,
       });
     }
@@ -2338,7 +2501,7 @@ export async function gradeJudge(deps = {}) {
       if (!deps.dry && !fits(JUDGE_DISPATCH_MS)) { deferred.push({ ref, of: s.of, step: "diamond", left_ms: Math.round(left()) }); continue; }
       const line = disagreementCard(item, { verdict: s.verdict, why: s.why }, { verdict: two.verdict, why: two.why });
       const c = deps.dry ? { ok: true, dry: true } : cardFile(line, `diamond:${s.type}:${s.ref}`);
-      diamonds.push({ ref: `${s.type}:${s.ref}`, first: s.verdict, second: two.verdict, filed: !!c.ok, dry: !!deps.dry, line });
+      diamonds.push({ ref: `${s.type}:${s.ref}`, of: s.of, first: s.verdict, second: two.verdict, filed: !!c.ok, dry: !!deps.dry, line });
     }
 
     // ⚠ --dry MEANS TOUCH NOTHING, AND IT DID NOT. Until this line `dry` only skipped
@@ -2360,12 +2523,12 @@ export async function gradeJudge(deps = {}) {
         // mjd4 — the write-ahead row carries the WHOLE verdict (the settled row's fields), so a capture it leaves in doubt can be
         // re-dispatched from it alone
         const w0 = (deps.appendRow || appendRowChecked)(GRADE_QUEUE, { ...s, kind: DISPATCHING_KIND, ts: now.toISOString() });
-        if (!w0 || !w0.ok) { refused.push({ ref: `${s.type}:${s.ref}`, error: `the write-ahead row is not on disk (${(w0 && w0.error) || "the writer gave no answer"}) — the owner was NOT called` }); continue; }
+        if (!w0 || !w0.ok) { refused.push({ ref: `${s.type}:${s.ref}`, of: s.of, write_ahead: true, error: `the write-ahead row is not on disk (${(w0 && w0.error) || "the writer gave no answer"}) — the owner was NOT called` }); continue; }
       }
       const d = (deps.dry && !deps.dispatch)
         ? { ok: true, noop: true, note: "DRY RUN — the owner was NOT called and nothing was recorded" }
         : dispatch(ownerCommand(s));
-      if (!d.ok) { refused.push({ ref: `${s.type}:${s.ref}`, error: d.error }); continue; }
+      if (!d.ok) { refused.push({ ref: `${s.type}:${s.ref}`, of: s.of, error: d.error }); continue; }
       const row = { ...s, owner_noop: !!d.noop, owner_note: d.note || null };
       // ONLY WHAT THE OWNER ACCEPTED IS MARKED SETTLED. A verdict an owner refused is not
       // a graded item, and writing a settlement row for it would lose his spoken answer.
@@ -2383,7 +2546,7 @@ export async function gradeJudge(deps = {}) {
       dispatched.push(row);
     }
     const later = new Set(deferred.map((x) => x.of));
-    return { settled: confirmed.filter((s) => !later.has(s.of)), dispatched, refused, missed, diamonds, keyDoubts, deferred, settleFailed };
+    return { settled: confirmed.filter((s) => !later.has(s.of)), dispatched, refused, missed, missedIds, diamonds, keyDoubts, deferred, settleFailed };
   };
 
   // ── THE ROUND: batch after batch, oldest day first, inside ONE budget, no retry ──
@@ -2393,13 +2556,29 @@ export async function gradeJudge(deps = {}) {
   let spent = extMs, at = 0, stop = null;   // mjud F3 — the check's own time is already spent from the ONE budget
   const left = () => JUDGE_BUDGET_MS - Math.max(clock() - t0, spent);   // mjd3 — what the round has left, re-read at every step
   const batches = [];
-  const all = { settled: [], dispatched: [], refused: [], missed: [], diamonds: [], keyDoubts: [], deferred: [] };
+  const all = { settled: [], dispatched: [], refused: [], missed: [], missedIds: [], diamonds: [], keyDoubts: [], deferred: [] };
   // mjd3 — RESERVE THE TAIL BEFORE SIZING: a batch starts only when its judge call AND its whole settle tail fit (judgeBatchWithTail),
   // and the call is killed at what remains minus that tail (`call_ms`), so the settle always has its reserve inside the budget.
   const sizing0 = judgeBatchWithTail({ rates, floors, remainingMs: left(), rest: items });
   while (at < items.length) {
     const remaining = left();
-    const sz = judgeBatchWithTail({ rates, floors, remainingMs: remaining, rest: items.slice(at) });
+    let sz = judgeBatchWithTail({ rates, floors, remainingMs: remaining, rest: items.slice(at) });
+    // unit mjset · F1 C + F2 B (forks row 1244) — THE GUARD ALWAYS TRIES ONE CAPTURE (law L8: the budget is a GUARD — the kill
+    // bound — never a gate that never opens). At base a history the estimator reads as "not even ONE fits" started nothing, so no
+    // new row could ever land and the history never changed: a fixed point no carrier could open (MJSET_SPEC §2, P4 — one killed
+    // one-capture row alone held it for ever). Now, when no batch of THIS round has started and the estimator says size 0, the
+    // round starts a batch of exactly ONE capture, killed at what remains minus that capture's own settle tail — IF that bound is
+    // positive AND (F2 B) the slowest OK rate measured fits inside it. A history whose OK rows say one capture takes longer than
+    // the bound keeps the RED of row 963 (1) (no call); a floor alone never refuses the guard (a floor is a lower bound, F1 C). At
+    // most ONE guarded call per round: a kill of it is K2 (RED, the round stops), and the next batch is sized by the estimator.
+    if (sz.size < 1 && !batches.length) {
+      const one = items.slice(at, at + 1), callMs = remaining - settleReserveMs(one);
+      const slowOk = rates.length ? Math.max(...rates) : null;
+      if (one.length && callMs > 0 && (slowOk === null || slowOk <= callMs)) {
+        sz = { ...sz, size: 1, tail_ms: settleReserveMs(one), call_ms: callMs, guarded: true,
+          why: `${sz.why} — THE GUARD (mjset F1 C): no batch of this round has started, so ONE capture is tried at ${Math.round(callMs)} ms (what remains minus its settle tail)${slowOk === null ? " — no ok row measures it slower" : ` — the slowest ok rate ${Math.round(slowOk)} ms fits`}` };
+      }
+    }
     if (sz.size < 1) {
       // mjud F3 — no batch started, and a full budget WOULD have started one: the check ate it, and the round says so
       const ate = !batches.length && Math.max(clock() - t0, spent) > 0 && judgeBatchWithTail({ rates, floors, remainingMs: JUDGE_BUDGET_MS, rest: items.slice(at) }).size >= 1;
@@ -2411,7 +2590,7 @@ export async function gradeJudge(deps = {}) {
     const r = await gen(prompt, { items: batch.length, budget_ms: sz.call_ms, batch: batches.length + 1 });
     const dur = r && Number.isFinite(r.duration_ms) && r.duration_ms > 0 ? r.duration_ms : 0;
     spent += dur;
-    const rec = { n: batches.length + 1, size: batch.length, ids: batch.map((it) => it.id), budget_ms: sz.call_ms, tail_ms: sz.tail_ms, duration_ms: dur, ok: !!(r && r.ok), sizing: sz };
+    const rec = { n: batches.length + 1, size: batch.length, ids: batch.map((it) => it.id), budget_ms: sz.call_ms, tail_ms: sz.tail_ms, duration_ms: dur, ok: !!(r && r.ok), sizing: sz, guarded: !!sz.guarded, ...(r && r.dry ? { dry: true } : {}) };
     batches.push(rec);
     if (!r || !r.ok) {
       const errText = String((r && (r.error_envelope || r.error)) || "no reply");
@@ -2431,8 +2610,37 @@ export async function gradeJudge(deps = {}) {
   }
   const calls = batches.length + ((ext && ext.calls) || 0);
   const outstanding = items.length - all.dispatched.length;
+  // mjset F3 A — EVERY CAPTURE THIS ROUND TRIED AND DID NOT SETTLE IS NAMED BY ONE `attempted` ROW (its outcome, the round's
+  // instant), so the next round puts it behind the rest (declinedLast). The outcomes: `missed` (no legal verdict) · `deferred` (the
+  // clock could not fit its tail) · `diamond` (two families disagreed) · `refused` (its write-ahead row or its owner refused) ·
+  // `killed` (a one-capture batch the lane killed at its bound — the same class: one capture could hold the queue for ever). A dry
+  // round writes nothing. A row that does not land is NAMED on the receipt (`attempted_unwritten`), never silent.
+  const attemptOf = new Map();
+  for (const id of all.missedIds) attemptOf.set(id, "missed");
+  for (const d of all.deferred) if (d.of && !attemptOf.has(d.of)) attemptOf.set(d.of, "deferred");
+  for (const d of all.diamonds) if (d.of && !attemptOf.has(d.of)) attemptOf.set(d.of, "diamond");
+  for (const d of all.refused) if (d.of && !attemptOf.has(d.of)) attemptOf.set(d.of, "refused");
+  if (stop && stop.kind === "one-capture-dead" && stop.item && !attemptOf.has(stop.item.id)) attemptOf.set(stop.item.id, "killed");
+  const attempted = [], attemptedUnwritten = [];
+  for (const [of, outcome] of attemptOf) {
+    attempted.push({ of, outcome });
+    if (deps.dry) continue;
+    const w = (deps.appendRow || appendRowChecked)(GRADE_QUEUE, { v: 1, kind: ATTEMPTED_KIND, of, outcome, ts: now.toISOString(), ...stamp });
+    if (!w || !w.ok) attemptedUnwritten.push({ of, error: clip((w && w.error) || "the writer gave no answer", 160) });
+  }
+  // row 1245 (2) — A ROUND THAT ENDS OK HAVING SETTLED NOTHING SAYS SO BY NAME. At base such a round exited 0 printing
+  // "0 item(s) graded" and its cause lived only in per-item lines, or nowhere (deferred). Now every ok round with a call made (or a
+  // dry one) and graded 0 carries `settled_nothing`: the names of every cause present, joined by "+", from `dry` · `missed` ·
+  // `deferred` · `diamond` · `refused`; the CLI's head line says it, so the day close's judge line and the sitting record keep it.
+  const nothingWhy = (() => {
+    if (all.dispatched.length || !batches.length) return null;
+    if (batches.some((b) => b.dry)) return "dry";
+    const names = [all.missed.length && "missed", all.deferred.length && "deferred", all.diamonds.length && "diamond", all.refused.length && "refused"].filter(Boolean);
+    return names.length ? names.join("+") : "no-grade";
+  })();
   const carried = { graded: all.dispatched.length, dispatched: all.dispatched, refused: all.refused, missed: all.missed, diamonds: all.diamonds, key_doubts: all.keyDoubts,
-    ...stamp, batches, sizing: sizing0, outstanding, calls, deferred: all.deferred, in_doubt: inDoubt, resolved_in_doubt: resolved };
+    ...stamp, batches, sizing: sizing0, outstanding, calls, deferred: all.deferred, in_doubt: inDoubt, resolved_in_doubt: resolved,
+    pre_cyborg: preCyborg, attempted, attempted_unwritten: attemptedUnwritten, guarded: batches.some((b) => b.guarded) };
   const earlier = all.dispatched.length ? ` (${all.dispatched.length} item(s) of earlier batch(es) are settled and stay settled)` : "";
 
   if (stop && stop.kind === "auth") {
@@ -2498,7 +2706,10 @@ export async function gradeJudge(deps = {}) {
     // mjd3 — the items the round's clock could not fit (outstanding, never coerced) and the captures in doubt from a kill mid-settle
     deferred: all.deferred, in_doubt: inDoubt, resolved_in_doubt: resolved,
     // mjdg — the batches as they ran, the opening size's derivation, and why the round ended before the queue did (null = it did not)
-    batches, sizing: sizing0, stopped: stop ? stop.kind : null, stopped_why: stop && stop.sizing ? stop.sizing.why : null, red: null };
+    batches, sizing: sizing0, stopped: stop ? stop.kind : null, stopped_why: stop && stop.sizing ? stop.sizing.why : null, red: null,
+    // unit mjset — the floor's set-aside, the attempts behind the rest, whether the guard fired, and WHY nothing settled (row 1245 (2))
+    pre_cyborg: preCyborg, attempted, attempted_unwritten: attemptedUnwritten, guarded: batches.some((b) => b.guarded),
+    ...(nothingWhy ? { settled_nothing: nothingWhy } : {}), ...(batches.some((b) => b.dry) ? { dry: true } : {}) };
 }
 
 // ---------------------------------------------------------------------------
@@ -2686,12 +2897,33 @@ async function main() {
     // it that way, and a flag ignored for its spelling is a measurement thrown away.
     const lat = flag("latency") !== undefined ? flag("latency") : flag("latency_ms");
     const said = flag("said");
-    const spoken = said !== undefined ? String(said) : readFileSync(0, "utf8");
-    const r = gradeCapture({ type: process.argv[3], ref: process.argv[4], gut: flag("gut"), spoken }, {
+    const asJson = process.argv.includes("--json");
+    const refuse = (o) => { console.log(asJson ? JSON.stringify({ ok: false, reason: o.reason, say: o.say }) : o.say); process.exit(1); };
+    // unit mbank (forks rows 1189 (1) / 1194 (2) / 1230) — THE CODE DOOR: a call carrying --said or --surface code banks
+    // HIS words from the prompt record through the one door, refused when absent, consumed, from another Claude session
+    // or written before the turn id existed (mbank-6 a). The stdin doors (voice, sitting) keep their own words (mbank-3 a).
+    const codeDoor = said !== undefined || String(flag("surface") || "").trim().toLowerCase() === "code";
+    let spoken, gut = flag("gut"), src, prompt = null, sessionChecked = null;
+    if (codeDoor) {
+      const sessionId = process.env.CLAUDE_CODE_SESSION_ID || null;
+      prompt = readHisPrompt({ sessionId, fresh: true, needTurn: true });
+      if (!prompt.ok) refuse({ reason: `prompt-${prompt.reason}`, say: `gaffer_brain: his words are not on disk (${prompt.reason}: ${prompt.why}) — the bank takes them from the prompt record, never from a typed copy; nothing banked` });
+      const w = codeDoorWords({ prompt, said, gut });
+      if (!w.ok) refuse(w);
+      spoken = w.spoken; gut = w.gut; src = "prompt"; sessionChecked = !!sessionId;
+    } else {
+      spoken = readFileSync(0, "utf8"); src = spokenSrcOf(flag("note"));
+    }
+    const r = gradeCapture({ type: process.argv[3], ref: process.argv[4], gut, spoken }, {
       asked: flag("asked"), axis: flag("axis"), note: flag("note"),
-      surface: flag("surface"), probe: flag("probe"), register: flag("register"),
+      surface: flag("surface"), probe: flag("probe"), register: flag("register"), moment: flag("moment"),
       latencyMs: lat !== undefined && Number.isFinite(Number(lat)) ? Math.trunc(Number(lat)) : undefined,
+      src, prompt, sessionChecked, prior: codeDoor ? readJournal(GRADE_QUEUE, 4000) : undefined,
     });
+    if (r.ok && r.already) {
+      console.log(asJson ? JSON.stringify({ ok: true, already: true, captured: r.captured }) : `gaffer_brain: already banked ${r.captured} — this turn's answer is on the queue once; nothing written`);
+      return;
+    }
     // --json (L2 · fate 15) — THE VERDICT AS ONE MACHINE LINE. sitting.mjs bank() reads this line's
     // `ok` — the write's own answer — and never the exit status (gaffer-dugout-sitting.txt:8). The
     // exit code keeps its meaning for a human shell; a program reads the verdict.
@@ -2733,10 +2965,15 @@ async function main() {
     await holdJudgePort();
     const r = await gradeJudge({ dry: process.argv.includes("--dry"), ...(firedBy ? { firedBy } : {}) });
     if (r.skipped) { console.log("gaffer_brain: " + r.skipped); return; }
-    if (!r.ok) { console.log(r.say); process.exit(1); }
+    if (!r.ok) { console.log(r.say + ((r.attempted || []).length ? ` · the capture tried goes behind the rest next round (${r.attempted.map((a) => a.outcome).join(", ")})` : "")); process.exit(1); }
     // mjdg — ONE batch prints the pre-mjdg line byte for byte; several say so after it (postmatch.mjs judgeLineOf reads the head)
     const nb = (r.batches || []).length;
-    console.log(`gaffer_brain: ${r.graded} item(s) graded in ONE Opus call${nb > 1 ? ` per batch · ${nb} batches, oldest day first` : ""} · types: ${r.types.join(", ") || "—"}${r.outstanding ? ` · ${r.outstanding} still outstanding` : ""}`);
+    console.log(`gaffer_brain: ${r.graded} item(s) graded in ONE Opus call${nb > 1 ? ` per batch · ${nb} batches, oldest day first` : ""} · types: ${r.types.join(", ") || "—"}${r.outstanding ? ` · ${r.outstanding} still outstanding` : ""}${r.settled_nothing ? ` · SETTLED NOTHING: ${r.settled_nothing}${r.settled_nothing === "dry" ? " (DRY RUN — no judge call was made)" : ""}` : ""}`);
+    // unit mjset — the floor's set-aside and the guard, said with the round (F5 A / F1 C)
+    if (r.pre_cyborg && r.pre_cyborg.set_aside) console.log(`  ${r.pre_cyborg.set_aside} pre-cyborg capture(s) set aside (floor ${r.pre_cyborg.floor}) — kept, never judged (forks row 1244 F5 A)`);
+    else if (r.pre_cyborg && r.pre_cyborg.why && !r.pre_cyborg.planted) console.log(`  pre-cyborg floor: ${r.pre_cyborg.why}`);
+    if (r.guarded) console.log("  THE GUARD fired: the estimator fit no batch, so ONE capture was tried at the round's bound (mjset F1 C)");
+    if ((r.attempted || []).length) console.log(`  ${r.attempted.length} capture(s) tried and not settled go behind the rest next round: ${r.attempted.map((a) => a.outcome).join(", ")}${(r.attempted_unwritten || []).length ? ` · ⚠ ${r.attempted_unwritten.length} attempted row(s) NOT written` : ""}`);
     if (r.stopped === "budget") console.log(`  the round's ONE budget ran out (${r.stopped_why}) — the rest waits in the queue for the next round, oldest day first`);
     console.log(`  stamped judged_by ${r.judged_by} · fired_by ${r.fired_by}${r.judged_by_code_at ? ` · judged_by_code_at ${r.judged_by_code_at}` : " · no code instant (a typed round)"}`);
     // §9.1 — the external check's receipt is said out loud with the round: ran or
@@ -2782,6 +3019,10 @@ async function main() {
     if (!out.length) { console.log("gaffer_brain: nothing outstanding — every captured item has been judged and recorded."); return; }
     console.log(`gaffer_brain: ${out.length} captured item(s) waiting for judge-round:`);
     for (const it of out) console.log(`  ${String(it.type).padEnd(13)} ${it.label || it.ref} · gut ${it.gut} · ${String(it.spoken).length} chars said · ${it.key ? "has a key" : "no key"}`);
+    // unit mjset F5 A — the captures before his floor: the next round sets them aside by a code row (kept, never judged)
+    let floorMs = null; try { floorMs = gameOnEpoch(); } catch { /* unreadable: the round names it */ }
+    const pre = out.filter((it) => beforeFloor(it, floorMs));
+    if (pre.length) console.log(`  ${pre.length} of them were captured before his floor (${new Date(floorMs).toISOString()}): the next round sets them aside by a pre_cyborg row — kept, never judged`);
     return;
   }
   if (mode === "selftest") return selftest();
@@ -3465,6 +3706,29 @@ function selftest2(stub, S) {
           gradeCapture({ type: "axis_weld", ref: "context:a", gut: "guessed", spoken: "" }, { dry: true, material: { concept: "c" } }).reason === "empty");
         assert("CAPTURE · an unknown verdict type is refused at the door", gradeCapture({ type: "vibes", ref: "x", gut: "knew", spoken: SAID }, { dry: true }).reason === "unknown-type");
         {
+          // unit mbank (row 1230) — THE CODE DOOR: his bytes from the prompt record, the gut-word his, the hedge meter over his answer
+          const PR = { ok: true, text: "shayad -  plant answer\n one two three", at: "2026-11-21T04:00:00.000Z", session_id: "s", turn_id: "t-1" };
+          const sel = codeDoorWords({ prompt: PR, said: "plant answer one two" }), whole = codeDoorWords({ prompt: PR });
+          assert("CODE DOOR (mbank-4 b · mbank-2 a) — no --said banks his whole message; --said selects, and the bytes kept are HIS slice (whitespace as he typed it), never the argument",
+            whole.ok && whole.spoken === PR.text && sel.ok && sel.spoken === "plant answer\n one two"
+            && codeDoorWords({ prompt: PR, said: "plant answer one 2" }).reason === "not-his-words" && codeDoorWords({ prompt: { ok: false } }).reason === "no-prompt");
+          assert("CODE DOOR (mbank-5 b) — the gut-word is read off his message; a --gut that disagrees, or one typed on a message with none, is refused",
+            whole.gut === "shaky" && codeDoorWords({ prompt: PR, gut: "shaky" }).ok && codeDoorWords({ prompt: PR, gut: "knew" }).reason === "gut-not-his"
+            && codeDoorWords({ prompt: { ...PR, text: "plant answer one two three" }, gut: "knew" }).reason === "gut-invented"
+            && codeDoorWords({ prompt: { ...PR, text: "plant answer one two three" } }).gut === undefined);
+          const mat = { concept: "c", label: "l" };
+          const cp = gradeCapture({ type: "voice_rep", ref: "c:a", gut: whole.gut, spoken: whole.spoken }, { dry: true, material: mat, src: "prompt", prompt: PR, sessionChecked: true, now: T0 });
+          assert("CODE DOOR ROW — spoken byte-equal to his message, spoken_src prompt, turn_id and prompt_at from the record, session_checked; the gut-word lead is not a hedge (mbank-7 a)",
+            cp.ok && cp.row.spoken === PR.text && cp.row.spoken_src === "prompt" && cp.row.turn_id === "t-1" && cp.row.prompt_at === PR.at
+            && cp.row.session_checked === true && cp.row.hedges === 0 && countHedges(PR.text) === 1);
+          const again = gradeCapture({ type: "voice_rep", ref: "c:a", gut: whole.gut, spoken: whole.spoken }, { dry: true, material: mat, src: "prompt", prompt: PR, prior: [cp.row], now: T0 });
+          const stdinRow = gradeCapture({ type: "voice_rep", ref: "c:a", gut: "knew", spoken: "  voice plant words here  " }, { dry: true, material: mat, src: spokenSrcOf("dugout-voice think:1ms"), now: T0 });
+          assert("CODE DOOR — the same turn + slice is `already banked` (one answer, one rep); the stdin doors keep their own words and name their door",
+            again.ok && again.already === true && again.captured === cp.row.id
+            && stdinRow.ok && stdinRow.row.spoken === "voice plant words here" && stdinRow.row.spoken_src === "voice" && stdinRow.row.turn_id === null
+            && spokenSrcOf("sitting x · y") === "sitting" && spokenSrcOf(null) === "stdin");
+        }
+        {
           const t0 = process.hrtime.bigint();
           for (let i = 0; i < 200; i++) gradeCapture({ type: "axis_weld", ref: "context:a", gut: "knew", spoken: SAID }, { dry: true, material: { concept: "context", label: "a", key: K.weld } });
           assert("CAPTURE · 200 captures stay trivial — this runs in the ONLY latency budget the round has",
@@ -3592,6 +3856,50 @@ function selftest2(stub, S) {
           assert("mjud mjd2 · …planted the other way: a refusal is not a kill (no floor), and with no killed row the size is the pre-mjd2 rule byte for byte",
             judgeFloors([refusedAuth, { job: JUDGE_JOB, ok: false, duration_ms: 300000, items: 59 }]).length === 0
             && judgeBatchSize({ rates: [10000, 20000], floors: [], remainingMs: 300000, left: 59 }).size === judgeBatchSize({ rates: [10000, 20000], remainingMs: 300000, left: 59 }).size);
+
+          // ── unit mjset (forks rows 1244 / 1245 / 1260 (2)) — the judge that never settled: estimator, guard, rotation, dry, floor ──
+          {
+            const RUN = [{ job: JUDGE_JOB, ok: true, duration_ms: 172766, items: 1 }, ...[15000, 30000, 40000, 90086].map((f) => ({ job: JUDGE_JOB, ok: false, killed: true, duration_ms: f, items: 1, error: `KILLED (SIGTERM) after ${f}ms` }))];
+            const est = judgeBatchWithTail({ rates: judgeRates(RUN), floors: judgeFloors(RUN), remainingMs: JUDGE_BUDGET_MS, rest: items.slice(0, 2) });
+            assert("mjset F1 C · a FLOOR is never a fast observation: the runner's history (1 ok row + floors 15000…90086) sizes ONE capture with margin 0, where base read 'NO BATCH FITS' for ever",
+              est.size === 1 && est.margin_ms === 0 && judgeBatchSize({ rates: [], floors: [240000], remainingMs: 300000, left: 1 }).margin_ms === 0);
+            const g1 = [];
+            const KILL1 = [{ job: JUDGE_JOB, ok: false, killed: true, duration_ms: 240000, items: 1, error: "KILLED (SIGTERM) after 240000ms" }];
+            const guard = await gradeJudge({ dry: true, rows: items, judgeHistory: KILL1, generate: async (p, call) => { g1.push(call); return { ok: false, duration_ms: 240000, killed: true, error: "KILLED (SIGTERM) after 240000ms" }; }, now: T0, clock: () => 0 });
+            assert("mjset F1 C · THE GUARD: one killed one-capture row alone (P4, base: no call for ever) → exactly ONE guarded call of ONE capture, killed at what remains minus its tail, then K2 RED and no second call",
+              guard.reason === "judge-one-capture-past-budget" && g1.length === 1 && g1[0].items === 1 && g1[0].budget_ms === JUDGE_BUDGET_MS - settleReserveMs([guard.batches[0] && items.find((it) => it.id === guard.batches[0].ids[0])]) && guard.guarded === true);
+            const g2 = [];
+            const once = await gradeJudge({ dry: true, rows: items, judgeHistory: KILL1, generate: async (p, call) => { g2.push(call); return { ok: true, duration_ms: 1000, text: JSON.stringify({ grades: items.filter((it) => p.includes(`id ${it.id}`)).map((it) => ({ id: it.id, verdict: VERDICT_TYPES[it.type].verdicts[0], why: "x" })) }) }; }, dispatch: () => ({ ok: true }), now: T0, clock: () => 0 });
+            assert("mjset F1 C · the guard fires at most ONCE per round: after its ok batch the next is sized by the estimator alone",
+              once.ok && g2.length === 1 && once.batches.length === 1 && once.batches[0].guarded === true && once.stopped === "budget");
+            const q = [];
+            const declined = async () => ({ ok: true, duration_ms: 1000, text: JSON.stringify({ grades: [] }) });
+            const r1 = await gradeJudge({ rows: items, judgeHistory: [{ job: JUDGE_JOB, ok: true, duration_ms: 172766, items: 1 }], generate: declined, appendRow: (f, row) => { q.push(row); return { ok: true }; }, dispatch: () => ({ ok: true }), now: T0, clock: () => 0 });
+            const head1 = r1.batches[0].ids[0];
+            const r2 = await gradeJudge({ dry: true, rows: [...items, ...q], judgeHistory: [{ job: JUDGE_JOB, ok: true, duration_ms: 172766, items: 1 }], generate: declined, dispatch: () => ({ ok: true }), now: T0, clock: () => 0 });
+            assert("mjset F3 A · a DECLINED capture goes behind the rest: round 1 declines its head and writes ONE attempted row; round 2 starts with a different capture; the receipt says SETTLED NOTHING: missed",
+              r1.ok && r1.settled_nothing === "missed" && q.filter((x) => x.kind === ATTEMPTED_KIND && x.of === head1 && x.outcome === "missed").length === 1
+              && r2.batches[0].ids[0] !== head1 && outstandingGrades([...items, ...q]).length === items.length);
+            const dr = await gradeJudge({ dry: true, rows: items, judgeHistory: [], verify: async () => ({ ran: false, why: "x", checks: {}, calls: 0 }), headRides: false, dispatch: () => ({ ok: true }), now: T0, clock: () => 0 });
+            assert("mjset F4 A · --dry with NO injected judge calls nothing and writes no ledger row: the receipt says DRY and settled nothing",
+              dr.ok && dr.graded === 0 && dr.settled_nothing === "dry" && dr.dry === true && dr.batches.length >= 1 && dr.batches.every((b) => b.dry === true && b.duration_ms === 0));
+            const EPOCH = Date.parse("2026-08-30T02:00:00.000Z");
+            const pre = { ...items[0], id: "pre1", ts: "2026-08-30T01:59:00.000Z" }, post = { ...items[0], id: "post1", ts: "2026-08-30T02:01:00.000Z" };
+            const pq = [], seen = [];
+            const fl = await gradeJudge({ rows: [pre, post], gameOnEpoch: () => EPOCH, judgeHistory: [], appendRow: (f, row) => { pq.push(row); return { ok: true }; }, dispatch: () => ({ ok: true }),
+              generate: async (p) => { seen.push(p); return { ok: true, duration_ms: 1000, text: JSON.stringify({ grades: [{ id: "post1", verdict: VERDICT_TYPES[post.type].verdicts[0], why: "x" }] }) }; }, now: T0, clock: () => 0 });
+            assert("mjset F5 A · a capture before his floor (by its instant, not its day) is set aside by ONE pre_cyborg row, kept, never handed to the judge; the one after it is judged",
+              fl.pre_cyborg.set_aside === 1 && pq.filter((x) => x.kind === PRE_CYBORG_KIND && x.of === "pre1").length === 1 && seen.length === 1 && !seen[0].includes("id pre1") && seen[0].includes("id post1")
+              && outstandingGrades([pre, post, ...pq]).length === 0 && beforeFloor(pre, EPOCH) && !beforeFloor(post, EPOCH));
+            const fc = [], fg = [];
+            const nofloor = await gradeJudge({ rows: [pre, post], gameOnEpoch: () => { throw new Error("planted: no live mechanisms row"); }, judgeHistory: [], generate: async () => { fg.push(1); return { ok: true, text: "{}" }; },
+              fileCard: (line, key) => { fc.push(key); return { ok: true, out: "captains_call: filed c9" }; }, appendRow: () => { throw new Error("must not write"); }, now: T0, clock: () => 0 });
+            assert("mjset row 1279 (2) · an UNREADABLE floor REFUSES the round by name: no call, no row, every capture outstanding, ONE card keyed by the day",
+              nofloor.ok === false && nofloor.reason === "judge-floor-unreadable" && /FLOOR IS UNREADABLE/.test(nofloor.say) && fg.length === 0 && fc.length === 1 && fc[0] === `judge:floor:${istDay(T0)}` && nofloor.outstanding === 2);
+            assert("mjset row 1260 (2) · the CLI's cost field rides the judge ledger row UNCHANGED, and is null when absent — never 0",
+              judgeLedgerRow({ ok: true, total_cost_usd: 0.4321 }).total_cost_usd === 0.4321 && judgeLedgerRow({ ok: true }).total_cost_usd === null
+              && judgeLedgerRow({ ok: false }).total_cost_usd !== 0);
+          }
 
           // ── unit mjud · mauth — ONE home for the auth refusal pattern (row 1008 (2) F1) ──
           const brainSrc = (() => { try { return readFileSync(join(HERE, "brain.mjs"), "utf8"); } catch { return ""; } })();
