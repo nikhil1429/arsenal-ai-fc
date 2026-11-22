@@ -1,0 +1,9 @@
+{"ts":"2026-11-22T05:43:15.168Z","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mq3-build FETCH_HEAD","last_line":"FETCH_HEAD d585648e3438147d97140248c69f900af7327d58"}
+{"ts":"2026-11-22T05:55:21.481Z","act":"edit","cmd":"suite.yml push filter + header; mciq REFS/BUILD re-cut, M3 re-cut, M4 added; ci/mq3 witness + mutants","last_line":"commit 17d855e"}
+{"ts":"2026-11-22T05:55:21.481Z","act":"witness both ways","cmd":"node ci/mq3/witness_mq3.mjs --org <LF 17d855e> --base-org <LF d585648> ; --org <LF d585648>","last_line":"build GREEN MQ3 · 10 clause(s) (exit 0) · base RED MQ3 · BUILD, SPEC (exit 1)"}
+{"ts":"2026-11-22T05:55:21.481Z","act":"mutants","cmd":"node ci/mq3/run_mutants_mq3.mjs --org <LF 17d855e> --base-org <LF d585648>","last_line":"run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-22T05:55:21.481Z","act":"mciq re-cut","cmd":"node ci/mciq/run_mutants_mciq.mjs --org <LF 17d855e> --base-org <LF d585648 + ci/mq3>","last_line":"run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-22T05:55:21.481Z","act":"suite both ways","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (LF clones d585648, 17d855e)","last_line":"base 170 passed 0 failed · build 170 passed 0 failed (exit 0 both)"}
+{"ts":"2026-11-22T05:55:21.481Z","act":"lawpack both ways","cmd":"node scripts/lawpack.mjs gate (LF clones)","last_line":"every count equal · lawpack: GREEN both"}
+{"ts":"2026-11-22T05:55:21.481Z","act":"models check","cmd":"node scripts/models.mjs check","last_line":"exit 0 both"}
+{"ts":"2026-11-22T05:55:21.481Z","act":"effort receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs --fleet mq3 --seat 00 --model claude-opus-5-5","last_line":"Error: Cannot find module (not in this repository)"}
