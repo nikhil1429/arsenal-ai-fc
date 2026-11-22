@@ -15,6 +15,7 @@
 //   BOUND     only the named files differ between --base-org and --org (scripts/forge_session.mjs ·
 //             scripts/notes_compiler.mjs · scripts/teaching_gate.mjs · scripts/teaching_audit.mjs ·
 //             scripts/teaching_contract.mjs (forks row 1281 (3): the ONE seed row of crack-gap) ·
+//             ci/mbank/run_mutants_mbank.mjs (forks row 1281 (4): its M17 anchor only) ·
 //             .claude/skills/forge/REFERENCE.md · ci/witness/mcrk/witness_crack.mjs · ci/witness/mcrk2/ · ci/mcrk2/), by text,
 //             CRLF folded; a file outside them is accepted ONLY when its LF bytes are git's own merge of BASE and a main
 //             merged into the build, listed in ci/mcrk2/MERGED.json (the class of row 1200 (2), ci/mgat/MERGED.json)
@@ -37,7 +38,7 @@ const ORG = resolve(arg("--org") || "."), BASE = arg("--base-org") ? resolve(arg
 const ONLY = arg("--only") ? arg("--only").split(",").map((s) => s.trim()).filter(Boolean) : null;
 const UNIT = "MCRK2", HERE = dirname(fileURLToPath(import.meta.url));
 const NAMED = (f) => ["scripts/forge_session.mjs", "scripts/notes_compiler.mjs", "scripts/teaching_gate.mjs", "scripts/teaching_audit.mjs", "scripts/teaching_contract.mjs",
-  ".claude/skills/forge/REFERENCE.md", "ci/witness/mcrk/witness_crack.mjs"].includes(f) || /^ci\/(witness\/mcrk2|mcrk2)\//.test(f);
+  ".claude/skills/forge/REFERENCE.md", "ci/witness/mcrk/witness_crack.mjs", "ci/mbank/run_mutants_mbank.mjs"].includes(f) || /^ci\/(witness\/mcrk2|mcrk2)\//.test(f);
 const TMP = mkdtempSync(join(tmpdir(), "mcrk2-witness-"));
 const results = [];
 const record = (id, ok, why) => { if (ONLY && !ONLY.includes(id) && id !== "LAST") return; results.push({ id, ok }); console.log(`  ${ok ? "GREEN" : "RED  "} ${id}${why ? ` · ${why}` : ""}`); };
