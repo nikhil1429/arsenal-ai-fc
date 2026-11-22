@@ -252,3 +252,37 @@ carries, and mdtl is on it (row 1216 K-F4). The interim base of section 1 is ret
 
 CHECKPOINT · RESUMED at 2026-11-21 · merge 1492987 (main 7bf008b) · BASE 7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f · legs of 6b5c0ae: node 24 136766445352 GREEN, node 22 136766445185 CANCELLED at the 60-minute job limit after a GREEN head step · resume from: the architect's reading of the node 22 leg
 
+## 12 · THE MERGE WITH MAIN 84cbc03 (RUNNER M under the architect's row 1304 (3), 22 Nov 2026)
+
+**The merge.** `git merge --no-edit origin/main` (84cbc03126eddb85c7d5cf54b51610068800315c) gave merge commit **3d4007a**.
+- **Conflicted:** `ci/mlv1/witness_mlv1.mjs`, `ci/mlv2/witness_mlv2.mjs` and `ci/mlv3/witness_mlv3.mjs`, the three keeper
+  witnesses that unit mt1's clock repair re-cut (`retireThenBoot`).
+- **How each was resolved:** take MAIN'S BYTES WHOLE (`git checkout --theirs`), then re-apply only what this unit needs on top:
+  - the family `CAUSES` literal, still byte-identical with `ci/mrv` (K5);
+  - the `CAUSE <ID> <CODE>` print in `clause()`;
+  - a `code:` beside each red `why`.
+- `retireThenBoot`'s two reds carry `RETIRE-LATE` (no RETIRING line by the bound) and `RESPAWN-FAIL` (the respawn did not
+  come up). No wait, bound, clause id, claim or printed reason of main's re-cut changed.
+- `scripts/organism_test.mjs` auto-merged with main's lines. No other file conflicted.
+
+**Not empty.** `git diff --stat 84cbc03 HEAD` reads `13 files changed`. BASE = `84cbc03126eddb85c7d5cf54b51610068800315c`.
+
+**Measured 2026-11-22 (this container).**
+- The witness both ways:
+  - at the merged head against BASE: `GREEN MKP24 … · 10 clause(s)` (BOUND: 13 differ, none beyond the named);
+  - at main itself: `RED MKP24 · K1 RETIRE-LATE, K2 NO-GAP, K3 PORT, K4 LOST, K5 UNPLANTED, K6 NO-LEAK, K7 REPLAY, K8 MRV, BOUND`.
+- Mutants, default trees and an unchanged control: `run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN` (189 s).
+- The suite's WITNESSES member, `GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo> ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses`,
+  exit 2 in 1172 s, measured 2026-11-22: `witnesses · 64 unit(s)`, headline `organism_test: 103 passed, 22 failed` (2026-11-22).
+  - **42 of 64 units read `GREEN at head against its BASE`.** Among them are `WITNESS ‹mkp24›` (16.8 s), `‹mlv0›`, `‹mlv1›`,
+    `‹mlv2›` and `‹mlv3›`.
+  - **9 red as `its BASE is in the clone`:** mf4, mjud, mpast, mpm, mr3, mrf, mrj, mrt and mrv. This clone does not hold
+    their BASE commits, and the member never fetches, so those witnesses never ran here, mrv among them.
+  - **13 red at head:** mclk, mcov, mdn2, mdone, mdtl2, mf2, mgat, mlaw, mmeter, mprk, mrung, mtail and mxw. Several read
+    `SETUP`, or clauses that need `node_modules`, which this container has no `npm ci` for.
+  - Each of the 13 belongs to another unit, and none names a keeper-family file. Their reading on main is the neutral
+    machine's, not this container's.
+- `witness_cause selftest: 17 passed, 0 failed` (2026-11-22). mlv1, mlv2 and mlv3 unplanted read GREEN with no CAUSE line.
+
+CHECKPOINT · 2026-11-22 · tip (this commit, on 6707dde) · merge 3d4007a with main 84cbc03 · BASE 84cbc03126eddb85c7d5cf54b51610068800315c · witness GREEN at head / RED at main · mutants 11 of 11, control GREEN · WITNESSES 42 of 64 GREEN in this container (mkp24 GREEN; 9 BASE-not-in-clone, 13 others red at head) · pushed [skip ci]
+
