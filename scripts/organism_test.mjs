@@ -68,6 +68,47 @@ const assert = (name, cond, detail) => {
   }
 };
 const section = (t) => console.log(`\n── ${t} ${"─".repeat(Math.max(0, 66 - t.length))}`);
+// unit mbare (mlaw2 fork F7 B, forks row 1231) · THE BARE-STATE GUARD of the laws mode. On a bare state dir (a plant, a fresh
+// tree) a block of laws() whose state input is ABSENT used to throw, and the throw ended the mode: every block after it went
+// unreached (ci/mlaw2/MLAW2_SPEC.md §3 (d)). bareGuard runs ONE block; a throw whose cause is a state input that is ABSENT
+// (an ENOENT under a dressing-room/state dir, or a throw naming a state file — registry.mjs's missing-row throw, gate.mjs's
+// "seed registry.json" — that ROOT's state dir does not hold) makes the block print each of its not-yet-judged asserts as BLOCKED by that input,
+// by name, and file ONE red assert naming the input: a blocked block is NEVER a pass. The mode then goes on to the next
+// block. Any other throw, and any throw while the input exists, is re-thrown untouched: on a state dir that holds the input
+// the full profile reads exactly as before (ci/mbare/PROOF.md).
+/** @param {unknown} e @returns {string|null} the absent input, relative to its state dir, or null */
+function absentStateInput(e) {
+  const err = /** @type {{ code?: string, path?: string, message?: string }} */ (e && typeof e === "object" ? e : {});
+  const msg = String(err.message || e);
+  const under = (/** @type {string} */ p) => { const n = p.replace(/\\/g, "/"), i = n.lastIndexOf("/dressing-room/state/"); return i < 0 ? null : n.slice(i + "/dressing-room/state/".length); };
+  // an ENOENT under a state dir: the throw itself proves the file absent (no second fs call on a computed path)
+  if (err.code === "ENOENT" && typeof err.path === "string" && under(err.path)) return under(err.path);
+  // a throw that NAMES its input (registry.mjs: 'no live mechanisms row "<m>" in <dir>/registry.json'; gate.mjs: "seed
+  // registry.json") counts only while that file is absent from ROOT's state dir — the dir an organ imported from ROOT reads.
+  // Read off ONE listing of that dir, so the guard aims no fs call at a path the error handed it.
+  const here = (() => { try { return new Set(readdirSync(STATE)); } catch { return new Set(); } })();
+  const row = /registry: no live mechanisms row "([^"]+)" in /.exec(msg);
+  for (const m of msg.matchAll(/\b([\w-]+\.jsonl?)\b/g)) {
+    if (here.has(m[1])) continue;
+    return row && m[1] === "registry.json" ? `registry.json (its mechanisms row "${row[1]}")` : `${m[1]} (named by the throw)`;
+  }
+  return null;
+}
+/** @param {string} block @param {string[]} names the block's asserts @param {() => unknown} body */
+async function bareGuard(block, names, body) {
+  try { await body(); } catch (e) {
+    const input = absentStateInput(e);
+    if (!input) throw e;
+    const judged = new Set([...passed, ...fails.map((f) => f.name)]);
+    const open = names.filter((x) => !judged.has(x));
+    for (const n of open) console.log(`  BLOCKED ${n} — not judged: its input ${input} is absent from the state dir`);
+    assert(`BLOCKED BY ITS INPUT · ${block} — the state input ${input} is absent, so the block is not judged (a blocked block is never a pass)`, false,
+      `${names.length ? `${open.length} of ${names.length} assert(s) of the block unreached` : "every assert of the block after the throw is unreached (a block with no LIVE names: its asserts are named at run, never listed)"}`
+      + ` · read at ${[...String(e instanceof Error ? e.stack : "").matchAll(/scripts[\\/]([\w-]+\.mjs):(\d+)/g)].map((m) => `${m[1]}:${m[2]}`).filter((x, i, a) => a.indexOf(x) === i).slice(0, 4).join(" ← ") || "(no stack frame)"}`);
+  }
+}
+/** a LIVE block of laws(), guarded: skipped whole when LIVE (skipLive), else run under bareGuard @param {string} block @param {string[]} names @param {() => unknown} body */
+async function liveBlock(block, names, body) { if (!skipLive(...names)) await bareGuard(block, names, body); }
 
 // THE LONG BOUND, in ONE place (unit mcov · forks row 1151 (1) (b), 19 Nov 2026). The heavy modes (gates, lawpack,
 // flow_atlas) each typed this same value; it is named here, unchanged, and a SUITE MEMBER's run takes it too: a member's
@@ -1021,10 +1062,10 @@ async function laws() {
     // The allowlist is a REGISTRY ROW, never a literal here (LAW: an enumeration
     // lives in a row with a receipt), and the planted violation below proves the
     // check really bites rather than passing on an empty read.
-    if (!skipLive("A9 · both study skills were readable (a gate that cannot see its subject is not a gate)",
+    await liveBlock("A9 · THE STUDY ENTRY POINTS ARE AN ALLOWLIST", ["A9 · both study skills were readable (a gate that cannot see its subject is not a gate)",
       "A9 · every organ the two study skills name is on the registry's study_entry_points row — a skill cannot quietly grow a new door",
       "A9 · no study skill offers a DAEMON or a transport as a runnable command — waking one from here spends outside the gate and re-enables a lane he switched off",
-      "A9 · PLANTED VIOLATION — an off-list organ and a deny-listed one are both caught (the gate is live, not vacuous)")) {
+      "A9 · PLANTED VIOLATION — an off-list organ and a deny-listed one are both caught (the gate is live, not vacuous)"], async () => {
       const { subjectsOf } = await import(pathToFileURL(join(ROOT, "scripts", "registry.mjs")).href);
       // ROWS, NOT LITERALS — his 11-Aug law, and the law pack counts every literal subject
       // list in this repo against a frozen baseline. The first draft wrote all three of
@@ -1082,7 +1123,7 @@ async function laws() {
         && /examiner\.mjs\s+stage/.test(runnable("stage it with `node scripts/examiner.mjs stage` tonight"));
       assert("A9 · PLANTED VIOLATION — an off-list organ and a deny-listed one are both caught (the gate is live, not vacuous)",
         plantedStray.length === 1 && plantedDeny === true);
-    }
+    });
 
     // THE FOUR LEGAL QUESTION-MOMENTS (PROJECT_OS / CLAUDE.md: only four exist by design)
     const badMoment = run([join(sb, "scripts", "forge_session.mjs"), "moment", "pop_quiz"], { cwd: sb });
@@ -1328,7 +1369,7 @@ async function laws() {
     // · R2 · 71d overdue" off a proof the captain had withdrawn. This is the cross-organ
     // check that a fourth derivation, or a fix patched into two of three, cannot survive.
     {
-      if (!skipLive("ONE SCHEDULE — all THREE derivations agree that a pre-epoch capsule is not due: the owner refuses it, deep calls it pre_cyborg, the map carries pre_cyborg with no next_due", "ONE SCHEDULE — and all three agree on the SAME open round and the SAME due date for a post-epoch capsule (a drifted derivation fails here, not in production)")) {
+      await liveBlock("ONE SCHEDULE, ONE OWNER — W0-B", ["ONE SCHEDULE — all THREE derivations agree that a pre-epoch capsule is not due: the owner refuses it, deep calls it pre_cyborg, the map carries pre_cyborg with no next_due", "ONE SCHEDULE — and all three agree on the SAME open round and the SAME due date for a post-epoch capsule (a drifted derivation fails here, not in production)"], async () => {
       const owner = await import(pathToFileURL(join(ROOT, "scripts", "rejirah.mjs")).href);
       const dp = await import(pathToFileURL(join(ROOT, "scripts", "deep.mjs")).href);
       const cb = await import(pathToFileURL(join(ROOT, "scripts", "capsule_bridge.mjs")).href);
@@ -1351,7 +1392,7 @@ async function laws() {
         ownerPost.ok === true && ownerPost.round === deepPost.round
         && ownerPost.due === deepPost.nextDue && ownerPost.due === bridgePost.next_due,
         `owner=R${ownerPost.round}/${ownerPost.due} deep=R${deepPost.round}/${deepPost.nextDue} bridge=${bridgePost.next_due}`);
-      }
+      });
       // and the frozen twins stay frozen: kept for the archaeology, called by nobody
       const frozen = [["deep.mjs", "rejirahStatusLegacy"], ["capsule_bridge.mjs", "rejirahRoundsLegacy"]];
       const live = frozen.filter(([f, name]) => {
@@ -1527,7 +1568,7 @@ async function laws() {
     // gate reads that as "he was shown it". Neither organ's own selftest can see the
     // seam, and the seam is the whole finding: before today a `relay` run from any shell
     // stamped rows delivered with nobody in front of the screen, and gate C counted it.
-    {
+    await bareGuard("THE WITNESS SURVIVES THE SEAM — W0-C", [], async () => {
       const OB = await import(pathToFileURL(join(ROOT, "scripts", "outbox.mjs")).href);
       const BR2 = await import(pathToFileURL(join(ROOT, "scripts", "brain.mjs")).href);
       const mk = (over) => ([
@@ -1545,7 +1586,7 @@ async function laws() {
       assert("R-04 — and the writer really does emit the field the reader checks (the two halves are the same word, not two conventions)",
         /witnessed/.test(readOrgan("outbox.mjs")) && /delivered_witnessed/.test(readOrgan("brain.mjs"))
         && typeof OB.fold === "function");
-    }
+    });
 
     // ── ONE STALENESS, ONE OWNER — W0-D (2 Sep 2026, SD-03/SD-04/SD-05) ────────
     // The forge staleness predicate was derived SIX times — forge_session.mjs (the owner),
@@ -1612,7 +1653,7 @@ async function laws() {
     // blocks. Every assertion here is PURE — driven on fixtures, never on the live deck — because a
     // ratchet whose verdict depends on what the captain did that evening is not a ratchet (this
     // suite paid for that lesson in red on 19 Aug and pinned two ledgers because of it).
-    {
+    await bareGuard("LOAD ZERO BLOCK 6 (19 Aug 2026) — THE DECISION GATE + THE ROAD THE GATE CAN SEE", [], async () => {
       const CC = await import(pathToFileURL(join(ROOT, "scripts", "captains_call.mjs")).href);
       const BR = await import(pathToFileURL(join(ROOT, "scripts", "brain.mjs")).href);
       const GT = await import(pathToFileURL(join(ROOT, "scripts", "gate.mjs")).href);
@@ -1715,7 +1756,7 @@ async function laws() {
         })());
 
       // THE SCOREBOARD ITSELF — by Law 4 it did not exist until it was a code path.
-    }
+    });
 
     // ── LOAD ZERO, AFTER BLOCK 6 — NO LEDGER LANE MAY BYPASS THE ROAD UNEXAMINED ────────────────
     // `outbox.ingest` asks brain_config which jobs produce FOR HIM, and silently dropped any lane
@@ -1724,7 +1765,7 @@ async function laws() {
     // the one surface that carries what he needs is the opposite of L7). They are now excluded BY
     // DECLARATION. This law is the part the declaration cannot do for itself: a NEW lane appearing
     // in the ledger, in neither brain_config nor the declared list, is NAMED rather than dropped.
-    {
+    await bareGuard("LOAD ZERO, AFTER BLOCK 6 — NO LEDGER LANE MAY BYPASS THE ROAD UNEXAMINED", [], async () => {
       const OB = await import(pathToFileURL(join(ROOT, "scripts", "outbox.mjs")).href);
       const G = await import(pathToFileURL(join(ROOT, "scripts", "gate.mjs")).href);      // S7 — the declared-consumers table and its resolver
       const B = await import(pathToFileURL(join(ROOT, "scripts", "brain.mjs")).href);     // S7 — jobConsumers: who a job_input lane's downstream jobs actually are
@@ -1925,7 +1966,7 @@ async function laws() {
             `${ungatedSpawns.join(" · ")} — a detached child is a spend path with no row in any table. dugout.mjs's spawn of selfknowledge.mjs was this class. ⚠ AND THE STATIC INSTRUMENT HAS A MEASURED BLIND SPOT, named rather than assumed away: xray matches a spawn by its CALLEE NAME (xray.mjs:499), so the indirected \`(deps.spawnFn || spawn)(…)\` form — which is exactly that dugout site — appears in NO xray edge; verified at build time (4 llm + 76 organ edges, and not that one). This bite therefore reads the SOURCE, and a spawn whose TARGET is a variable resolves only at runtime, where the ledger-side half above is the net.`);
         }
       }
-    }
+    });
 
     // ── RUNG S8 · THE WRITE-AHEAD IS WIRED, AND STAYS WIRED (28 Aug 2026) ──────────────────
     // The spool is only worth anything if the NERVE actually writes to it before it posts, and
