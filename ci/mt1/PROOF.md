@@ -79,4 +79,4 @@ green forty of forty after mlv0.** mt1 lands as ruled on the plant above, and **
 24, run 137021937008) stays UNMEASURED: named, not explained.** This seat reproduced it neither alone (mbank's
 `ci/mbank/MLV3_50.txt`: 0/50) nor in the real order (0/40).
 
-CHECKPOINT · mt1 built at the branch tip on main 96be529 · `GREEN MT1 … · 15 clause(s)` / `RED MT1 · <all 13>` (main) · `run_mutants: 10 of 10 … · control GREEN` · hermetic `169 passed, 0 failed` · gates GREEN (checkJs 296, lint frozen) · order 0/20 · 0/20 · NEXT: the architect's re-run; the neutral legs (node 22 and node 24) read on this tip; mbank re-cut above mt1 after it lands
+CHECKPOINT (22 Nov 2026) · mt1 built at the branch tip on main 96be529 · `GREEN MT1 … · 15 clause(s)` / `RED MT1 · <all 13>` (main) · `run_mutants: 10 of 10 … · control GREEN` · hermetic `169 passed, 0 failed` · gates GREEN (checkJs 296, lint frozen) · order 0/20 · 0/20 · NEXT: the architect's re-run; the neutral legs (node 22 and node 24) read on this tip; mbank re-cut above mt1 after it lands
