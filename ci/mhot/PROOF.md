@@ -795,3 +795,55 @@ The seven reds, by name:
 ‹mcov› and ‹mprk› no longer red in WITNESSES.
 
 CHECKPOINT · 13:03 UTC 2026-11-22 · tip = the commit carrying this line (on 352996f) · BASE 84cbc03 · re-cut: mcov C1 C5 C6 C7 · mprk COVER · mdtl2 E1 E2 E3 E10 E11 (E10 = FORK MHOT-M4) · their mutants 4/4 · each beyond BOUND green on main and on this tree except mdtl2 E10 on this tree · grep: no fourth witness · bare form GREEN 11 · BOUND NOT JUDGED · mutants 18/18 control GREEN · WITNESSES 132 passed 7 failed · resume from: the ruling on MHOT-M4, then the next merge of main
+
+## 20 · FORKS ROW 1314 (1) — MHOT-M4 RULED A: mdtl2 E10 compares SETS where the head holds the member folder (2026-11-22)
+
+**E10's re-cut text** (`ci/mdtl2/witness_mdtl2.mjs`, in place, an ADDED edit, the struck text kept; the old `judged` and its
+byte compare stand unchanged for a head without `suite/members`):
+
+```
+//   E10 RULED       every toy FAIL name, its detail line and its machine-line `unruled` entry are ~~byte-identical~~ — RE-CUT by unit
+//                   mhot (row 1314 (1)): equal as SETS (the roll-up tail as the set of red members' tails) where the head tree holds
+//                   suite/members, byte-identical where it does not — between the two trees …
+  const asSet = (out) => {   // every FAIL line with the SET of its continuation lines (a roll-up's lines are the red members' tails),
+                             // sorted; the machine line's unruled entries as [assert, set of detail lines], sorted; reds sorted
+  const rolled = existsSync(join(ORG, "suite", "members"));
+  const j10 = ["suites", "clauses"].map((m) => (rolled ? [asSet(O[m].out), asSet(B[m].out)] : [judged(O[m].out), judged(B[m].out)]));
+```
+
+**mdtl2 against its own BASE, on both trees** (this tree's witness file; git clones):
+
+```
+$ node ci/mdtl2/witness_mdtl2.mjs --org <clone 84cbc03> --base-org <clone of ci/mdtl2/BASE>
+GREEN E10 · toy FAIL names + detail lines + unruled entries byte-identical between the trees (suites, clauses: 4 + 1 judged red(s))
+RED MDTL2 · BOUND                                                            (exit 1: BOUND only, row 1200 (2)'s class)
+$ node ci/mdtl2/witness_mdtl2.mjs --org <clone 8bdfc04> --base-org <clone of ci/mdtl2/BASE>
+GREEN E10 · toy FAIL names + detail lines + unruled entries equal as SETS (the head holds suite/members) between the trees (suites, clauses: 4 + 1 judged red(s))
+RED MDTL2 · BOUND                                                            (exit 1: BOUND only)
+```
+
+**The mutants** (`run_mutants_mhot.mjs --unit-bases <dir>`; judged by the named clause against the unmutated control):
+
+```
+  ok   MDTL2 CONTROL · the unmutated copy → RED MDTL2 · BOUND
+  ok   M-MDTL2-E10-missing · one planted red missing on one tree (toy_salad's member file never written on the roll tree) → RED MDTL2 · E2 E10 BOUND
+  ok   M-MDTL2-E10-detail · one detail changed on one tree (toy_canary prints one more line at exit on the roll tree) → RED MDTL2 · E2 E10 BOUND
+  ok   M-MDTL2-E1 · the planted toy_member's member file never written → RED MDTL2 · E1 E3 E10 BOUND
+  ok   CONTROL · the unmutated witness over --org → exit 0 · GREEN MHOT the member roll · 12 clause(s)
+run_mutants: 20 of 20 mutant(s) RED by the clause that names them · control GREEN      (12 mhot + 2 mlaw + 6 re-cut)
+```
+
+**WITNESSES** (all three shards, the neutral flags, git clone of `8bdfc04`):
+
+```
+shard 1 36 passed, 1 failed · shard 2 49 passed, 1 failed · shard 3 49 passed, 3 failed → 134 passed, 5 failed
+  witness ‹mhot›  GREEN MHOT the member roll · 11 clause(s) · BOUND NOT JUDGED
+  witness ‹mcov›  RED MCOV · BOUND · ‹mprk› RED MPRK · BOUND · ‹mdtl2› RED MDTL2 · BOUND · ‹mcrk2› RED MCRK2 · BOUND
+```
+
+The five reds, every one named: ‹mr3› (`52b51c1`), ‹mrf› (`52b51c1`), ‹mrj› (`52b51c1`), ‹mrt› (`51055bb`) and ‹mrv›
+(`cf1ca54`), each with "its BASE is in the clone · <sha> is not a commit here (the member never fetches)". Those BASE commits
+are not in this container's local clone, so this is environment, the same five as at main (§18). No witness reds beyond
+BOUND. ‹mcrk2›'s G9 read green in this run; by row 1314 (2) it is not this unit's, and it was not re-run for colour.
+
+CHECKPOINT · 13:58 UTC 2026-11-22 · tip = the commit carrying this line (on 8bdfc04) · BASE 84cbc03 · mdtl2 E10 re-cut as SETS where the head holds suite/members · mdtl2 @ main: RED MDTL2 · BOUND · @ 8bdfc04: RED MDTL2 · BOUND (E10 GREEN both) · mutants 20/20 control GREEN · WITNESSES 134 passed 5 failed (mr3 mrf mrj mrt mrv: BASE not in the clone) · resume from: the next merge of main (rides alone and last)
