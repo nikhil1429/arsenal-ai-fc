@@ -83,6 +83,11 @@
 //   reader:"stub" — the rung witness refuses a stub outside --fixture. A read that cannot run (the role is
 //   unresolved, claude -p refused, the window closed, the call failed, no JSON came back) writes a NAMED absence
 //   row with its cause (forks row 774 (2)) — never silence: a note with no verdict and no reason is the mirror class.
+//   THE BAR (unit mtrap, forks rows 1198 / 1230): a note holding fewer than TRAP_BAR distinct traps CANNOT pass by
+//   construction, so it is REFUSED at the gate, by name, with its count, before any reader is called — op "not-gateable",
+//   NO row written (mtrap-1 a: every reader derives it from the compiled row by gateableOf). Distinct = by folded bait, a
+//   placeholder bait not counted (mtrap-2 b); ONLY this lesson's cracks and corrections count — a capsule trap stays in the
+//   note as teaching material and is NEVER counted (mtrap-3 b, his word of 30 Aug: the old proof withdrawn, the notes kept).
 //
 // THE ANCHOR (fates 22 / 51): postmatch.mjs fires `fulltime --date <the day it closed>` right after the day is
 //   closed (post_match/<date>.md written) — the archive's own `run` first, then the compile, then the gate.
@@ -106,7 +111,7 @@ import { archiveRoot, istDayKey } from "./archivist.mjs";
 import { readLaneDays, exchanges, istDaysBetween, WORD_LANE, BANK_LANE } from "./exchanges.mjs";
 import { readRows as readCorrectionRows, active as liveCorrections, matchesIn, LEDGER as CORRECTIONS } from "./notes_corrections.mjs";
 import { loadCapsules } from "./rejirah.mjs";   // the capsules' reader — read only, capsules are immutable
-import { readCracks } from "./forge_session.mjs";   // unit mcrk — the crack rows' reader; forge_session.mjs is cracks.jsonl's SOLE WRITER
+import { readCracks, TRAP_BAR, COUNTED_FROM, NO_BAIT, gateableOf } from "./forge_session.mjs";   // unit mtrap — the bar's one home, re-exported below · unit mcrk — the crack rows' reader; forge_session.mjs is cracks.jsonl's SOLE WRITER
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -503,7 +508,9 @@ export function compileDay({ date = todayIst(), stateDir = STATE_DIR, path = nul
     lastGuard = w.guard || lastGuard;
     if (!w.ok) { ok = false; results.push({ concept: c, axis: a, op: "refused", why: w.why }); continue; }
     rows.push(row);
-    results.push({ concept: c, axis: a, op: prev ? "recompiled" : "compiled", id: row.id, supersedes: prev ? prev.id : null, sources: sources.length, traps: note.traps.length, gaps: note.gaps.length });
+    const gq = gateableOf(note);   // unit mtrap — the compile names a thin note before the gate (have/need/owed, said on the CLI)
+    results.push({ concept: c, axis: a, op: prev ? "recompiled" : "compiled", id: row.id, supersedes: prev ? prev.id : null, sources: sources.length, traps: note.traps.length, gaps: note.gaps.length,
+      gateable: gq.gateable, have: gq.have, need: gq.need, owed: gq.owed });
   }
   return { ok, date, results, guard: lastGuard, cracks: cracksNote };
 }
@@ -511,6 +518,10 @@ export function compileDay({ date = todayIst(), stateDir = STATE_DIR, path = nul
 // ---------------------------------------------------------------------------
 // THE COLD GATE
 // ---------------------------------------------------------------------------
+// unit mtrap — TRAP_BAR / COUNTED_FROM / NO_BAIT / gateableOf: ONE home, forge_session.mjs (the pacer's contract reads the
+// predicate on every turn, and this file already imports the pacer — mcrk — so the pacer could not import it back without
+// a cycle: measured, a lazy import is still a dependency-cruiser edge). Re-exported here: every reader asks the compiler.
+export { TRAP_BAR, COUNTED_FROM, NO_BAIT, gateableOf };
 /** verdictOf — PURE. The reader's reply against the note: PASS iff answered from the note alone, three DISTINCT
  *  seductive wrong answers each already a trap of the note, and the note rebuilds. */
 export function verdictOf(note, reply) {
@@ -518,11 +529,11 @@ export function verdictOf(note, reply) {
   const r = reply && typeof reply === "object" ? reply : {};
   const answered = typeof r.answer === "string" && r.answer.trim() !== "";
   const fromNote = r.answer_from_note === true, rebuild = r.rebuild === true;
-  const wrong = (Array.isArray(r.wrong) ? r.wrong : []).slice(0, 3).map((x) => ({ text: clip(x && x.text, 300), trap: x && typeof x.trap === "string" && x.trap.trim() ? x.trap.trim() : null }));
+  const wrong = (Array.isArray(r.wrong) ? r.wrong : []).slice(0, TRAP_BAR).map((x) => ({ text: clip(x && x.text, 300), trap: x && typeof x.trap === "string" && x.trap.trim() ? x.trap.trim() : null }));
   const inNote = (w) => !!w.text && !!w.trap && ids.has(w.trap);
-  const covered = wrong.length === 3 && wrong.every(inNote) && new Set(wrong.map((w) => w.trap)).size === 3;
+  const covered = wrong.length === TRAP_BAR && wrong.every(inNote) && new Set(wrong.map((w) => w.trap)).size === TRAP_BAR;
   const missing = wrong.filter((w) => !inNote(w)).map((w) => w.text || "(empty)");
-  if (wrong.length < 3) missing.push(`(the reader named ${wrong.length} of the three seductive wrong answers)`);
+  if (wrong.length < TRAP_BAR) missing.push(`(the reader named ${wrong.length} of the three seductive wrong answers)`);
   const pass = answered && fromNote && rebuild && covered;
   const why = pass ? "the strike answered from the note alone · all three seductive wrong answers are traps of the note · it rebuilds"
     : [!answered && "the strike was not answered", answered && !fromNote && "the note alone was not enough to answer the strike", !rebuild && "the note only reminds — it does not rebuild (G-C)",
@@ -545,7 +556,7 @@ const rightModelOf = (note) => {
 export function stubReader(note) {
   const t = note.traps || [], ans = rightModelOf(note);
   return { answer: ans, answer_from_note: !!ans, rebuild: note.items.some((i) => i.mark === "N") && note.items.some((i) => i.mark === "T"),
-    wrong: [0, 1, 2].map((i) => (t[i] ? { text: t[i].bait, trap: t[i].id } : { text: "(the stub found no further trap in the note)", trap: null })) };
+    wrong: Array.from({ length: TRAP_BAR }, (_, i) => i).map((i) => (t[i] ? { text: t[i].bait, trap: t[i].id } : { text: "(the stub found no further trap in the note)", trap: null })) };
 }
 export const readerPrompt = (note) => [
   "You are a COLD READER. You have never seen this learner or his lessons. Below is ONE compiled study note; read ONLY the note.",
@@ -598,6 +609,14 @@ export async function gateDay({ date = todayIst(), stateDir = STATE_DIR, path = 
   const results = [];
   let ok = true;
   for (const n of targets) {
+    // UNIT MTRAP (row 1230 mtrap-1 a / mtrap-5 a): a note under the bar cannot pass by construction — REFUSED here, by name and
+    // count, BEFORE any reader (the stub included) is called. No row is written and `ok` stands: a thin lesson is a teaching fact.
+    const gq = gateableOf(n.note);
+    if (!gq.gateable) {
+      results.push({ of: n.id, concept: n.concept, axis: n.axis, op: "not-gateable", have: gq.have, need: gq.need, owed: gq.owed,
+        why: `${n.concept}/${n.axis} ${n.id} · ${gq.have} of ${gq.need} distinct traps — not gateable, no reader called · ${gq.owed} trap(s) owed on axis ${n.axis}` });
+      continue;
+    }
     // ROW 914 G6: under a deadline a note starts only when one whole reader budget is left, so no call is cut mid-note. A note
     // not reached is written NOWHERE — it stays un-gated, the next anchor's gate takes it — and is named in the result.
     if (deadline != null) {
@@ -634,7 +653,7 @@ export async function gateDay({ date = todayIst(), stateDir = STATE_DIR, path = 
   // reach gets a NAMED absent row, cause day-unmatched, so a key drift reads RED by name, never as 0 / 0 / 0 / 0.
   for (const id of expect) {
     const n = st.live.find((x) => x.id === id);
-    if (!n || targets.includes(n) || st.gates.some((g) => g.of === id && g.verdict !== "absent")) continue;
+    if (!n || targets.includes(n) || st.gates.some((g) => g.of === id && g.verdict !== "absent") || !gateableOf(n.note).gateable) continue;   // unit mtrap: a thin note was refused, never "could not run"
     ok = false;
     const t = now(), why = `the compile for ${date} wrote or kept this note, and the gate's day key (${noteDay(n)}) did not reach it`;
     const row = { v: 1, kind: "cold_gate", id: newId("g", t), of: id, ts: t.toISOString(), day: noteDay(n), verdict: "absent", traps_named: [], reader: `role:${READER_ROLE}/not-reached`, role: READER_ROLE, cause: "day-unmatched", why };
@@ -652,11 +671,14 @@ export function glanceLines({ date = todayIst(), rows = [] } = {}) {
   const st = noteState(rows);
   const live = st.live.filter((n) => noteDay(n) === date);
   const verdicts = live.map((n) => st.lastGate(n.id));
-  const L = [`NOTES · ${date} IST · ${live.length} axis note(s) compiled by code · cold gate: ${verdicts.filter((g) => g && g.verdict === "pass").length} pass · ${verdicts.filter((g) => g && g.verdict === "fail").length} fail · ${verdicts.filter((g) => g && g.verdict === "absent").length} absent (could not run, named) · ${verdicts.filter((g) => !g).length} not gated`];
+  const gqs = live.map((n) => gateableOf(n.note));   // unit mtrap — a thin note reads NOT GATEABLE, beside any kept row (never rewritten)
+  const L = [`NOTES · ${date} IST · ${live.length} axis note(s) compiled by code · cold gate: ${verdicts.filter((g, i) => g && g.verdict === "pass" && gqs[i].gateable).length} pass · ${verdicts.filter((g, i) => g && g.verdict === "fail" && gqs[i].gateable).length} fail · ${verdicts.filter((g, i) => g && g.verdict === "absent" && gqs[i].gateable).length} absent (could not run, named) · ${verdicts.filter((g, i) => !g && gqs[i].gateable).length} not gated · ${gqs.filter((q) => !q.gateable).length} not gateable`];
   const hhmm = (iso) => (istStampOf(iso) || "?").slice(11, 16);
   live.forEach((n, i) => {
-    const g = verdicts[i], note = n.note;
-    L.push(`── ${n.concept} · axis ${n.axis}${note.title ? ` — ${clip(note.title, 40)}` : ""} · gate ${g ? `${g.verdict.toUpperCase()}${g.reader === "stub" ? " (stub)" : ""}` : "not run"} · traps ${note.traps.map((t) => t.id).join(" ") || "none"} · compiled ${hhmm(n.ts)} IST ──`);
+    const g = verdicts[i], note = n.note, q = gqs[i];
+    const gate = !q.gateable ? `NOT GATEABLE (${q.have} of ${q.need} traps · ${q.owed} owed)${g ? ` · kept ${g.verdict.toUpperCase()} ${g.id}` : ""}`
+      : g ? `${g.verdict.toUpperCase()}${g.reader === "stub" ? " (stub)" : ""}` : "not run";
+    L.push(`── ${n.concept} · axis ${n.axis}${note.title ? ` — ${clip(note.title, 40)}` : ""} · gate ${gate} · traps ${note.traps.map((t) => t.id).join(" ") || "none"} · compiled ${hhmm(n.ts)} IST ──`);
     L.push(`  STRIKE  ${clip(note.strike && note.strike.text, 110) || "— none —"}`);
     const shown = note.items.filter((x) => ["pehle_guess", "crack", "stuck", "trace", "bolo"].includes(x.kind));
     for (const it of shown.slice(0, 8)) {
@@ -711,7 +733,7 @@ const summary = (date, c, g, stub) => {
   const gated = (g.results || []).filter((r) => r.op === "gated");
   const unreached = (g.results || []).filter((r) => r.op === "unreached").length;   // row 914 G6: only a deadline makes one
   return `notes_compiler: ${date} IST · compiled ${n("compiled") + n("recompiled")} (${n("recompiled")} superseding) · unchanged ${n("unchanged")} · refused ${n("refused")}`
-    + ` · gate ${gated.filter((r) => r.verdict === "pass").length} pass / ${gated.filter((r) => r.verdict === "fail").length} fail / ${(g.results || []).filter((r) => r.op === "absent").length} absent (named) / ${(g.results || []).filter((r) => r.op !== "gated" && r.op !== "absent" && r.op !== "unreached").length} not run (reader ${stub ? "stub" : `role:${READER_ROLE}`})`
+    + ` · gate ${gated.filter((r) => r.verdict === "pass").length} pass / ${gated.filter((r) => r.verdict === "fail").length} fail / ${(g.results || []).filter((r) => r.op === "absent").length} absent (named) / ${(g.results || []).filter((r) => r.op === "not-gateable").length} not gateable (< ${TRAP_BAR} traps) / ${(g.results || []).filter((r) => r.op !== "gated" && r.op !== "absent" && r.op !== "unreached" && r.op !== "not-gateable").length} not run (reader ${stub ? "stub" : `role:${READER_ROLE}`})`
     + ` · names guard ${c.guard ? (c.guard.ran ? "ran" : "OFF") : "not reached"}`
     + (c.cracks ? ` · ${c.cracks}` : "")   // unit mcrk — the crack rows, said (absent and unreadable both named)
     + (unreached ? ` · ${unreached} note(s) not reached by the deadline` : "");
@@ -769,6 +791,11 @@ async function selftest() {
     const bpe = { concept: "tokenization", claim: "BPE at inference = greedy longest-match", match: ["greedy longest-match", "greedy longest match"],
       correct: "Greedy longest-match is WordPiece's inference; BPE replays its learned merges in the order they were learned.", source: "selftest fixture", taught: "2026-09-24" };
     assert("CORRECTIONS LANE — the BPE row through its owner's door (notes_corrections.mjs add)", addCorrection(bpe, { path: CL, now: new Date(at(0)) }).ok === true);
+    // unit mtrap (mtrap-3 b): capsule traps are never counted, so the fixture lesson carries a SECOND live correction of its own
+    // to stand at the bar of three (crack + two corrections); its match text occurs in no other line of the fixture
+    const chars = { concept: "tokenization", axis: "a", claim: "a token is always one character", match: ["always one character"],
+      correct: "A token is a vocabulary entry — a character, a subword or a whole word.", source: "selftest fixture (unit mtrap)", taught: "2026-09-24" };
+    assert("CORRECTIONS LANE — a second lesson correction through the same door (unit mtrap: the fixture stands at the bar of three counted traps)", addCorrection(chars, { path: CL, now: new Date(at(0.1)) }).ok === true);
     const capsule = { id: "tokenization", title: "Tokenization", faultLines: [{ axis: "a", title: "what a token is", strike: "A token is what, exactly — and why is it not a word?", weld: "A token is the subword unit the tokenizer emits." }],
       traps: [{ bait: "one word is one token", wrong: "subwords", truth: "a word can be several tokens" }, { bait: "BPE ka inference?", wrong: "—", truth: "BPE at inference uses greedy longest-match over the vocabulary" }] };
     const capDir = join(st, "capsules"); mkdirSync(capDir); writeFileSync(join(capDir, "tokenization.json"), JSON.stringify(capsule));
@@ -831,8 +858,8 @@ async function selftest() {
     assert("THE BANK — receipts: asked, what he said, gut, latency, and the settled verdict; the interview line is named",
       n1.note.bank.length === 2 && n1.note.bank[0].said === "2 tokens: token + ization" && n1.note.bank[0].gut === "shaky" && n1.note.bank[0].latency_ms === 42000
       && n1.note.bank[0].verdict === "held" && n1.note.bank[1].register === "interview" && R1.some((l) => /^BANK · .* interview line/.test(l)));
-    assert("STRIKE AND TRAPS — the capsule's axis strike; the traps are the crack, then the live correction, then the capsule's, numbered T1…",
-      n1.note.strike.from === "capsule" && n1.note.traps.map((t) => t.from).join() === "crack,correction,capsule,capsule" && n1.note.traps.map((t) => t.id).join() === "T1,T2,T3,T4");
+    assert("STRIKE AND TRAPS — the capsule's axis strike; the traps are the crack, then the live corrections, then the capsule's, numbered T1…",
+      n1.note.strike.from === "capsule" && n1.note.traps.map((t) => t.from).join() === "crack,correction,correction,capsule,capsule" && n1.note.traps.map((t) => t.id).join() === "T1,T2,T3,T4,T5");
     const claimLines = R1.filter((l) => /greedy longest[- ]match/i.test(l));
     assert("CORRECTIONS READ FIRST — every rendered line that states the corrected claim (the teacher's old line, the capsule's trap) carries ⟦CORRECTED <id>⟧, never served as truth",
       claimLines.length >= 3 && claimLines.every((l) => l.includes("⟦CORRECTED ")) && n1.note.traps.some((t) => t.from === "correction" && t.correction), claimLines.join("\n"));
@@ -990,6 +1017,41 @@ async function selftest() {
       ns.ok === false && ns.compile.results[0].op === "unchanged" && ns.gate.results.length === 1 && ns.gate.results[0].op === "absent" && bytes(LG).startsWith(preNs) && readRows(LG).length === 3
       && nsRow.kind === "cold_gate" && nsRow.verdict === "absent" && nsRow.cause === "day-unmatched" && nsRow.of === rkRows[1].id && nsRow.day === "2026-10-06", JSON.stringify(ns.gate.results));
 
+    // ── UNIT MTRAP (forks rows 1198 / 1230): the bar of three, refused at the gate before any reader ──
+    {
+      const tr = (from, bait, id) => ({ from, bait, truth: "t", id });
+      const withTraps = (r, traps, id) => ({ ...r, id, note: { ...r.note, traps } });
+      const thin = withTraps(n1, [tr("crack", "a", "T1"), tr("crack", "b", "T2")], `${n1.id}-thin`);
+      const LT = join(tmp, "thin.jsonl"); writeFileSync(LT, JSON.stringify(thin) + "\n");
+      const preT = bytes(LT);
+      let called = 0;
+      const gT = await gateDay({ path: LT, stateDir: st, date: "2026-10-06", now: T(27), guard: NOGUARD, reader: async (n) => { called++; return { ok: true, reply: stubReader(n), reader: "stub" }; } });
+      const gT2 = await gateDay({ path: LT, stateDir: st, date: "2026-10-06", stub: true, now: T(27), guard: NOGUARD, expect: [thin.id] });
+      assert("MTRAP — a note under the bar is REFUSED before any reader (stub included): op not-gateable with have 2 · need 3 · owed 1 and its id, NO row written, ok stands; the expect loop writes no day-unmatched row for it",
+        called === 0 && gT.ok && gT.results.length === 1 && gT.results[0].op === "not-gateable" && gT.results[0].have === 2 && gT.results[0].need === TRAP_BAR && gT.results[0].owed === 1
+        && gT.results[0].why.includes(thin.id) && /1 trap\(s\) owed on axis a/.test(gT.results[0].why) && gT2.ok && gT2.results.length === 1 && gT2.results[0].op === "not-gateable" && bytes(LT) === preT, JSON.stringify(gT.results));
+      const g3 = gateableOf({ traps: [tr("crack", "Ek  Word", "T1"), tr("crack", "ek word", "T2"), tr("crack", "c", "T3")] });
+      const plusOnly = buildNote({ concept: "x", axis: "a", ex: [{ role: "teacher", at: at(1), rid: "p1", text: "```diff\n+ only a plus line\n```" }] });
+      assert("MTRAP — distinct is by FOLDED bait (mtrap-2 b): two baits that fold equal count once; the compiler's placeholder bait (a diff with no - line) and an empty bait never count",
+        g3.have === 2 && !g3.gateable && plusOnly.traps[0].bait === NO_BAIT && gateableOf({ traps: [plusOnly.traps[0], tr("crack", "", "T2"), tr("crack", "a", "T3"), tr("crack", "b", "T4")] }).have === 2);
+      assert("MTRAP — a capsule trap is NEVER counted (mtrap-3 b): two cracks + one capsule trap read 2 of 3; two cracks + one correction read 3, gateable",
+        gateableOf({ traps: [tr("crack", "a", "T1"), tr("crack", "b", "T2"), tr("capsule", "c", "T3")] }).have === 2
+        && gateableOf({ traps: [tr("crack", "a", "T1"), tr("crack", "b", "T2"), tr("correction", "c", "T3")] }).gateable === true);
+      const kept = { v: 1, kind: "cold_gate", id: "g-kept-thin", of: thin.id, ts: at(27), day: "2026-10-06", verdict: "fail", traps_named: [], reader: "stub" };
+      const LK = join(tmp, "kept.jsonl"); writeFileSync(LK, JSON.stringify(thin) + "\n" + JSON.stringify(kept) + "\n");
+      const preK = bytes(LK), gK = await gateDay({ path: LK, stateDir: st, date: "2026-10-06", stub: true, again: false, now: T(28), guard: NOGUARD });
+      const glK = glanceLines({ date: "2026-10-06", rows: readRows(LK) });
+      assert("MTRAP — an OLD thin note with a kept FAIL row is never rewritten: no row appended, the glance reads NOT GATEABLE beside the kept FAIL by id, the header counts it not gateable, not fail",
+        gK.ok && gK.results.length === 0 && bytes(LK) === preK && glK.some((l) => /gate NOT GATEABLE \(2 of 3 traps · 1 owed\) · kept FAIL g-kept-thin/.test(l)) && /0 fail · .* · 1 not gateable$/.test(glK[0]), glK.join("\n"));
+      const fat = withTraps(n1, [tr("crack", "a", "T1"), tr("crack", "b", "T2"), tr("crack", "c", "T3"), tr("crack", "d", "T4"), tr("crack", "e", "T5")], `${n1.id}-fat`);
+      const glF = glanceLines({ date: "2026-10-06", rows: [fat, { ...kept, id: "g-kept-fat", of: fat.id }] });
+      assert("MTRAP — a TRUE fail stands: a five-trap note with a kept FAIL row reads FAIL, never not gateable", glF.some((l) => /· gate FAIL \(stub\) · traps T1/.test(l)) && /1 fail · .* · 0 not gateable$/.test(glF[0]), glF.join("\n"));
+      // mtrap-6 a: TRAP_BAR read by verdictOf — the same verdicts as the literal three on a fixed table
+      const five = fat.note, rep = (ids, o = {}) => ({ answer: "x", answer_from_note: true, rebuild: true, wrong: ids.map((t) => ({ text: `w ${t}`, trap: t })), ...o });
+      const table = [[rep(["T1", "T2", "T3"]), "pass"], [rep(["T1", "T1", "T2"]), "fail"], [rep(["T1", "T2"]), "fail"], [rep(["T1", "T2", "T9"]), "fail"], [rep(["T1", "T2", "T3", "T4"]), "pass"], [rep(["T1", "T2", "T3"], { rebuild: false }), "fail"]];
+      assert("MTRAP — the bar is NOT loosened (b refused): verdictOf over a fixed table of replies gives the verdicts of the literal three", table.every(([r, v]) => verdictOf(five, r).verdict === v));
+    }
+
     // ── THE RUNG WITNESS'S CLASS A over the ledger this selftest wrote ───────
     const all = readRows(L), ids = all.map((r) => r.id), comp = all.filter((r) => r.kind === "compiled"), gates = all.filter((r) => r.kind === "cold_gate");
     assert("CLASS A — no id repeats; no compiled row carries a verdict; every gate names a note compiled at or before it",
@@ -1015,7 +1077,7 @@ async function main() {
   const date = flag(rest, "--date") || todayIst();
   const stub = rest.includes("--stub") || String(process.env[STUB_ENV] || "").toLowerCase() === "stub";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { console.error(`notes_compiler: --date is an IST day YYYY-MM-DD (${date})`); process.exitCode = 2; return; }
-  const say = (r) => { const line = `  ${r.concept}/${r.axis} ${r.op}${r.id ? ` ${r.id}` : ""}${r.supersedes ? ` (supersedes ${r.supersedes})` : ""}${r.verdict ? ` · ${r.verdict.toUpperCase()}` : ""}${r.cause ? ` · ABSENT (${r.cause})` : ""}${r.why ? ` — ${r.why}` : ""}`; (r.op === "refused" || r.op === "not-run" || r.op === "absent" || r.op === "unreached" ? console.error : console.log)(line); };
+  const say = (r) => { const line = `  ${r.concept}/${r.axis} ${r.op}${r.id ? ` ${r.id}` : ""}${r.supersedes ? ` (supersedes ${r.supersedes})` : ""}${r.verdict ? ` · ${r.verdict.toUpperCase()}` : ""}${r.cause ? ` · ABSENT (${r.cause})` : ""}${r.why ? ` — ${r.why}` : ""}${r.gateable === false ? ` · NOT GATEABLE (${r.have} of ${r.need} distinct traps · ${r.owed} owed — the gate will refuse it)` : ""}`; (r.op === "refused" || r.op === "not-run" || r.op === "absent" || r.op === "unreached" || r.op === "not-gateable" || r.gateable === false ? console.error : console.log)(line); };
   switch (mode) {
     case "compile": {
       const c = compileDay({ date, concept: flag(rest, "--concept"), axis: flag(rest, "--axis"), sessions: flags(rest, "--session") });
@@ -1029,7 +1091,7 @@ async function main() {
       const g = await gateDay({ date, stub, again: rest.includes("--again") });
       if (g.why) console.error(`notes_compiler: NOTHING GATED — ${g.why}`);
       g.results.forEach(say);
-      console.log(`notes_compiler: gate ${date} IST · ${g.results.filter((r) => r.op === "gated").length} gated (${g.results.filter((r) => r.verdict === "pass").length} pass) · ${g.results.filter((r) => r.op === "absent").length} absent (named) · ${g.results.filter((r) => r.op !== "gated" && r.op !== "absent").length} not run · reader ${stub ? "stub" : `role:${READER_ROLE}`}`);
+      console.log(`notes_compiler: gate ${date} IST · ${g.results.filter((r) => r.op === "gated").length} gated (${g.results.filter((r) => r.verdict === "pass").length} pass) · ${g.results.filter((r) => r.op === "absent").length} absent (named) · ${g.results.filter((r) => r.op === "not-gateable").length} not gateable (< ${TRAP_BAR} traps) · ${g.results.filter((r) => r.op !== "gated" && r.op !== "absent" && r.op !== "not-gateable").length} not run · reader ${stub ? "stub" : `role:${READER_ROLE}`}`);
       if (!g.ok) process.exitCode = 1;
       break;
     }
@@ -1056,7 +1118,7 @@ async function main() {
     case "status": {
       let rows; try { rows = readRows(); } catch (e) { console.error(`notes_compiler: the ledger cannot be read (${clip(e && e.message, 120)})`); process.exitCode = 1; break; }
       const s = noteState(rows);
-      console.log(`notes_compiler: ${s.compiled.length} compiled row(s) · ${s.live.length} live · ${s.superseded.size} superseded · ${s.gates.length} gate row(s) · ${s.live.filter((n) => (s.lastGate(n.id) || {}).verdict === "pass").length} live note(s) gate-passed · ${COMPILER}`);
+      console.log(`notes_compiler: ${s.compiled.length} compiled row(s) · ${s.live.length} live · ${s.superseded.size} superseded · ${s.gates.length} gate row(s) · ${s.live.filter((n) => (s.lastGate(n.id) || {}).verdict === "pass" && gateableOf(n.note).gateable).length} live note(s) gate-passed · ${s.live.filter((n) => !gateableOf(n.note).gateable).length} live note(s) not gateable (< ${TRAP_BAR} traps, kept rows beside them) · ${COMPILER}`);
       break;
     }
     case "born": {
