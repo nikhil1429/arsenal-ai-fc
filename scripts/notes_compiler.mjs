@@ -407,7 +407,7 @@ export function buildNote({ concept, axis, ex = [], bank = [], capsule = null, c
     const stamp = { moment: r.moment, words: r.words, crack_id: r.id, turn_id: typeof r.turn_id === "string" ? r.turn_id : null, words_at: r.prompt_at };   // turn_id: unit mbank (row 1230 mbank-8 a)
     if (typeof r.gap === "string" && r.gap) stamp.gap = r.gap;   // unit mcrk2: the named gap and how its axis was settled
     if (r.axis_settled) stamp.axis_settled = { axis: r.axis_settled.axis, by: r.axis_settled.by };
-    if (stamp.gap) gaps.push(`crack row ${r.id}: ${r.gap} — the teacher's miss, not his`);
+    if (stamp.gap) gaps.push(`crack row ${r.id}: ${r.gap} — ${r.gap_owner === "organism" ? "the organism's miss" : r.gap_owner === "teacher+organism" ? "the teacher's and the organism's miss" : "the teacher's miss"}, not his`);
     let at = -1;
     for (let i = 0; i < ex.length; i++) {
       if (ex[i].at < r.at) continue;

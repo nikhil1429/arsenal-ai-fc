@@ -216,10 +216,9 @@ export const CHECKED_RULES = [
 // (forks row 649 (0): this note sat between the waiver and the list and pushed the waiver out of lawpack's six-line window.)
 // law-waiver:jugad — a DECLARED GAP LIST, never a subject list: it names rule ids this
 // file emits that its OWNER has not yet seeded, and its whole purpose is to shrink to [].
-// unit mcrk2 (forks row 1258 F1 A, 21 Nov 2026) — ONE more id, declared, not hidden: `crack-gap` is emitted below
-// (crackGapDrift) and its seed row belongs to teaching_contract.mjs's owner, which this unit may not edit; until that
-// row lands its autohit exits 1 and the drift still rides this organ's own audit lane (the log row's drifts).
-export const SEED_GAP = ["act-mueywvag", "crack-gap"];
+// unit mcrk2 (forks rows 1258 F1 A / 1281 (3)): `crack-gap` was declared here on 21 Nov and left it on 22 Nov, in the same
+// commit that seeded its row in teaching_contract.mjs (the ratchet below holds both directions).
+export const SEED_GAP = ["act-mueywvag"];
 
 // COVERAGE HONESTY, PER RULE (full-organism audit P1.1-P1.2, 7 Aug 2026). A rule
 // id in CHECKED_RULES means "a check EXISTS", never "the whole rule is machine-
@@ -1485,7 +1484,8 @@ export function turnPicture(hook = {}, turn = readTurn(hook && hook.transcript_p
  *  evidence names the row ids, the gaps and the axes — never his words. */
 export function crackGapDrift({ rows = [], sessionId = null, promptAt = null, turnId = null } = {}) {
   if (!sessionId || !promptAt) return null;
-  const hit = (Array.isArray(rows) ? rows : []).filter((r) => r && r.kind === "crack" && typeof r.gap === "string" && r.gap && r.prompt_session_id === sessionId
+  // forks row 1281 (2): the drift is the TEACHER's — a row whose only gap is the organism's (session-unchecked) is not counted here
+  const hit = (Array.isArray(rows) ? rows : []).filter((r) => r && r.kind === "crack" && typeof r.gap === "string" && r.gap && String(r.gap).split("+").some((g) => g !== "session-unchecked") && r.prompt_session_id === sessionId
     && (turnId && typeof r.turn_id === "string" && r.turn_id ? r.turn_id === turnId : r.prompt_at === promptAt));
   if (!hit.length) return null;
   return {
@@ -2232,6 +2232,8 @@ function selftest() {
       && crackGapDrift({ rows: [ck], sessionId: "s1", promptAt: "2026-11-21T06:01:00.000Z" }) === null
       && crackGapDrift({ rows: [{ ...ck, gap: null }], sessionId: "s1", promptAt: ck.prompt_at }) === null
       && crackGapDrift({ rows: [{ ...ck, turn_id: "t-9" }], sessionId: "s1", promptAt: ck.prompt_at, turnId: "t-1" }) === null
+      && crackGapDrift({ rows: [{ ...ck, gap: "session-unchecked", gap_owner: "organism" }], sessionId: "s1", promptAt: ck.prompt_at }) === null   // row 1281 (2): the organism's, not the teacher's
+      && !!crackGapDrift({ rows: [{ ...ck, gap: "moment-undeclared+session-unchecked", gap_owner: "teacher+organism" }], sessionId: "s1", promptAt: ck.prompt_at })
       && /if \(gapDrift\) res\.drifts\.push\(gapDrift\);/.test(src) && src.indexOf("if (gapDrift) res.drifts.push(gapDrift);") < src.indexOf("for (const d of res.drifts) staged.push"));
   }
   assert("W0-D · LR-04 — every CHECKED_RULE that is only PARTIALLY machine-visible carries its RULE_NOTES slice, so 'no drift caught' can never widen into 'taught correctly'",

@@ -158,6 +158,9 @@ export const CHECKS = Object.freeze({
   // unit mcrk2 (forks rows 1243 (2) / 1258 F1 A): a crack row written with a NAMED GAP (moment undeclared, axis none) is the
   // teacher's miss, never his — a PRESENCE red on the turn whose prompt it answered: logged and drift-counted, never a block
   "C.crack-gap": { fam: "C", mouth: "count", fix: "agle turn se: answer se PEHLE `forge_session.mjs moment <kind>` (aur `axis <x> now`) — crack ke words likhe gaye, gap teacher ka hai" },
+  // forks row 1281 (2), F12: a crack row written with no calling session id (gap "session-unchecked", gap_owner "organism") —
+  // the organism's miss, never his or the teacher's: counted, never a block
+  "C.crack-unchecked": { fam: "C", mouth: "count", fix: "crack likha gaya bina calling session id ke (CLAUDE_CODE_SESSION_ID nahi mila) — organism ka gap, uske words rakhe gaye; teacher ko kuch nahi karna" },
   "D.digest-first": { fam: "D", mouth: "patch", fix: "abhi chalao: node scripts/learn_digest.mjs — text mein kuch nahi jodna, jab tak uski screen tumhara sawaal na badle" },
   "D.sitting-first": { fam: "D", mouth: "patch", fix: "abhi kholo: node scripts/sitting.mjs open --surface code --no-spawn --task \"<concept> axis <x>\" — text mein kuch nahi jodna" },
   "D.start-once": { fam: "D", mouth: "count", fix: "forge_session start dobara nahi, --force kabhi nahi — khuli session RESUME karo (pointer se)" },
@@ -175,7 +178,7 @@ export const PATCH_OPENER = "PATCH — tumhara jawab uski screen par hai aur rah
 // one-idea 2.86 per 10 turns · bank 6 of 7 missed · too-Hindi 12/35 · position), then the rest in
 // catalogue order. A measured order, not a preference; P4 replaces it with the judge's.
 export const RANK = Object.freeze(["D.unbound", "D.digest-first", "D.sitting-first", "A.text-last", "B.bank", "B.tools", "A.one-question", "A.new-terms", "A.neev-pehle",
-  "A.too-hindi", "A.question-last", "A.gut-by-moment", "A.gut-trio", "B.moment", "C.crack-gap", "A.confusion-literal", "A.position", "A.count-form", "A.codes-at-him"]);
+  "A.too-hindi", "A.question-last", "A.gut-by-moment", "A.gut-trio", "B.moment", "C.crack-gap", "C.crack-unchecked", "A.confusion-literal", "A.position", "A.count-form", "A.codes-at-him"]);
 const rankOf = (id) => { const i = RANK.indexOf(id); return i >= 0 ? i : RANK.length + Object.keys(CHECKS).indexOf(id); };
 // B.widget's presence cases carry their own fix line (the catalogue's is the absence's add-shaped one, row 276 (1)(d))
 // forks row 305 (24 Sep 2026): the test-moment presence case's own fix line, verbatim from the ruling
@@ -529,7 +532,12 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
       && sid && c.prompt_session_id === sid && !named.has(c.id));
     if (gapRows.length) {
       d.crack_gaps = gapRows.map((c) => c.id);
-      red("C.crack-gap", gapRows.map((c) => `crack ${c.id} written with ${c.gap === "moment-undeclared" ? `moment undeclared on axis ${c.axis}` : c.gap} — the teacher's miss`).join(" · "), "count");
+      const parts = (c) => String(c.gap).split("+");
+      const teacher = gapRows.filter((c) => parts(c).some((g) => g !== "session-unchecked"));
+      const organism = gapRows.filter((c) => parts(c).includes("session-unchecked"));
+      const tg = (c) => parts(c).filter((g) => g !== "session-unchecked").join("+");
+      if (teacher.length) red("C.crack-gap", teacher.map((c) => `crack ${c.id} written with ${tg(c) === "moment-undeclared" ? `moment undeclared on axis ${c.axis}` : tg(c)} — the teacher's miss`).join(" · "), "count");
+      if (organism.length) red("C.crack-unchecked", organism.map((c) => `crack ${c.id} written with no calling session id — the organism's miss`).join(" · "), "count");
     }
   }
   if (cls.kind !== "system") {
@@ -908,6 +916,10 @@ async function selftest() {
       && CHECKS["C.crack-gap"].mouth === "count" && RANK.includes("C.crack-gap"), JSON.stringify(g1).slice(0, 300));
     assert("C.crack-gap (unit mcrk2) — the once-latch: a gap this session's log already named does not red again; another session's gap row and a row with no gap never red",
       !has(g2, "C.crack-gap") && !has(g3, "C.crack-gap") && !has(g4, "C.crack-gap"));
+    const u1 = dg([{ ...gapRow, gap: "session-unchecked", gap_owner: "organism" }]), u2 = dg([{ ...gapRow, gap: "moment-undeclared+session-unchecked", gap_owner: "teacher+organism" }]);
+    assert("C.crack-unchecked (forks row 1281 (2)) — a row written with no calling session id reds the organism's count, never the teacher's; joined with a teacher gap, both count; the turn is allowed",
+      u1.decision === "allow" && has(u1, "C.crack-unchecked") && !has(u1, "C.crack-gap") && CHECKS["C.crack-unchecked"].mouth === "count"
+      && has(u2, "C.crack-unchecked") && has(u2, "C.crack-gap") && u2.decision === "allow", JSON.stringify([u1.reds, u2.reds]));
   }
   // 1 — the unbound nudge, once per session
   const nudge = decide({ payload: { session_id: ARCH }, sitting: null, forge: FORGE, transcript: "", env: {}, unbound: { line: "STUDY SCOPE NOT BOUND — learn_digest first, then sitting open" }, logRows: [] });
