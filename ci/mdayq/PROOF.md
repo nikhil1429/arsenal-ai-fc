@@ -50,6 +50,15 @@ node ci/witness/mdayq/witness_dayq.mjs plants --tree <tip>     → PLANTS mdayq 
 node ci/witness/mdayq/witness_dayq.mjs plants --tree <cut>     → PLANTS mdayq · 0 of 11 plant(s) as expected
 ```
 
+Re-run 22 Nov 2026 after row 1280, the same trees (tip `6e976f4`, cut `f635d68`):
+
+```
+node ci/mdayq/witness_mdayq.mjs --org <tip> --base-org <cut>   → GREEN MDAYQ the day end asks the two day-close questions by code before it closes, the bank keeps them as moment day_close rows that pay neither the axis-done gate nor the LOCK's negative-space count, and the close judges them · 17 clause(s)   (exit 0)
+node ci/mdayq/witness_mdayq.mjs --org <cut> --base-org <cut>   → RED MDAYQ · W1, W2, W3, W4, W5, W5L, W7, W8, W9, W10, W14, W15, W16, W17   (exit 1)
+```
+
+W15 CONT · W16 CLOSED · W17 READFAIL (row 1280 (2) / (3) / (5)) join the clauses below.
+
 Clauses: W1 KIND · W2 FENCE · W3 DUE · W4 ROW · W5 AXIS · W5L LOCK · W7 SKIP · W8 ORDER · W9 ANSWERED · W10 LEFT · W14 NOSESS
 (each GREEN on the tip and RED on the cut), seat W11 (org only), BOUND (only the named files differ), LAST (no survivor).
 Differences from the spec's §7 table, named:
@@ -75,6 +84,18 @@ moment defaults to day_close → W4 · M5 axis-gate exclusion removed → W5 · 
 as a close → W7 · M8 step 0 does not stop the close → W8 · M9 the bank read skipped → W9 · M10 a card filed on `left` → W10 ·
 M14 a null session id let through → W14.
 
+Re-run 22 Nov 2026 after row 1280 (tip `6e976f4`, cut `f635d68`):
+
+```
+node ci/mdayq/run_mutants_mdayq.mjs --org <tip> --base-org <cut>   → run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN
+```
+M15 a moment's axis on D not counted as worked → W15 · M16 `day_close` refused on a closed session like every kind → W16 ·
+M17 a failed read reads not due → W17.
+
+22 Nov 2026 · `node scripts/forge_session.mjs selftest` at the tip `6e976f4`: `forge_session selftest: 250 passed, 0 failed`
+(the two asserts `mdayq W15` and `mdayq W16` added); study_scope 62, teaching_gate 130, gaffer_brain 198 as on 21 Nov 2026;
+`models.mjs check` exit 0.
+
 Each touched selftest or member, cut → tip, by its headline line (21 Nov 2026, cloud, both trees):
 
 | command | at the cut `f635d68` | at the tip |
@@ -90,28 +111,49 @@ Each touched selftest or member, cut → tip, by its headline line (21 Nov 2026,
 | `node ci/mday/witness_mday.mjs --org <tree>` (no base leg: its BOUND is RED on both for want of `--base-org`) | `RED MDAY · BOUND` — every other clause GREEN | `RED MDAY · BOUND` — the same clause lines, identical to the cut's (diffed) |
 | `node scripts/models.mjs check` | exit 0 | exit 0 · `models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)` |
 
-## 5 · FORKS (each a choice for the architect; nothing beyond the named files was edited)
+## 5 · FORKS — RULED, forks row 1280 (22 Nov 2026); the old text struck in place
 
-- **mdayq-1 · the skeleton's moment list.** `scripts/teaching_bar.mjs:350` (`[EK CHECK] … moment check_q|pehle_guess|widget_gate|jirah|sharp_check`)
+- **mdayq-1 · the skeleton's moment list — RULED (a), row 1280 (1).** *"day_close is asked by code at his day end and never by
+  the teacher mid-lesson, so the skeleton and the skill's list do not print it; the fence names it as the one kind outside the
+  list and stays exact otherwise."* As built; W2 is the clause, M2 its mutant.
+  ~~`scripts/teaching_bar.mjs:350` (`[EK CHECK] … moment check_q|pehle_guess|widget_gate|jirah|sharp_check`)
   is beyond the named files. The gate's FENCE assert (`teaching_gate.mjs` selftest) compared it EQUAL to MOMENT_KINDS, so
   adding `day_close` to the gate alone turns it red. Built: the assert names `day_close` as the ONE kind the skeleton does not
   print (it is asked by code at `day.mjs end`, never as a mid-lesson check) and keeps the list exact otherwise. (a) as built ·
-  (b) teaching_bar prints `day_close` too and the fence returns to full equality (a teaching_bar edit). Spec W2 assumed (b).
-- **mdayq-2 · the forge skill's verb list.** `.claude/skills/forge/SKILL.md:31` still lists five moment kinds; the brief
-  allows the two skill lines only, so `day_close` is named in THE BANK line instead. (a) leave · (b) add it to :31.
-- **mdayq-3 · F7's "declared on D".** Read strictly as an `axis <x> now` stamped on D. A day where he works an axis
+  (b) teaching_bar prints `day_close` too and the fence returns to full equality (a teaching_bar edit). Spec W2 assumed (b).~~
+- **mdayq-2 · the forge skill's verb list — RULED (a), row 1280 (1)** (the same words). `.claude/skills/forge/SKILL.md:31` is
+  left as it is. ~~`.claude/skills/forge/SKILL.md:31` still lists five moment kinds; the brief
+  allows the two skill lines only, so `day_close` is named in THE BANK line instead. (a) leave · (b) add it to :31.~~
+- **mdayq-3 · F7's "declared on D" — RULED (b), row 1280 (2).** *"a moments_log entry on day D that carries an axis also counts
+  as that axis worked on D; a null axis counts for nothing. A day he continues an old axis is a study day and is due."* Built:
+  `dayCloseDue` pushes every moments_log entry stamped on D whose axis is a letter into the declared list (so the LAST axis
+  declared or worked on D is the rows' axis). Clause **W15 CONT**, mutant **M15**; selftest assert `mdayq W15`.
+  ~~Read strictly as an `axis <x> now` stamped on D. A day where he works an axis
   declared on an earlier day and never re-declares it reads not due (F7 B), though its `moments_log` carries that axis.
-  (a) as built · (b) an axis-bearing `moments_log` entry on D also counts as declared.
-- **mdayq-4 · `moment day_close` on a day whose forge session is closed or stale.** The pacer's `moment` verb runs
+  (a) as built · (b) an axis-bearing `moments_log` entry on D also counts as declared.~~
+- **mdayq-4 · `moment day_close` on a closed or stale forge session — RULED (b), row 1280 (3).** *"day_close alone is accepted
+  with no live forge session and names the day it closes; every other kind still refuses."* Built: the pacer's `moment` verb
+  runs `need(load())` for every kind and `live()` for every kind but `day_close`; the moment's log entry carries `day` (the IST
+  day of its stamp) and the verb's line ends `· day-close moment for <D>`; on a closed or stale session it leaves `updated_at`
+  unmoved (a stale session stays stale, its pacer silent). With no session file at all `need()` still refuses — a due day
+  always has one (F2 A: a pacer entry of D). Clause **W16 CLOSED**, mutant **M16**; selftest assert `mdayq W16`. The runner's
+  one measurement on his laptop: §9.
+  ~~The pacer's `moment` verb runs
   `live(need(load()))`: it refuses with no open, live session. Step 0 still prints the ask (the day was taught); the
   model then cannot declare the moment and the gate's B.moment would read the question undeclared. Not measured on his
-  laptop. (a) leave (the close after `--dayq lost`) · (b) `day_close` bypasses `live()`.
-- **mdayq-5 · step 0's import graph.** `day.mjs end` imports `forge_session.mjs` and `gaffer_brain.mjs` dynamically, only
-  inside `end` (never on the hook path: `start` and `brief` do not load them). `gaffer_brain.mjs` loads `models.mjs` at
-  import (no call). mday's W2.5 static check reads day.mjs's own source and stays green. (a) as built · (b) a leaf
-  reader of the bank rows.
-- **mdayq-6 · a step-0 read that fails** → the close runs as before and its line says `day-close: not due (the day-close
-  read failed …)`: his day end is never blocked by this read. (a) as built · (b) refuse the close.
+  laptop. (a) leave (the close after `--dayq lost`) · (b) `day_close` bypasses `live()`.~~
+- **mdayq-5 · step 0's import graph — RULED (a), row 1280 (4).** *"as built; the hook path loads neither organ and the static
+  check stays."* `day.mjs end` imports `forge_session.mjs` and `gaffer_brain.mjs` dynamically, only inside `end` (never on the
+  hook path: `start` and `brief` do not load them). `gaffer_brain.mjs` loads `models.mjs` at import (no call). mday's W2.5
+  static check reads day.mjs's own source and stays green. ~~(a) as built · (b) a leaf reader of the bank rows.~~
+- **mdayq-6 · a step-0 read that fails — RULED (a) with one change of words, row 1280 (5).** *"the close is never blocked, and
+  its line reads that the day-close READ FAILED, with the reason; it never reads not due."* Built: `dayCloseRead` returns
+  `{failed, why: <the error's first line>}` and `dayqStep` prints `day-close: READ FAILED (<reason>) · the close runs, nothing
+  asked` before any not-due branch. Clause **W17 READFAIL**, mutant **M17**.
+  ~~→ the close runs as before and its line says `day-close: not due (the day-close
+  read failed …)`: his day end is never blocked by this read. (a) as built · (b) refuse the close.~~
+- **(6), row 1280 (6) / row 1279 (5):** re-cut above mbank after mjset — owed when the runner sends the sha; main is NOT merged
+  here until then (a local merge of main `a0645d2` made on 22 Nov 2026 was dropped unpushed on this ruling).
 - **Beyond the files, named by the spec and not edited:** `scripts/daily_green.mjs` (F6 b — not ruled), `scripts/learn_digest.mjs`
   (its moments line is derived from MOMENTS and now prints six), `scripts/teaching_bar.mjs` (mdayq-1; `bankDueAt` read as is).
 
@@ -146,6 +188,13 @@ Replayed over the COMMIT blobs (`git show <sha>:<path>` for every tracked .md) b
 - F6: the study days since 13 Nov whose meter reads red with nothing banked; then the meter owner's one small unit.
 - Whether the close's ONE judge settles the two day-close rows on his machine before mjset lands (mjset §9).
 - How often he ends a day by leaving (`--dayq left` lines in `sitting_reviews.jsonl` closes), once live.
+
+- **Row 1280 (3), the ONE planted-closed-session measurement on his laptop** (a copy of the tree under `os.tmpdir()`, its own
+  planted state there; his `dressing-room/state` is never read or written; no model is called, no port bound), from the
+  checkout of this branch:
+  `node ci/witness/mdayq/witness_dayq.mjs plants --tree . --only W16`
+  → expected last line `PLANTS mdayq · 1 of 1 plant(s) as expected`, with `CLAUSE W16 GREEN · day_close on a closed session
+  exit 0 … · log day_close/day <today, IST> · last touch unmoved · check_q exit 1`.
 
 ## 10 · CI
 
