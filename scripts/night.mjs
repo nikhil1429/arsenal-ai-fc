@@ -25,11 +25,15 @@
 //   F7 A  the campaign calls this by CLI            → no campaign path, no campaign file read
 //   F9 A  the learn start closes and never waits    → close --by learn-start; nothing here blocks on the runner
 //   ADDED (ii) no landing at night                  → may --act land is always NO; mark --kind landed is refused
+// UNIT mrehearse (spec ci/mwit/MWIT_SPEC.md @ 88bf69d, B-rehearsal:night-replay): ONE mark kind more, `rehearse` — the act
+//   of the night that rehearse.mjs (sole writer of rehearsal_log.jsonl) reports through this CLI. Its row carries `head`, the
+//   commit the night ran at, MEASURED here (git rev-parse HEAD of this tree, read only) and never typed by the caller: it is
+//   the fact the rehearsal row's code_sha is judged against. It is not a launch: no count of the NIGHT line moves.
 // CLI:
 //   arm    --day <YYYY-MM-DD> --by day.end          (day.mjs end, and only it)
 //   wait   [--since <iso>] [--once]                 (the runner's hold; exit 0 when an armed, unbegun night exists)
 //   begin  --runner <role>                          (the runner, on waking)
-//   mark   --kind launch|return|land-ready|fork|red --unit <id> [--note <word>]
+//   mark   --kind launch|return|land-ready|fork|red|rehearse --unit <id> [--note <word>]
 //   stop   --reason pool|memory|red|fork|context|his-word|learn-start|done [--note <word>]
 //   may    --act launch|land                        (ONE line: GO exit 0 · NO <reason> exit 1)
 //   close  --by learn-start                         (day.mjs start, and only it; prints the ONE line)
@@ -55,7 +59,7 @@ export const LOG_NAME = "night_log.jsonl";
 export const FLOOR_UNSET = "FLOOR_UNSET";
 export const NIGHT_CONFIG = Object.freeze({ memory_floor_mb: 1536 });   // forks row 1103 · the 1.5 GB line of row 477 (5)
 
-export const KINDS = Object.freeze(["launch", "return", "land-ready", "fork", "red"]);
+export const KINDS = Object.freeze(["launch", "return", "land-ready", "fork", "red", "rehearse"]);
 export const REASONS = Object.freeze(["pool", "memory", "red", "fork", "context", "his-word", "learn-start", "done"]);
 const ACTS = Object.freeze(["launch", "land"]);
 const TOKEN = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;   // a unit id, a role, a reason word — never prose
@@ -90,7 +94,7 @@ export function lineOf(n) {
 
 /** the organ, bound to one state dir; every door injectable so the selftest never reaches a live file */
 export function organ({ dir = STATE_DIR, sittingDir = SITTING_DIR, now = () => new Date(), freeMb = () => Math.floor(freemem() / 1048576),
-  floor = NIGHT_CONFIG.memory_floor_mb, fileCard = defaultFileCard } = {}) {
+  floor = NIGHT_CONFIG.memory_floor_mb, fileCard = defaultFileCard, head = defaultHead } = {}) {
   const LOG = join(dir, LOG_NAME);
   const rows = () => readRows(LOG);
   const append = (row) => { mkdirSync(dir, { recursive: true }); appendFileSync(LOG, JSON.stringify({ ts: now().toISOString(), ...row }) + "\n"); };
@@ -136,7 +140,7 @@ export function organ({ dir = STATE_DIR, sittingDir = SITTING_DIR, now = () => n
     if (!u) return { code: 1, out: "night: mark REFUSED — --unit <id> (a token)" };
     const n = live();
     if (!n || !n.begun) return { code: 1, out: "night: mark REFUSED — no begun night" };
-    append({ day: n.day, kind: "mark", mark: kind, unit: u, ...(tok(note) ? { note: tok(note) } : {}) });
+    append({ day: n.day, kind: "mark", mark: kind, unit: u, ...(tok(note) ? { note: tok(note) } : {}), ...(kind === "rehearse" ? { head: head() } : {}) });
     if (kind === "red" && !n.stopped) append({ day: n.day, kind: "stopped", reason: "red", unit: u });   // F5 A: one red stops the night
     return { code: 0, out: `night: MARK ${kind} ${u}${kind === "red" ? " · the night stops (F5 A)" : kind === "fork" ? " · that thread waits for the architect; the night goes on (F6 A)" : ""}` };
   }
@@ -170,6 +174,13 @@ export function organ({ dir = STATE_DIR, sittingDir = SITTING_DIR, now = () => n
   return { arm, waiting, begin, stop, mark, may, close, line, LOG };
 }
 
+/** the commit this tree runs at (unit mrehearse's `rehearse` mark): git rev-parse HEAD, read only; null when unreadable */
+function defaultHead() {
+  const r = spawnSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8", windowsHide: true });
+  const sha = r.status === 0 ? String(r.stdout || "").trim() : "";
+  return /^[0-9a-f]{40}$/.test(sha) ? sha : null;
+}
+
 /** ONE card, through its owner's own CLI and its keyed door (idempotent by key) */
 function defaultFileCard({ key, line }) {
   const why = "a landing to main moves only on his word (no unattended landing is granted at night) and a fork outside the runner's class is the architect's";
@@ -198,7 +209,8 @@ async function selftest() {
     const cards = [];
     const F = Math.floor(freemem() / 1048576);   // the plant's line IS this box's measured free memory; never a typed number
     let mem = 0;
-    const mk = (extra = {}) => organ({ dir: join(tmp, "st"), sittingDir: sdir, floor: F, freeMb: () => mem, fileCard: (c) => { if (!cards.some((x) => x.key === c.key)) cards.push(c); return true; }, ...extra });
+    const HEAD = "0123456789abcdef0123456789abcdef01234567";   // a planted commit id: the head door is injected like every other
+    const mk = (extra = {}) => organ({ dir: join(tmp, "st"), sittingDir: sdir, floor: F, freeMb: () => mem, head: () => HEAD, fileCard: (c) => { if (!cards.some((x) => x.key === c.key)) cards.push(c); return true; }, ...extra });
     const o = mk();
     const floorNo = (f) => /^NO floor-unset/.test(organ({ dir: join(tmp, "x"), sittingDir: sdir, floor: f }).may({ act: "launch" }).out);
     ok("a non-number floor refuses (F4 A, row 1103) — FLOOR_UNSET and a string give NO floor-unset; a numeric floor passes that check",
@@ -216,6 +228,10 @@ async function selftest() {
     ok("mark --kind landed is refused (ADDED (ii))", o.mark({ kind: "landed", unit: "u1" }).code === 1);
     o.mark({ kind: "launch", unit: "u1" }); o.mark({ kind: "return", unit: "u1" }); o.mark({ kind: "land-ready", unit: "u1" });
     o.mark({ kind: "fork", unit: "u2" });
+    const rh = o.mark({ kind: "rehearse", unit: "rehearse" });
+    const rrow = readRows(o.LOG).filter((r) => r.mark === "rehearse");
+    ok("mark --kind rehearse (unit mrehearse) → ONE mark row carrying the head the door measured; only that kind carries a head; not a launch",
+      rh.code === 0 && rrow.length === 1 && rrow[0].head === HEAD && readRows(o.LOG).filter((r) => r.kind === "mark" && "head" in r).length === 1 && nightOf(readRows(o.LOG)).launched === 1);
     ok("a fork stops that thread only — may still GO (F6 A)", o.may({ act: "launch" }).code === 0);
     writeSitting(sdir, { id: "s1", opened_at: new Date().toISOString() });
     ok("a sitting open → NO sitting-open", /^NO sitting-open/.test(o.may({ act: "launch" }).out));
