@@ -271,9 +271,45 @@ node scripts/gates.mjs report                gates: 1 RED — a gate may only ge
 ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all   organism_test: 168 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 125 (hermetic: named, not run) — the one red is GATES (the mbank line), as at 4b17f89
 ```
 
+## 15. THE RE-CUT ON MAIN d585648 — mbank LANDED (rows 1279 (5) / 1284 (2), 22 Nov 2026 IST)
+
+- `core.autocrlf false`, `core.eol lf`, then `git fetch origin main` = **d585648** (mbank landed; mt1 727ba23 before it).
+  mbank landed as a re-cut tree, so f635d68 is not its ancestor; a0645d2 (mshard + mgat) is. Merged with a merge commit
+  (9d6959c), no rebase, no force push. **BASE = d585648.** Every conflict and auto-merged file is named in the ledger:
+
+```
+CONFLICT  ci/mbank/LEDGER.jsonl (add/add)      → main's side   (no mcrk2 byte; f635d68's copy superseded by the landed mbank)
+CONFLICT  ci/mbank/PROOF.md (add/add)          → main's side   (the same)
+CONFLICT  scripts/organism_test.mjs            → main's side   (no mcrk2 commit; the branch carried f635d68's + a0645d2's bytes)
+CONFLICT  scripts/forge_session.mjs, 5 hunks   → mcrk2's side  (main's side = f635d68's mbank crack code, byte-equal; main's other
+                                                                change to this file, unit mtrap's, merged automatically)
+CONFLICT  scripts/notes_compiler.mjs, 1 hunk   → mcrk2's 3 lines (main's side empty: an adjacent unit mtrap change)
+AUTO      .claude/skills/forge/REFERENCE.md · .claude/skills/forge/SKILL.md · scripts/teaching_audit.mjs · scripts/teaching_gate.mjs
+```
+
+- After the merge `git diff --name-only d585648 HEAD` is the named files, `ci/mcrk2/` and `ci/witness/mcrk2/` only, so
+  `ci/mcrk2/MERGED.json` now lists no file (kept for the next merge).
+- **Ruling 1281 (4) done here:** mbank's `run_mutants_mbank.mjs` M17 re-anchored against the landed bytes (the anchor only;
+  the mutant still drops the calling session's id, so the verb reads the shared slot again). The bound names that file.
+- **Ruling 1281 (5): F15 is moot** — the gates' checkJs count reads at the baseline at this tip.
+
+```
+(22 Nov 2026, LF archives made after core.autocrlf false / core.eol lf)
+node ci/mcrk2/witness_mcrk2.mjs --org <tip> --base-org <d585648>     GREEN MCRK2 … · 15 clause(s)   (BOUND · 16 file(s) differ · outside the named files 0)
+node ci/mcrk2/witness_mcrk2.mjs --org <d585648> --base-org <same>    RED MCRK2 · G2, G3, G3b, G4, G5, G6, G7, G8, G9, G10, G13, G12, MCRK CARRY
+node ci/mcrk2/run_mutants_mcrk2.mjs                                   run_mutants: 24 of 24 mutant(s) RED by the clause that names them · control GREEN
+node ci/mbank/run_mutants_mbank.mjs --org <tip> --base-org <5301f15>  M17 RED by B17 · 20 of 20 mutant(s) RED · control RED MBANK · BOUND
+   (mbank's own witness reads RED MBANK · BOUND on main d585648 itself, the same; every other mbank clause is green at the tip)
+node scripts/gates.mjs report, LF archive of the tip                 checkJs 296 (baseline 296) · lint 344 error(s) · 2 warning(s), every count at its frozen value
+   (the same archive of d585648 reads the same; both show 2 SCHEMA reds, as an archive holds no gitignored state file)
+node scripts/gates.mjs report, the working tree                      gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides, and every schema'd state file matches
+forge_session 246 passed, 0 failed · notes_compiler 58 passed, 0 failed · teaching_gate 133 passed, 0 failed · teaching_contract 118 passed, 0 failed
+teaching_audit ALL CHECKS PASSED (154 passed, 0 failed) · witness_crack PLANTS mcrk · 11 of 11 · witness_bank PLANTS mbank · 19 of 19 · models check exit 0
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all   organism_test: 171 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)
+```
+
 ## 11. CHECKPOINT
 
-CHECKPOINT · ROW 1281 BUILT at 2026-11-22 (IST) · (2) G13/M13, (3) seed row + G7 CLI leg/M7b, (6) close suffix G10/M10c · witness
-GREEN both ways, 24 of 24 mutants RED, control GREEN · resume from: the runner's main sha (after mbank lands and mjset + mdayq
-re-cut) → re-cut above it by row 1279 (5), re-anchor mbank's M17 there (row 1281 (4)), regenerate MERGED.json, re-run witness
-and mutants, name it here
+CHECKPOINT · RE-CUT on main d585648 (mbank LANDED) at 2026-11-22T05:45Z · BASE d585648 · witness GREEN at the tip, RED at the
+base · 24 of 24 mutants RED, control GREEN · mbank M17 re-anchored (RED by B17) · gates checkJs 296 / lint frozen · resume from:
+the architect's own legs on this tip; any message (a new main → merge it the same way, regenerate MERGED.json, re-run, name it)
