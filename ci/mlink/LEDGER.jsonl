@@ -9,3 +9,6 @@
 {"ts":"2026-11-22T13:12:20.547Z","act":"suite build","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (LF tree HEAD)","last_line":"organism_test: 173 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
 {"ts":"2026-11-22T13:12:20.547Z","act":"law pack base and build","cmd":"node scripts/lawpack.mjs gate","last_line":"lawpack: GREEN — no law's finding count rose, and every rule is on disk (identical both)"}
 {"ts":"2026-11-22T13:12:20.547Z","act":"models","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
+{"ts": "2026-11-22T13:51:31.738208Z", "act": "WITNESSES member, shallow clone", "cmd": "GITHUB_ACTIONS=true GITHUB_WORKSPACE=<clone> ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses", "last_line": "organism_test: 80 passed, 27 failed · ruled 0 · UNRULED 27 · LIVE 0 (hermetic: named, not run)"}
+{"ts": "2026-11-22T13:51:31.738208Z", "act": "unshallow the clone", "cmd": "git fetch --unshallow origin main", "last_line": "is-shallow false"}
+{"ts": "2026-11-22T13:51:31.738208Z", "act": "WITNESSES member, full clone", "cmd": "GITHUB_ACTIONS=true GITHUB_WORKSPACE=<clone> ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses", "last_line": "organism_test: 124 passed, 5 failed · ruled 0 · UNRULED 5 · LIVE 0 (hermetic: named, not run)"}

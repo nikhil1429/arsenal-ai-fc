@@ -48,7 +48,9 @@ A build seat, no spec. Measured 22 Nov 2026 (UTC) in a cloud build seat (linux, 
 - `node scripts/models.mjs check`: exit 0 (22 Nov 2026).
 
 ## The WITNESSES member (row 1311 (4) brief item 4)
-- `GITHUB_ACTIONS=true GITHUB_WORKSPACE=<clone> ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses`: running at this checkpoint; its count lands at the next checkpoint.
+- `GITHUB_ACTIONS=true GITHUB_WORKSPACE=<clone> ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses` at the build tip (22 Nov 2026), after `git fetch --unshallow origin main` (the seat's clone was shallow; the member never fetches): `witnesses · 64 unit(s) · 1470.0 s` · `organism_test: 124 passed, 5 failed · ruled 0 · UNRULED 5 · LIVE 0 (hermetic: named, not run)` (exit 2). Mine among them: `witness ‹mlink› 0.6 s · GREEN MLINK …` and `WITNESS ‹mlink› · GREEN at head against its BASE` ok.
+- The 5 reds are all `its BASE is in the clone` — mr3, mrf, mrj (52b51c1), mrt (51055bb), mrv (cf1ca54): commits not on main's history, so not in this clone; none is judged here and none touches this unit.
+- The first pass on the SHALLOW clone (22 Nov 2026) read `80 passed, 27 failed`: 26 the same `its BASE is in the clone`, and mgat `RED MGAT · W2 (RED on org) · BOUND` (135.2 s); on the unshallowed re-run mgat read GREEN at head against its BASE. Named, not chased (a timing/contention read; mgat's files are not this unit's).
 
 ## FORKS
 - F1 · the effort receipt tool `campaign-2026-09/tools/effort_receipt.mjs` is not in this repository (its error is named in the seat's final message): A · the runner carries it · B · drop the step for cloud seats.
@@ -56,4 +58,5 @@ A build seat, no spec. Measured 22 Nov 2026 (UTC) in a cloud build seat (linux, 
 - F3 · the WIN32 door is an emulation off Windows (process.platform reads win32; the privilege rule thrown by the probe). Not measured on a Windows host by this seat: A · the runner re-runs the witness on his laptop (both doors run there natively, the WIN32 door adding only the privilege rule) · B · accept the emulation.
 - F4 · off win32 the sandbox's node_modules is now a dir symlink where it was a copy (on the neutral machine's real folder): A · keep (no copy anywhere, measured above) · B · keep the old copy off win32 when the source is a real folder.
 
-CHECKPOINT · 1 at 2026-11-22 (UTC) · the fix, the witness both ways, the mutants · resume from: the WITNESSES member count, then the effort receipt.
+CHECKPOINT · 1 at 2026-11-22 (UTC) · the fix, the witness both ways, the mutants.
+CHECKPOINT · 2 at 2026-11-22 (UTC) · the WITNESSES member count · resume from: the effort receipt (the brief's last step).
