@@ -383,3 +383,41 @@ organism_test: 122 passed, 5 failed · ruled 0 · UNRULED 5 · LIVE 0 (hermetic:
   re-run is its first.
 
 CHECKPOINT · 2026-11-22 · tip = this commit ([skip ci]) · BASE 84cbc03126eddb85c7d5cf54b51610068800315c · witness build GREEN MQ2 · 11 clause(s) on 6 of 6 passes (A9 GREEN each, A1–A8 unchanged) · base RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9 · mutants 9 of 9, control GREEN · WITNESSES 122 passed, 5 failed (all 5 shallow-clone BASE) · resume from: the architect's Windows re-run
+
+## 13 · Row 1311: A8 is a BOUND-class clause (2026-11-22)
+
+**The ruling, items (1)–(2), verbatim (by the runner):** (1) THE WITNESS LAW, second half of row 1307: a clause whose
+verdict compares a whole-tree count or list between the base and the head is a BOUND-class clause. It carries an id of
+the form ID BOUND as a literal in its source, so the member drops it; it is judged at adoption against the unit's
+parent, by the seat, the runner and the architect, and its mutant stays. The neutral readers of those counts stay the
+judges on main: the law pack line of row 1137 (2), the graph query, the gates. (2) mq2 and mxb come OUT of the train
+now, nothing rides above them. Each seat renames exactly the measured clauses (mq2 A8; mxb W8 and W9), checks its other
+clauses for the same shape and names any, re-measures both ways against current main, mutants, checkpoint; each
+returns as a top car for the architect's re-run.
+
+- **Renamed: A8 → `A8 BOUND`.** It is a literal in the witness source (`const A8_ID = "A8 BOUND"`). The witness prints
+  `A8 BOUND base vs build …` and, on a red, pushes `A8 BOUND` into its RED line. The member's own `boundIds` reads the
+  source as `["A8 BOUND","BOUND"]`, and its drop applied to `RED MQ2 · A8 BOUND, BOUND` leaves nothing. M8 stays, now
+  judged at `A8 BOUND`.
+- **Named, same shape, not renamed (as ordered): A6's allowlist sub-check.** `witness_mq2.mjs:209` compares xray's
+  whole `MULTI_WRITER_ALLOWLIST` list between base and head ("allowlist as the base"). A car below that adds an
+  allowlist entry would turn A6 RED for a reason outside this unit. The rest of A6 (Q2/Q5 rows for this ONE file) and
+  every other clause (A1–A5, A7, A9 are planted, per-tree; BOUND is already BOUND; LAST counts its own children) do
+  not compare a whole-tree count or list.
+- **Main:** `git fetch origin main` → 84cbc03126eddb85c7d5cf54b51610068800315c, unchanged, already merged (7cc2b3f).
+  BASE stays 84cbc03126eddb85c7d5cf54b51610068800315c.
+- **Re-measured against main 84cbc03**, LF trees:
+
+```
+witness, build (3 passes): GREEN MQ2 thalamus is the sole writer of thalamus_config.json through three lane doors · 11 clause(s)   (3 of 3, exit 0)
+  A8 BOUND base vs build GREEN — law pack rose: none · unresolved sinks 2128 → 2124 · A9 build GREEN (each pass)
+witness, base both ways: RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9
+mutants: run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN
+  M8 … → A8 BOUND RED — killed · witness: RED MQ2 · A8 BOUND
+  M9 (the lock dropped) → A9 RED — killed · witness: RED MQ2 · A9
+WITNESSES member: organism_test: 122 passed, 5 failed · ruled 0 · UNRULED 5 · LIVE 0 (hermetic: named, not run)   (63 units)
+```
+  The 5 FAILs are `mr3`, `mrf`, `mrj`, `mrt`, `mrv` · "its BASE is in the clone" (this container's shallow clone),
+  unchanged from §12. mq2 is not a member (§11).
+
+CHECKPOINT · 2026-11-22 · tip = this commit ([skip ci]) · BASE 84cbc03126eddb85c7d5cf54b51610068800315c · renamed A8 → "A8 BOUND" · named, same shape: A6's allowlist-equality sub-check (witness_mq2.mjs:209) · witness build GREEN MQ2 · 11 clause(s) 3 of 3 · base RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9 · mutants 9 of 9, control GREEN · WITNESSES 122 passed, 5 failed (shallow-clone BASE only) · resume from: the architect's re-run
