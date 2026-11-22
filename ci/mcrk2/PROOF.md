@@ -308,10 +308,43 @@ teaching_audit ALL CHECKS PASSED (154 passed, 0 failed) · witness_crack PLANTS 
 ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all   organism_test: 171 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)
 ```
 
+## 16. TWO MORE MERGES OF MAIN (architect 67, 22 Nov 2026 IST)
+
+**Merge 1 — main 462bf6c** (maud43 72bf874 · mq3 f3c828e · mjset 462bf6c), merge commit b744a25. No conflict; the one
+auto-merged file, `scripts/teaching_audit.mjs`, was read as a merge of two units: the merged file minus the pre-merge tip is
+exactly maud43's change, and the merged file minus main is exactly mcrk2's own. Pushed with `[skip ci]` until this merge
+carried mq3's filter. The WITNESSES member over that tree (e4b98c6) read 62 of 62 units GREEN at head.
+
+**Merge 2 — main 3d059d0** (mdayq landed, row 1295), merge commit **c0d1a6f**. No conflict. Auto-merged, each read the same
+way (merged minus main = mcrk2's own change; merged minus the pre-merge tip = mdayq's change):
+`scripts/forge_session.mjs` (mdayq, its contract fix 4178271 in `contractLines` included) and `scripts/teaching_gate.mjs`.
+`.claude/skills/forge/SKILL.md` changed on main's side only. **BASE = 3d059d0**; `git diff --name-only 3d059d0 HEAD` is the
+named files only, so MERGED.json lists none.
+
+**M17 against the landed bytes:** the landed `ci/mbank/run_mutants_mbank.mjs` (unchanged from 462bf6c to 3d059d0) still
+anchors on `auditLast: ownC ? { ...alC, prompt: ownC } : alC,`, a line the crack case no longer has; mcrk2's re-anchor reads
+
+```
+["B17", "M17 the crack verb reads the shared slot again", FS, "sessionId: process.env.CLAUDE_CODE_SESSION_ID || null, fresh: true }, AUDIT_LAST);", "sessionId: null, fresh: true }, AUDIT_LAST);"]
+```
+
+and that anchor lands once in `scripts/forge_session.mjs` at the tip; mbank's runner reads M17 RED by B17.
+
+```
+(22 Nov 2026, the merged tree 333c38a, LF archives)
+node ci/mcrk2/witness_mcrk2.mjs --org <tip> --base-org <3d059d0>    GREEN MCRK2 … · 15 clause(s)   (BOUND · 16 file(s) differ · outside the named files 0)
+node ci/mcrk2/witness_mcrk2.mjs --org <3d059d0> --base-org <same>   RED MCRK2 · G2, G3, G3b, G4, G5, G6, G7, G8, G9, G10, G13, G12, MCRK CARRY
+node ci/mcrk2/run_mutants_mcrk2.mjs                                  run_mutants: 24 of 24 mutant(s) RED by the clause that names them · control GREEN
+node ci/mbank/run_mutants_mbank.mjs --org <tip> --base-org <5301f15> M17 RED by B17 · 20 of 20 mutant(s) RED
+node scripts/gates.mjs report                                        gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides, and every schema'd state file matches
+forge_session 252 passed, 0 failed · notes_compiler 58 passed, 0 failed · teaching_gate 133 passed, 0 failed · teaching_contract 118 passed, 0 failed · teaching_audit 154 passed, 0 failed
+WITNESSES member over 333c38a (row 1292 (3))                         WITNESSES · 63 unit(s) judged · 63 GREEN at head against its BASE · organism_test: 133 passed, 0 failed
+```
+
 ## 11. CHECKPOINT
 
-CHECKPOINT · RE-CUT on main d585648 (mbank LANDED) at 2026-11-22T05:45Z · BASE d585648 · witness GREEN at the tip, RED at the
-base · 24 of 24 mutants RED, control GREEN · mbank M17 re-anchored (RED by B17) · gates checkJs 296 / lint frozen · WITNESSES
-member (row 1292 (3)) over this tree, unshallowed clean clone, the neutral machine's flags, 2026-11-22: 59 of 59 unit(s) GREEN at
-head against their BASE, 0 failed (organism_test: 125 passed, 0 failed) · resume from: the architect's own legs on this tip; any
-message (a new main → merge it the same way, regenerate MERGED.json, re-run, name it)
+CHECKPOINT · merge c0d1a6f (main 3d059d0, mdayq; after b744a25, main 462bf6c) · BASE 3d059d0 · conflicts none · auto-merged:
+scripts/forge_session.mjs, scripts/teaching_gate.mjs (and, at 462bf6c, scripts/teaching_audit.mjs), each = mcrk2's own change
++ the other unit's, exactly · M17 re-anchored on "sessionId: process.env.CLAUDE_CODE_SESSION_ID || null, fresh: true },
+AUDIT_LAST);" (lands once; RED by B17) · witness GREEN 15 clauses at the tip / RED 13 of 13 at 3d059d0 · mutants 24/24, control
+GREEN · WITNESSES 63 of 63 GREEN at head (2026-11-22) · resume from: the runner's cut of land/mcrk2
