@@ -1,0 +1,16 @@
+{
+  "_what": "unit mmach (forks rows 1162 / 1163): THE RECORD the B-machine witness reads. Written once by the unit; it carries shas and the planted assert's NAME only, never a verdict (the verdict is read live from the neutral machine by scripts/ci_verdict.mjs). Both branches are pushed and NEVER landed, never merged into anything.",
+  "broken": {
+    "branch": "claude/mmach-broken",
+    "sha": "2995f43bc688bfe4594f43614278e1a7478aacad",
+    "base": "fb4211870093e6b8657655eb02ebcfc425f1eab1",
+    "planted_assert": "SUITE MEMBER · tokenizer_play selftest exits 0",
+    "break": "scripts/tokenizer_play.mjs:208 — the dial assert expects 12 tokens at 0 merges, not 11 (one byte)"
+  },
+  "clean": {
+    "branch": "claude/mmach-clean",
+    "sha": "399b7192abe567fb0715a7fa0fbc2e024a3306a1",
+    "base": "fb4211870093e6b8657655eb02ebcfc425f1eab1",
+    "break": "reverted: the clean commit's tree equals the base's tree (1244e55)"
+  }
+}
