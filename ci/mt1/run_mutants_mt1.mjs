@@ -2,7 +2,7 @@
 // ============================================================================
 // ci/mt1/run_mutants_mt1.mjs — one mutant per changed clause of ci/mt1/witness_mt1.mjs, each RED by the clause that names it
 //   node ci/mt1/run_mutants_mt1.mjs --org <build tree> --base-org <base tree>
-// Each mutant is a COPY under os.tmpdir() of the build tree (node_modules linked; .git and dressing-room skipped) with ONE
+// Each mutant is a COPY under os.tmpdir() of the build tree (node_modules linked; .git skipped; dressing-room's TRACKED files only) with ONE
 // edit to ONE unit witness: the k-th `retireThenBoot(…)` site of ci/<u>/witness_<u>.mjs (the clause it names, in file
 // order) put back to the single-sample wait it replaced (`waitFor(<a new worker>, BOUND)`). The edit is applied only when
 // the file holds exactly the expected number of sites (else that mutant is not RED: an edit that cannot land proves
@@ -12,7 +12,7 @@
 // LAST LINE: run_mutants: k of n mutant(s) RED by the clause that names them · control GREEN|RED
 // ============================================================================
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, cpSync, readFileSync, writeFileSync, rmSync, existsSync, symlinkSync, readdirSync } from "node:fs";
+import { mkdtempSync, cpSync, readFileSync, writeFileSync, rmSync, existsSync, symlinkSync, readdirSync, mkdirSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
@@ -26,6 +26,10 @@ const ROOT = mkdtempSync(join(os.tmpdir(), "mutants-mt1-"));
 const SITE = /const rb = await retireThenBoot\(nR, ([\s\S]*?)\), s2 = rb\.s2;/g;
 const copyOf = (into) => {
   for (const e of readdirSync(ORG)) if (e !== "node_modules" && e !== ".git" && e !== "dressing-room") cpSync(join(ORG, e), join(into, e), { recursive: true });
+  if (existsSync(join(ORG, ".git"))) {   // dressing-room: tracked files only
+    const ls = spawnSync("git", ["-C", ORG, "ls-files", "-z", "dressing-room"], { encoding: "utf8", windowsHide: true });
+    for (const f of String(ls.stdout || "").split("\0").filter(Boolean)) { mkdirSync(dirname(join(into, f)), { recursive: true }); cpSync(join(ORG, f), join(into, f)); }
+  } else if (existsSync(join(ORG, "dressing-room"))) cpSync(join(ORG, "dressing-room"), join(into, "dressing-room"), { recursive: true });
   if (existsSync(join(ORG, "node_modules"))) symlinkSync(join(ORG, "node_modules"), join(into, "node_modules"), process.platform === "win32" ? "junction" : "dir");
 };
 const lastOf = (r) => String(r.stdout || "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean).pop() || "";

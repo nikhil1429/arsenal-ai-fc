@@ -6,7 +6,7 @@
 // CONTRACT (judged on --org; the build reads GREEN, the base ci/mt1/BASE reads RED). The unit edits ONLY three witness
 // files, so each clause runs the tree's OWN unit witness (ci/<u>/witness_<u>.mjs of --org, and of --base-org for the base
 // leg) as a child, on a COPY of that tree under os.tmpdir():
-//   (every copy skips node_modules, .git and dressing-room: his state never enters a copy; node_modules is linked)
+//   (every copy skips node_modules and .git, and takes only the TRACKED dressing-room files: his state never enters a copy)
 //   PLAIN-<u>   the build's witness on an UNPLANTED copy of --org reads GREEN on its last line (no clause loosened, none red)
 //               AND each of its changed clauses reads GREEN printing `retire <ms> · respawn <ms>` (the base prints neither)
 //   P-<u>-<id>  THE PLANT, one per changed clause: a copy of the tree whose scripts/keeper.mjs waits, before each RESPAWN,
@@ -24,7 +24,7 @@
 // Runs on Windows too: no POSIX-only shell, every read split on \r?\n, no git repo is planted.
 // LAST LINE: GREEN MT1 <what> · <n> clause(s) (exit 0) or RED MT1 · <clauses> (exit 1)
 // ============================================================================
-import { mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync, readdirSync, cpSync, symlinkSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync, readdirSync, cpSync, symlinkSync, mkdirSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync, execFileSync } from "node:child_process";
@@ -49,14 +49,22 @@ const RAN = "      const ran = now() - t0, d = decide(";
 function plantKeeper(src) {
   const s = String(src).replace(/\r\n/g, "\n");
   if (s.split(SPAWN).length !== 2 || s.split(RAN).length !== 2) return null;
-  return "let __mt1Ran = 0;   // PLANTED by ci/mt1 (a copy under os.tmpdir() only)\n"
-    + s.replace(SPAWN, "      if (spawns > 0) await sleep(__mt1Ran, () => stopping);   // PLANTED: a respawn slower than one first-boot sample\n" + SPAWN)
+  const body = s.replace(SPAWN, "      if (spawns > 0) await sleep(__mt1Ran, () => stopping);   // PLANTED: a respawn slower than one first-boot sample\n" + SPAWN)
       .replace(RAN, "      const ran = (__mt1Ran = now() - t0), d = decide(");
+  // after the shebang line, if there is one (a line before `#!` is a syntax error)
+  const nl = body.startsWith("#!") ? body.indexOf("\n") + 1 : 0;
+  return body.slice(0, nl) + "let __mt1Ran = 0;   // PLANTED by ci/mt1 (a copy under os.tmpdir() only)\n" + body.slice(nl);
 }
 let seq = 0;
 function copyTree(tree, planted) {
   const d = join(TMP, `${++seq}-${planted ? "planted" : "plain"}`);
   for (const e of readdirSync(tree)) if (e !== "node_modules" && e !== ".git" && e !== "dressing-room") cpSync(join(tree, e), join(d, e), { recursive: true });
+  // dressing-room: only its TRACKED files (a work tree's `git ls-files`; an exported tree holds tracked files only) — his state never enters
+  if (existsSync(join(tree, ".git"))) {
+    const ls = spawnSync("git", ["-C", tree, "ls-files", "-z", "dressing-room"], { encoding: "utf8", windowsHide: true });
+    for (const f of String(ls.stdout || "").split("\0").filter(Boolean)) { mkdirSync(dirname(join(d, f)), { recursive: true }); cpSync(join(tree, f), join(d, f)); }
+  } else if (existsSync(join(tree, "dressing-room"))) cpSync(join(tree, "dressing-room"), join(d, "dressing-room"), { recursive: true });
+  mkdirSync(join(d, "dressing-room", "state"), { recursive: true });
   if (NM) symlinkSync(NM, join(d, "node_modules"), process.platform === "win32" ? "junction" : "dir");
   if (planted) {
     const k = join(d, "scripts", "keeper.mjs"), p = plantKeeper(readFileSync(k, "utf8"));
