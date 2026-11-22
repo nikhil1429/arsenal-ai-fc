@@ -3264,7 +3264,10 @@ async function witnesses() {
       if (!j.ok && wc) {
         const wsrc = readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8");
         const kind = killed ? "killed" : j.left.startsWith(wc.MEMBER.GRAMMAR) ? "grammar" : "clauses";
-        for (const c of wc.causesOf({ left: j.left, src: wsrc, kind, code: r.status })) causes.push(wc.causeText(name("GREEN at head against its BASE"), c));
+        // unit mkp24 (forks row 1216 K-F2 C0): the witness's own `CAUSE <ID> <CODE>` lines go to causesOf, which keeps a CODE only
+        // as the text of a key of the witness's CAUSES literal (re-read from its tracked source); they ride no other line
+        const said = out.split(/\r?\n/).map((x) => x.trim()).filter((x) => /^CAUSE /.test(x));
+        for (const c of wc.causesOf({ left: j.left, src: wsrc, kind, code: r.status, cause: said })) causes.push(wc.causeText(name("GREEN at head against its BASE"), c));
       }
     } finally {
       for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch (e) { if (e && e.code !== "ENOENT") console.log(`  witness ‹${unit}› · the node_modules link in ${t} was not removed (${e.code || e.message})`); } }
