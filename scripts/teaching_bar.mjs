@@ -107,7 +107,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { requiredTerms, conceptOwnTerms, closedDerive, SKELETON_CARRIED } from "./teaching_terms.mjs";
 // The bank's moments are ONE predicate shared with the gate (forks row 264 (1)). study_scope is a CALL-shape
 // callee that turn_hook already imports statically, so reaching it from here is never a shim no-op.
-import { classifyPrompt, bankDueAt } from "./study_scope.mjs";
+import { classifyPrompt, bankDueAt, ownStopOf } from "./study_scope.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(HERE, "..", "dressing-room", "state");
@@ -287,6 +287,11 @@ export const CARRIED_BY_SLOT = Object.freeze({
  *  teaching_audit_last.json (owner teaching_audit.mjs, read-only here). Another session's turn → []. */
 export function prevMomentKinds({ sessionId = null, auditLast = null } = {}) {
   const L = auditLast && typeof auditLast === "object" ? auditLast : null;
+  // unit mbank (forks row 1250, mbank-9): HIS OWN session's last Stop (its record or its stub) names the kinds it
+  // declared, so a parallel session's turn in the shared slot can no longer hide the [BANK] line; the shared slot below
+  // is only for a session with no record.
+  const own = sessionId ? ownStopOf(L, sessionId) : null;
+  if (own && Array.isArray(own.kinds)) return own.kinds;
   if (!L || !L.stop || !L.prompt || !sessionId || L.stop.session_id !== sessionId || L.prompt.session_id !== sessionId) return [];
   const open = L.prompt.moments_by_kind, close = L.stop.moments_by_kind;
   if (!open || !close || typeof open !== "object" || typeof close !== "object") return [];

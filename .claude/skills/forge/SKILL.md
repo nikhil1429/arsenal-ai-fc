@@ -30,6 +30,7 @@ description: Run a full FORGE study session INSIDE Claude Code with ZERO capture
   `start <concept>` (refuses while a session is open) · `step <0-11>` · `axis <a-i> now|done|defer` ·
   `moment pehle_guess|widget_gate|check_q|jirah|sharp_check` (sharp_check = the axis-close sharp check, row 266) · `pointer "…"` · `contract` · `resume` · `close`.
   `crack` (`node scripts/forge_session.mjs crack`, no args) — run it in the SAME turn you write the ```diff: it writes his words of that turn verbatim with the concept, axis and moment (unit mcrk).
+  `contract`'s axes line saying `N trap owed` = the axis note holds fewer than three distinct traps of THIS lesson and its cold gate refuses it: set one more bait from this lesson's own material (a ```diff of a real break); never write one to reach a count — capsule traps teach but are never counted, and a new day's note counts only the windows that touched its day (unit mtrap).
   → `REFERENCE.md` "THE PACER".
 - **THE NOTES LAW** (22 Sep, row 240): notes are extracted from the archive by code at the week's end;
   your only live job is the four elicitations (gut-word · stuck-story at the crack with the one ```diff
@@ -39,12 +40,14 @@ description: Run a full FORGE study session INSIDE Claude Code with ZERO capture
 ## THE BANK — one command per answer, not optional (A3, 4 Sep 2026) — carried whole because every axis needs it
 
 At the axis's THREE banked moments only — the sharp check, the Bolo, the interview line — you type ONE
-bank line. Per-idea typed answers are re-welded in the turn and never banked (5 Sep 2026, row 53b).
+bank line. Plus ONE day-close pair at his day end (`day.mjs end` asks for it by code, unit mdayq): one recall, one what-it-does-not-do, each after `moment day_close`, each banked with `--moment day_close`. Per-idea typed answers are re-welded in the turn and never banked (5 Sep 2026, row 53b).
 He types his answer; you type the bank line:
 
 ```
 node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --gut knew|shaky|guessed --asked "<the question you actually asked, verbatim>" --said "<his words, verbatim>" --surface code --latency_ms <n> [--probe recall|reconstruct|defend|novel|negative_space|jirah|cross_axis] [--register interview]
 ```
+
+- **His words are taken from the prompt record, never from your copy** (unit mbank): the bank reads his message through the one door, keeps HIS bytes (`--said` only selects a slice, and a `--said` that is not inside his message is REFUSED), reads his gut-word off his message (a `--gut` that disagrees is REFUSED), and stamps the turn id. Omit `--said` and his whole message is banked.
 
 - `--latency_ms` is the Stop→prompt clock the hook prints every turn. **If you cannot read it, LEAVE THE
   FLAG OFF** — a null latency is a measurement not made; an invented one corrupts the fluency ladder.
