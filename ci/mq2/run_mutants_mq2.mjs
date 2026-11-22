@@ -36,7 +36,7 @@ const MUTANTS = [
   { id: "M6", clause: "A6", why: "gate_tune apply keeps a direct write of the config", edits: [[GT, FS_GT_OLD, FS_GT_NEW],
     [GT, "    if (!w.ok || !r) { console.error(`gate_tune: NOT applied — ${w.why}`); process.exit(1); }\n", "    if (!w.ok || !r) { console.error(`gate_tune: NOT applied — ${w.why}`); process.exit(1); }\n    writeFileSync(CONFIG(), JSON.stringify(r.cfg, null, 1));\n"]] },
   { id: "M7", clause: "A7", why: "the SOLE WRITER header line removed", edits: [[TH, "//        SOLE WRITER of thalamus_config.json too (unit mq2, forks row 1175 F1 A)", "//        the one writer of the config too (unit mq2, forks row 1175 F1 A)"]] },
-  { id: "M8", clause: "A8", why: "the stale header sentence kept AND a new state write added to thalamus", edits: [
+  { id: "M8", clause: "A8 BOUND", why: "the stale header sentence kept AND a new state write added to thalamus", edits: [
     [TH, "//        One more file is written, and only as an APPENDER on the", "//        ONE file outside that five is written, and only as an APPENDER on the"],
     [TH, "export function setAdjudicatorRole(edit, opts) { return writeConfigLane(CONFIG_LANES.adjudicator, edit, opts); }\n",
       "export function setAdjudicatorRole(edit, opts) { return writeConfigLane(CONFIG_LANES.adjudicator, edit, opts); }\nexport function mq2Mutant() { writeFileSync(join(STATE_DIR, \"xray_graph.json\"), \"\"); }\n"]] },
@@ -66,7 +66,7 @@ function copyTree(tag, edits) {
 }
 const witness = (t) => { const r = spawnSync(process.execPath, [WITNESS, "--org", t, "--base-org", BASE], { encoding: "utf8", windowsHide: true, maxBuffer: 1 << 26 });
   return String(r.stdout || "").split(/\r?\n/).filter(Boolean); };
-const held = (lines, clause) => { const l = lines.find((x) => x.startsWith(clause + " ")) || ""; return clause === "A8" ? /^A8 base vs build GREEN/.test(l) : / → held$/.test(l); };
+const held = (lines, clause) => { const l = lines.find((x) => x.startsWith(clause + " ")) || ""; return clause === "A8 BOUND" ? /^A8 BOUND base vs build GREEN/.test(l) : / → held$/.test(l); };
 
 const only = argOf("--only"), RUN = MUTANTS.filter((x) => !only || x.id === only);
 const out = [];
@@ -74,7 +74,7 @@ let killed = 0, controlRed = [];
 try {
   const c = copyTree("control", []);
   const cl = witness(c.t);
-  controlRed = ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9"].filter((k) => !held(cl, k));
+  controlRed = ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8 BOUND", "A9"].filter((k) => !held(cl, k));
   out.push(`control: ${cl[cl.length - 1] || "no output"}`);
   for (const m of RUN) {
     const { t, missed } = copyTree(m.id, m.edits);

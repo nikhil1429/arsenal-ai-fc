@@ -18,7 +18,8 @@
 //                      second's key survives
 //   A6 GRAPH           xray: no Q2 row for the file, MULTI_WRITER_ALLOWLIST unchanged from the base and without the file
 //   A7 DECLARED        xray: thalamus.mjs is the one declared sole writer of the file, the IR's one writer, no Q5/Q6 row
-//   A8 SAME BODY       base vs build: every law-pack finding count and xray's unresolved sinks only fall
+//   A8 BOUND           (renamed by row 1311: a BOUND-class clause, its id the literal "A8 BOUND") SAME BODY — base vs
+//                      build: every law-pack finding count and xray's unresolved sinks only fall
 //   A9 RACE            (row 1175 (6)'s added clause) two of the three exports raced on one planted file lose no key:
 //                      a free race behind one start flag for EVERY pair of the three doors, and a forced overlap across
 //                      two processes — every write a process reports done is on disk, every planted key survives, a
@@ -294,6 +295,10 @@ function bound() {
   return { green: beyond.length === 0, line: `${diff.length} path(s) differ · beyond the named files: ${beyond.join(", ") || "none"}` };
 }
 
+// row 1311 (1), the second half of row 1307: A8 compares WHOLE-TREE counts (every law-pack finding count, xray's
+// unresolved sinks) between the base and the head, so it is a BOUND-class clause. Its id carries the literal below, the
+// WITNESSES member drops it, and it is judged at adoption against the unit's parent; its mutant (M8) stays.
+const A8_ID = "A8 BOUND";
 const out = [], reds = [];
 let judged = 0;   // every clause judged: A1-A9, BOUND, LAST
 try {
@@ -303,9 +308,9 @@ try {
     judged++;
     if (id === "A8") {
       const v = await C.A8(RO, ORG, baseG, BASE);
-      out.push(`A8 base vs build ${v.green ? "GREEN" : "RED"} — ${v.line}`);
+      out.push(`${A8_ID} base vs build ${v.green ? "GREEN" : "RED"} — ${v.line}`);
       if (v.counts) out.push(`A8 law pack counts (build): ${v.counts}`);
-      if (!v.green) reds.push(id);
+      if (!v.green) reds.push(A8_ID);
       continue;
     }
     const vb = await C[id](RB, BASE, baseG), vo = await C[id](RO, ORG, baseG);
