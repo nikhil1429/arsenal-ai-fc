@@ -51,6 +51,14 @@
 //   W10 LEFT     the same day, nothing banked, `day.mjs end --dayq left` → CLOSED, its line says `unanswered (he left) · day
 //                taught · nothing banked`, no card names the day-close, nothing on the line is RED
 //   W14 NOSESS   the code door with `--moment day_close` and NO CLAUDE_CODE_SESSION_ID → refused no-session, nothing banked
+//   W15 CONT     (row 1280 (2), mdayq-3 b) dayCloseDue: axis c declared on D-1 and worked on D (a moments_log entry on D carrying
+//                axis c) → due on axis c; the same day with that entry's axis null → not due (a null axis counts for nothing)
+//   W16 CLOSED   (row 1280 (3), mdayq-4 b) a lite plant whose forge session is CLOSED: `forge_session.mjs moment day_close` →
+//                exit 0, its log entry names the IST day it closes (and the line says so), the last touch unmoved; `moment
+//                check_q` on the same session → still refused
+//   W17 READFAIL (row 1280 (5), mdayq-6 a) a FULL plant taught today whose step-0 read throws (the plant's own copy of the
+//                pacer's dayCloseDue is made to throw, AFTER the day was taught): `day.mjs end` → CLOSED, exit 0, its line reads
+//                `day-close: READ FAILED (<reason>)` and never `not due`
 //   (W13 PARALLEL is UNREACHABLE by plant at this base — the per-session record holds; row 1257's BRANCH, PROOF §F10)
 //   SEAT W11     every model spawn of every plant above was the refusing shim's (counted), and no plant carried an API key
 // OUTPUT: one `CLAUSE <id> GREEN|RED · <why>` line per clause, `SEAT W11 GREEN|RED · <why>`, then
@@ -278,6 +286,38 @@ await clause("W14", async () => {
   const rc = ctl.cap(["--moment", "day_close", "--probe", "recall"]);
   return { ok: r.code === 1 && v.reason === "no-session" && p.queue() === null && rc.code === 0 && (ctl.queue() || []).length === 1,
     why: `no session id ${brief(r)} reason ${v.reason} · queue ${p.queue() === null ? "absent" : "WRITTEN"} · with its id exit ${rc.code}` };
+});
+await clause("W15", async () => {
+  const f = await imp("forge_session.mjs");
+  if (typeof f.dayCloseDue !== "function") return { ok: false, why: "forge_session.mjs exports no dayCloseDue" };
+  const D = "2026-11-20", old = [{ axis: "c", at: "2026-11-19T04:00:00.000Z" }];
+  const cont = f.dayCloseDue({ session: { concept: "tokenization", axes_now_history: old, moments_log: [{ kind: "check_q", axis: "c", at: "2026-11-20T05:00:00.000Z" }] }, D });
+  const nul = f.dayCloseDue({ session: { concept: "tokenization", axes_now_history: old, moments_log: [{ kind: "check_q", axis: null, at: "2026-11-20T05:00:00.000Z" }] }, D });
+  return { ok: cont.due === true && cont.axis === "c" && nul.due === false,
+    why: `old axis worked on D → ${cont.due ? `due on ${cont.axis}` : `NOT due (${cont.why})`} · null axis on D → ${nul.due ? "DUE" : "not due"}` };
+});
+await clause("W16", async () => {
+  const p = await plant("w16"); p.forge(["start", "tokenization"], ["step", "3"], ["axis", "c", "now"]);
+  const s0 = JSON.parse(text(p.at("forge_session.json")) || "{}");
+  const touched = "2026-11-01T00:00:00.000Z";
+  writeFileSync(p.at("forge_session.json"), JSON.stringify({ ...s0, closed_at: touched, updated_at: touched }, null, 2) + "\n");
+  const r = p.node("forge_session.mjs", ["moment", "day_close"]);
+  const s = JSON.parse(text(p.at("forge_session.json")) || "{}"), last = (s.moments_log || []).at(-1) || {};
+  const other = p.node("forge_session.mjs", ["moment", "check_q"]);
+  const today = istDay();
+  return { ok: r.code === 0 && last.kind === "day_close" && last.day === today && r.out.includes(`day-close moment for ${today}`) && s.updated_at === touched && other.code !== 0,
+    why: `day_close on a closed session ${brief(r)} · log ${last.kind}/day ${last.day} · last touch ${s.updated_at === touched ? "unmoved" : "MOVED"} · check_q exit ${other.code}` };
+});
+await clause("W17", async () => {
+  const p = await taughtDay("w17");
+  const fs = join(p.dir, "scripts", "forge_session.mjs"), src = text(fs) || "";
+  const anchor = "export function dayCloseDue({";
+  if (src.split(anchor).length === 2) writeFileSync(fs, src.replace(anchor, 'export function dayCloseDue() { throw new Error("planted read fault"); }\nfunction dayCloseDueReal({'));
+  const r = p.node("day.mjs", ["end"]);
+  const close = lines(r.out).find((l) => l.startsWith("day: CLOSED")) || "";
+  const s = JSON.parse(text(p.at("sitting.json")) || "{}");
+  return { ok: r.code === 0 && /day-close: READ FAILED \(planted read fault\)/.test(close) && !/day-close: not due/.test(close) && !!s.closed_at,
+    why: `${brief(r)} · close line ${close ? fold(close).slice(0, 200) : "ABSENT"} · sitting ${s.closed_at ? "closed" : "OPEN"}` };
 });
 // ── SEAT W11 · NO LIVE MODEL CALL ────────────────────────────────────────────────────────────────────────────────────
 {

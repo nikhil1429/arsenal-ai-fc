@@ -35,7 +35,8 @@
 //      teacher composes both questions from it, one a turn, F8 A) and RETURNS, writing nothing, exit 0. --dayq left (he
 //      leaves before answering) or --dayq lost (the bank refused his answer, F10 A) → the close runs, its line says the
 //      day was taught and what was banked: no card is filed and nothing is red on him. A read that fails says so and the
-//      close runs as before (his day end is never blocked by this read).
+//      close runs as before (his day end is never blocked by this read): its line reads `day-close: READ FAILED (<reason>)`,
+//      never "not due" (row 1280 (5)).
 //   1. forge_session.mjs pointer "<--pointer>"   only when a forge concept is open and the pointer is given (L3: the words
 //      are the model's; the door is the pacer's)
 //   2. the sitting closes through its OWN door (sitting.mjs closeDoor: daemon up → POST only; down → the local door, F10)
@@ -140,7 +141,7 @@ async function dayCloseRead(D) {
     const reg = readJson(join(STATE_DIR, "concepts.json"));
     return f.dayCloseDue({ session: readJson(join(STATE_DIR, "forge_session.json")), history: readRows(join(STATE_DIR, "forge_sessions.jsonl")),
       D, bank: g.bankRows({}), axisNames: reg && reg.axes && typeof reg.axes === "object" ? reg.axes : {} });
-  } catch (e) { return { due: false, failed: true, why: `the day-close read failed (${String((e && e.message) || e).split(/\r?\n/)[0].slice(0, 120)}) — the close runs as before` }; }
+  } catch (e) { return { due: false, failed: true, why: String((e && e.message) || e).split(/\r?\n/)[0].slice(0, 120) }; }
 }
 const PROBE_SAY = { recall: "recall — ONE idea taught today, in his words", negative_space: "what that same idea does NOT do" };
 function dayqAsk(D, q) {
@@ -154,6 +155,8 @@ function dayqAsk(D, q) {
   ];
 }
 const dayqStep = (q, dayq) => {
+  // unit mdayq (row 1280 (5), mdayq-6 a): a failed read never blocks the close and never reads "not due" — it says so
+  if (q.failed) return `day-close: READ FAILED (${q.why}) · the close runs, nothing asked`;
   if (q.done) return `day-close: pair banked (${q.asked} row(s)) · the sitting close judges them`;
   if (!q.due) return `day-close: not due (${q.why})`;
   const banked = q.asked ? `${q.asked} of 2 banked` : "nothing banked";

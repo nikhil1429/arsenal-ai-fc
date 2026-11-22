@@ -38,6 +38,9 @@ const MUTANTS = [
   ["W8", "M8 step 0 does not stop the close", DM, STEP0, STEP0.replace("if (q.due && ", "if (false && q.due && ")],
   ["W9", "M9 skip the bank read (always ask first)", DM, "D, bank: g.bankRows({}), axisNames:", "D, bank: [], axisNames:"],
   ["W10", "M10 file a card when he left", DM, STEPS, `${STEPS}\n  if (dayq === "left") await ownerRun("captains_call.mjs", ["file", "--line", "day-close: he left before the two questions", "--key", "mdayq:left"]);`],
+  ["W15", "M15 a moment's axis on D is not an axis worked on D (row 1280 (2) undone)", FS, "      if (AXES.includes(m.axis)) decl.push({ concept: x.concept || null, axis: m.axis, at: m.at });\n", ""],
+  ["W16", "M16 day_close refused on a closed session like every kind (row 1280 (3) undone)", FS, "const r = addMoment(k === DAY_CLOSE ? s0 : live(s0), rest[0]);", "const r = addMoment(live(s0), rest[0]);"],
+  ["W17", "M17 a failed step-0 read reads not due (row 1280 (5) undone)", DM, "  if (q.failed) return `day-close: READ FAILED (${q.why}) · the close runs, nothing asked`;\n", ""],
   ["W14", "M14 let a null session id through", GB, '  if (momentRaw === "day_close" && !(fromPrompt && deps.sessionChecked === true)) {', '  if (momentRaw === "day_close" && !fromPrompt) {'],
 ];
 const slash = (p) => p.split(sep).join("/");

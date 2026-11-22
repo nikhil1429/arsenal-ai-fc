@@ -361,7 +361,8 @@ function addMoment(s, kind, now = new Date()) {
   if (!MOMENTS.includes(m)) return { ok: false, error: `moment not ${MOMENTS.join("|")} (${kind})`, session: s };
   // RUNG L1 (ml1 F-5): the moment with its axis and clock, appended on every path below
   const logged = (extra = {}) => [...(Array.isArray(s.moments_log) ? s.moments_log : []),
-    { kind: m, axis: s.current_axis && AXES.includes(s.current_axis) ? s.current_axis : null, at: nowISO(now), ...extra }];
+    { kind: m, axis: s.current_axis && AXES.includes(s.current_axis) ? s.current_axis : null, at: nowISO(now),
+      ...(m === DAY_CLOSE ? { day: istDayOf(nowISO(now)) } : {}), ...extra }];   // unit mdayq (row 1280 (3), mdayq-4 b): a day-close moment names the IST day it closes
   // THE ONE-CHECK-QUESTION LAW, ENFORCED (audit 30 Jul 2026): the contract used to
   // only WARN here while SKILL.md claimed "the pacer hard-stops the second one" —
   // a claim the code did not honour. It does now: in phases 3-6 the second
@@ -416,7 +417,9 @@ function addMoment(s, kind, now = new Date()) {
       moments_by_axis: mba,
       moments_log: logged(),
       check_q_this_pass: m === "check_q" ? (s.check_q_this_pass || 0) + 1 : (s.check_q_this_pass || 0),
-      updated_at: nowISO(now),
+      // unit mdayq (row 1280 (3)): a day-close moment on a closed or stale session is the DAY's, not a continuation — it
+      // never moves the last touch (a stale session stays stale, its pacer stays silent)
+      updated_at: m === DAY_CLOSE && (s.closed_at || isStale(s, now)) ? s.updated_at : nowISO(now),
     },
   };
 }
@@ -916,6 +919,8 @@ export function closeGate(s, rows = [], outstanding = []) {
  *    · else due, with the day's material by code (F1 A: the teacher composes both questions from it; a capsule may
  *      inform, never be the source): the concept, the axes declared on D by letter and name, the moment kinds of D, and
  *      the axis the rows carry — the LAST axis declared on D (F7 A); none declared on D → not due (F7 B, the fallback).
+ *      Since row 1280 (2) (mdayq-3 b) "declared on D" also counts an axis WORKED on D: a moments_log entry stamped on D
+ *      that carries an axis (a null axis counts for nothing).
  *  @returns {{due:boolean, why:string, taught?:boolean, done?:boolean, concept?:string|null, axis?:string, axis_name?:string|null,
  *    material?:{axes:string[], moments:Object<string,number>}, asked?:number, next?:string}} */
 export function dayCloseDue({ session = null, history = [], D = null, bank = [], axisNames = {} } = /** @type {any} */ ({})) {
@@ -939,6 +944,9 @@ export function dayCloseDue({ session = null, history = [], D = null, bank = [],
     for (const m of (Array.isArray(x.moments_log) ? x.moments_log : [])) {
       if (!m || !MOMENTS.includes(m.kind) || !on(m.at) || seen.has(`m:${m.kind}:${m.axis}:${m.at}`)) continue;
       seen.add(`m:${m.kind}:${m.axis}:${m.at}`); moms.push({ concept: x.concept || null, kind: m.kind, at: m.at });
+      // unit mdayq (row 1280 (2), mdayq-3 b): a moment on D that carries an axis is that axis WORKED on D (a day he
+      // continues an old axis is a study day); a null axis counts for nothing
+      if (AXES.includes(m.axis)) decl.push({ concept: x.concept || null, axis: m.axis, at: m.at });
     }
   }
   if (!decl.length && !moms.length) return { due: false, why: `no teaching turn on ${day} (no pacer entry stamped that day)`, taught: false };
@@ -946,7 +954,7 @@ export function dayCloseDue({ session = null, history = [], D = null, bank = [],
   if (banked.length >= 2) return { due: false, why: `the day-close pair is banked (${banked.length} row(s) on ${day})`, taught: true, done: true, asked: banked.length };
   decl.sort((p, q) => Date.parse(p.at) - Date.parse(q.at));
   const last = decl[decl.length - 1];
-  if (!last) return { due: false, why: `no axis declared on ${day} — a day-close row needs the axis taught that day (F7 B)`, taught: true };
+  if (!last) return { due: false, why: `no axis declared or worked on ${day} — a day-close row needs the axis taught that day (F7 B)`, taught: true };
   const axes = [...new Set(decl.map((d) => d.axis))];
   const moments = moms.reduce((o, m) => ((o[m.kind] = (o[m.kind] || 0) + 1), o), /** @type {Object<string,number>} */ ({}));
   const has = (p) => banked.some((r) => String(r.probe || "").toLowerCase() === p);
@@ -1813,6 +1821,16 @@ function selftest() {
         && r4.material.axes.join("|") === "b (bee)|c (sea)" && r4.material.moments.check_q === 1 && r4.next === "recall"
         && !r5.due && r5.done && r6.due && r6.asked === 1 && r6.next === "negative_space" && !r7.due && r7.taught && /F7 B/.test(r7.why),
         JSON.stringify({ r1: r1.why, r2: r2.due, r3: r3.why, r4: r4.material, r5: r5.why, r6: r6.next, r7: r7.why }));
+      // row 1280 (2), mdayq-3 b: an old axis continued on D (declared on an earlier day, worked today) is due on that axis
+      const r8 = dayCloseDue({ session: { ...blank("tokenization"), axes_now_history: [{ axis: "c", at: "2026-11-19T04:00:00.000Z" }],
+        moments_log: [{ kind: "check_q", axis: "c", at: at(5) }] }, D });
+      assert("mdayq W15 — dayCloseDue (row 1280 (2)): a moment on D carrying an axis is that axis worked on D → due on it; a null axis still counts for nothing",
+        r8.due && r8.axis === "c" && !r7.due, JSON.stringify({ r8 }));
+      // row 1280 (3), mdayq-4 b: day_close is the one kind a closed session takes, and its log entry names the IST day
+      const closed = { ...day(), closed_at: at(7), updated_at: at(7) };
+      const dk = addMoment(closed, "day_close", new Date(Date.parse(at(8))));
+      assert("mdayq W16 — addMoment day_close on a CLOSED session: logged with the IST day it closes, the last touch unmoved",
+        dk.ok && dk.session.moments_log.at(-1).day === D && dk.session.updated_at === closed.updated_at, JSON.stringify(dk.session && dk.session.moments_log.at(-1)));
     }
     assert("a TEXT-FIRST widget refusal recorded before row 276 still counts against the verdict like a quiz-dump, and the count is reported",
       coverage({ ...g, widget_refused: 1 }, T0).method_clean === false && coverage(g, T0).widget_refused === 0);
@@ -3164,7 +3182,10 @@ export async function hookMain() {
       }
       break;
     }
-    case "moment": console.log(oneLine(apply(addMoment(live(need(load())), rest[0])))); break;
+    // unit mdayq (row 1280 (3), mdayq-4 b): `day_close` ALONE is accepted on a closed or stale session (the day end comes
+    // after the lesson); every other kind still refuses through live()
+    case "moment": { const k = String(rest[0] || "").trim().toLowerCase(), s0 = need(load()); const r = addMoment(k === DAY_CLOSE ? s0 : live(s0), rest[0]);
+      console.log(oneLine(apply(r)) + (k === DAY_CLOSE ? ` · day-close moment for ${r.session.moments_log.at(-1).day}` : "")); break; }
     case "pointer": {
       // THE RESUME POINTER (row 68 (b), 6 Sep 2026). `pointer "<question>"` writes the exact
       // unanswered micro-question where he stopped; bare `pointer` reads it back. need(), not

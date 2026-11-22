@@ -11,7 +11,8 @@
 // is not run and the line says so (the clause still has to be GREEN on --org). The clause witness is read from this file's
 // own repository when it is there (a seat run from a checkout), else from --org.
 //   W1 KIND · W2 FENCE · W3 DUE (spec W6 carried inside it) · W4 ROW · W5 AXIS · W5L LOCK · W7 SKIP · W8 ORDER ·
-//   W9 ANSWERED · W10 LEFT · W14 NOSESS — the clause witness's own, one line each (its header names each plant)
+//   W9 ANSWERED · W10 LEFT · W14 NOSESS · W15 CONT · W16 CLOSED · W17 READFAIL (the last three by row 1280 (2) / (3) /
+//   (5)) — the clause witness's own, one line each (its header names each plant)
 //   W11       SEAT (judged on --org only): every model spawn the plants drew was the refusing shim's, no API key in the env
 //   BOUND     only the named files differ between --base-org and --org (scripts/forge_session.mjs · scripts/study_scope.mjs ·
 //             scripts/teaching_gate.mjs · scripts/gaffer_brain.mjs · scripts/day.mjs · .claude/skills/learn/SKILL.md ·
@@ -43,7 +44,7 @@ const record = (id, ok, why) => { if (ONLY && !ONLY.includes(id) && id !== "LAST
 
 const CW = [join(HERE, "..", "witness", "mdayq", "witness_dayq.mjs"), join(ORG, "ci", "witness", "mdayq", "witness_dayq.mjs")].find((p) => existsSync(p)) || null;
 console.log(`witness mdayq · org ${ORG}${BASE ? ` · base ${BASE}` : ""} · clause witness ${CW || "ABSENT"}`);
-const IDS = ["W1", "W2", "W3", "W4", "W5", "W5L", "W7", "W8", "W9", "W10", "W14"];
+const IDS = ["W1", "W2", "W3", "W4", "W5", "W5L", "W7", "W8", "W9", "W10", "W14", "W15", "W16", "W17"];
 const want = IDS.filter((id) => !ONLY || ONLY.includes(id));
 const runOn = (tree) => {
   const r = spawnSync(process.execPath, [CW, "plants", "--tree", tree, "--tmp", TMP, ...(ONLY ? ["--only", want.join(",")] : [])], { cwd: TMP, encoding: "utf8", windowsHide: true });
