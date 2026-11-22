@@ -308,6 +308,16 @@ if (!COLLAR && !TRACE) {
     }
   }
 
+  // ── RE-SYNC THE ESM FACADES (unit mcollar, forks row 1244 · mplant F9 A, 21 Nov 2026) ────────────────────────────
+  // The "VERIFIED" note above holds only while nothing has instantiated Node's ESM facade of a builtin before this file
+  // loads. sandbox.mjs builds the child's NODE_OPTIONS as the CALLER's NODE_OPTIONS followed by this collar, so a caller
+  // preload whose one line is `import "node:fs";` freezes the facade first, and every `import { writeFileSync } from
+  // "node:fs"` in a collared child then holds the UNPATCHED function: the write guard is skipped (measured on the mplant
+  // seat; ci/mcollar/witness_mcollar.mjs plants it). syncBuiltinESMExports() copies the patched CJS properties into every
+  // builtin's ESM named exports, so it must run AFTER every patch above (fs, fs.promises, child_process, http, https,
+  // net) — before them it would sync the originals (the witness's mutant M2).
+  require_("module").syncBuiltinESMExports();
+
   // ── EXIT ──────────────────────────────────────────────────────────────────
   const t0 = Date.now();
   const done = (code) => {
