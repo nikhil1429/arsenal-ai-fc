@@ -465,6 +465,7 @@ When he pastes the `📋 CLAUDE-HANDOFF` (or says "done / bas / khatam"):
    Bank his answer and let the one judge grade it, so the verdict stops depending on which
    surface he happened to open (voice / Gem / here). Per answer, instant and model-free:
    `node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --gut <word> --asked "<your question, verbatim>" --said "<what he said>" --surface code [--latency_ms <n>] [--probe <kind>] [--register interview]`
+   *(unit mbank: the bank keeps HIS bytes from the prompt record — `--said` only selects, a copy not inside his message is refused, his gut-word is read off his message, the turn id is stamped.)*
    *(A3, 4 Sep 2026. Three things changed and each one matters: `--said` replaces the stdin
    heredoc so this is ONE command mid-lesson; `--surface code` is what makes the rep
    countable by the axis gate and is what puts `surface:"code"` in `reps_log.jsonl`; and
