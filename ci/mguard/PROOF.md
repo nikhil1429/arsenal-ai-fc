@@ -204,6 +204,64 @@ CHECKPOINT · 21 Nov 2026 · merge `1917b8d` (main 7bf008b merged in); its legs 
 in the judge; (2) mpool F1, open; (3) mlv3 on node 22 only, not this unit's. Witness GREEN at build and RED at base, mutants
 7 of 7, plants 15 of 15.
 
+## CHECKPOINT · merge of main 84cbc03 (22 Nov 2026, forks row 1298 (3))
+
+**The legs of `042a9bb`, read once by curl:**
+- hermetic twice: 136820633170 (node 22) and 136820633079 (node 24) · **success**
+- npm test: 136820633253 (node 22) and 136820633221 (node 24) · **failure**. Both carry the same B1_VERDICT RED, base
+  `7bf008b`: "1 member(s) red that are not red at the merge base", new `["WITNESS ‹mpool› · GREEN at head against its
+  BASE"]`, base_red 0, pass 271, fail 1.
+
+So the plants-mode fix cleared the CLAUSE WITNESS red, the mlv3 red of node 22 did not recur, and the one red left is F1.
+
+**The merge.** `git fetch origin main` gave FETCH_HEAD `84cbc03126eddb85c7d5cf54b51610068800315c`. Then
+`git merge --no-edit 84cbc03…` made merge commit **`d024e4289d716d4ad0887f48e3978b0325702a35`**: no rebase, no force.
+Git named ONE conflicted file, `scripts/presence.mjs`, with ONE hunk:
+
+- **Hunk 1 · the `export { … }` list (the conflict at line ~1489).** Mguard's side added the comment
+  `// unit mguard (row 1176 G2 A / G7 A) — the recorded away spans and their read-only reader` and
+  `backAt, awayFields, awaySpans, closedOf`. Mpres2's side added `// unit mpres2 — the reason, the launcher read, the reopen
+  set` and `fetchAwRead, awReason, launcherRunning, launcherLeaf, listByLeaf, REOPEN`. **Both are kept, verbatim**:
+  mpres2's two lines first, mguard's two after, with no name shared and none dropped.
+
+The rest of mpres2's change to `scripts/presence.mjs` (177 insertions / 18 deletions vs `7bf008b`) auto-merged. Mguard's
+`awayFields(afk)` still rides the focus row: `{ ts, day, kind: "focus", ...f, ...awayFields(afk), tone, posted }`.
+
+**Selftests on the merge:**
+- presence: `ALL CHECKS PASSED`
+- `usage_tap selftest 45/45 — all clauses hold`
+- `node scripts/models.mjs check`: exit 0
+
+**`ci/mguard/BASE` = `84cbc03126eddb85c7d5cf54b51610068800315c`**, by the runner's order (row 1298 (3)). This supersedes
+the 21 Nov choice above to keep `5759cce`.
+
+**The witness both ways, on LF trees, base = LF `84cbc03`:**
+
+```
+--org <merge d024e42>  --base-org <LF 84cbc03>   GREEN MGUARD the spend guard · 7 clause(s)   (exit 0)
+--org <LF 84cbc03>     --base-org <LF 84cbc03>   RED MGUARD · JUDGE                            (exit 1)
+```
+
+Each clause reads `build GREEN · base RED`:
+- **R1176.3**: no root variable → RED by the door's name, the reading named DROPPED.
+- **U1177**: a day with no away-span rows → U1177 UNREAD by name.
+- **G1**: AFK and return → away + back_at recorded, the closed span found; still away → G1 UNREAD.
+- **G2**: the bracket names only the span's spend; a stale edge row → unbracketed, G2 UNREAD.
+- **G3**: exactly one writer; a planted second writer → G3 RED.
+- **G4**: `shown` equal to the read → exit 0; a planted wrong `shown` → G4 RED.
+- **LAST**: no node process naming the temp dir survives.
+
+**Mutants:** `run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN` (7/7).
+
+**The judge's plants mode** (the suite's CLAUSE WITNESSES member): `PLANTS mguard · 15 of 15 plant(s) as expected`.
+
+**The law pack:** on the merge tree and on LF `84cbc03` alike, `jugad-literal-subject-list 90 · bare-catch 37 ·
+receipt-testimony-read 5 · import-time-registry-read 2 · depcruise_errors 7`, the rest 0. `lawpack: GREEN — no law's
+finding count rose`.
+
+**The push.** Pushed ONCE, with `[skip ci]` in the head commit message, by the runner's order, so no leg runs on this
+tip. Carried open: **F1** (mpool W3.1's two writes vs G4 A's three), still the architect's.
+
 ## FORKS
 
 - **F1 · the mpool witness's W3.1 against G4 A.** `ci/mpool/witness_mpool.mjs:157-160` (a landed unit's witness, judged
