@@ -42,9 +42,9 @@
 // by a live process (a spin ends when the flag lands OR the process it waits on is gone) — no number is typed.
 // CRLF-proof: every text read normalises \r\n; git blobs are compared through the index. Node only, no shell.
 // LAST LINE: `GREEN MQ2 <what> · <n> clause(s)` (exit 0) or `RED MQ2 · <clauses>` (exit 1).
-import { mkdtempSync, writeFileSync, readFileSync, mkdirSync, rmSync, cpSync, existsSync, readdirSync } from "node:fs";
+import { mkdtempSync, writeFileSync, readFileSync, mkdirSync, rmSync, cpSync, existsSync, readdirSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { spawnSync, spawn } from "node:child_process";
 import { pathToFileURL, fileURLToPath } from "node:url";
 
@@ -277,8 +277,22 @@ C.A9 = async (R, T) => {
   // (iv) no lock is left behind in ANY planted dir of this tree (every clause's refusal and write paths above)
   const left = readdirSync(R.tree).filter((x) => /^p\d+$/.test(x)).flatMap((x) => readdirSync(join(R.tree, x)).filter((y) => y.endsWith(".lock")).map((y) => `${x}/${y}`));
   // (v) the lock path is gitignored and untracked in the tree under judgement
-  const ign = spawnSync("git", ["-C", T, "check-ignore", "-q", "dressing-room/state/thalamus_config.json.lock"], { windowsHide: true }).status === 0;
-  const trk = String(spawnSync("git", ["-C", T, "ls-files", "--", "dressing-room/state/thalamus_config.json.lock"], { encoding: "utf8", windowsHide: true }).stdout || "").trim() !== "";
+  //     T may be a git work tree (a seat's checkout) or a plain checkout with no .git (the WITNESSES member's LF trees):
+  //     the tree's OWN .gitignore is judged in a throwaway git repo (core.autocrlf=false) either way, and "untracked"
+  //     is git's index where there is one, else "the checkout does not carry the file" (a checkout of HEAD would).
+  const LOCK_REL = "dressing-room/state/thalamus_config.json.lock";
+  const canon = (x) => { let r = resolve(x); try { r = realpathSync(r); } catch { /* keep the resolved form */ } return process.platform === "win32" ? r.toLowerCase() : r; };
+  const same = (a, b) => canon(a) === canon(b);
+  const ig = join(R.tree, "ignore-probe");
+  mkdirSync(ig, { recursive: true });
+  spawnSync("git", ["init", "-q", ig], { windowsHide: true });
+  spawnSync("git", ["-C", ig, "config", "core.autocrlf", "false"], { windowsHide: true });
+  let ign = false;
+  try { writeFileSync(join(ig, ".gitignore"), text(join(T, ".gitignore"))); ign = spawnSync("git", ["-C", ig, "check-ignore", "-q", LOCK_REL], { windowsHide: true }).status === 0; } catch { ign = false; }
+  const isGit = spawnSync("git", ["-C", T, "rev-parse", "--show-toplevel"], { encoding: "utf8", windowsHide: true });
+  const gitTop = isGit.status === 0 && String(isGit.stdout).trim() !== "" && same(String(isGit.stdout).trim(), T);
+  const trk = gitTop ? String(spawnSync("git", ["-C", T, "ls-files", "--", LOCK_REL], { encoding: "utf8", windowsHide: true }).stdout || "").trim() !== ""
+    : existsSync(join(T, ...LOCK_REL.split("/")));
   return { green: free.every((x) => x.ok) && forced && dead && live && left.length === 0 && ign && !trk,
     line: `free race ${free.map((x) => `${x.pair}: wrote ${x.wrote.join("+") || "none"}${x.lost.length ? `, LOST ${x.lost.join("+")}` : ", no key lost"}`).join(" · ")} · forced overlap: holder ${rh.r && rh.r.wrote ? "wrote" : "REFUSED"}, partner ${rp.r && rp.r.ok === false && /THE LOCK/.test(rp.r.why) ? "refused by THE LOCK" : "NOT refused by the lock"} · dead-pid lock taken over ${dead} · live-pid lock refused, file unchanged ${live} · locks left ${left.length ? left.join(",") : "none"} · lock path ignored ${ign} untracked ${!trk}` };
 };

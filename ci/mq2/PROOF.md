@@ -33,7 +33,7 @@ Unit mq2 · CLOUD BUILD SEAT · branch `claude/mq2-build` · never landed, never
 | `scripts/thalamus.mjs` | header: `SOLE WRITER of thalamus_config.json too (unit mq2, forks row 1175 F1 A)`; the stale "ONE file outside that five" sentence corrected (F6 A). New section THE ONE WRITER OF THE CONFIG: a closed frozen lane table `CONFIG_LANES` (tiers · wake_economy · adjudicator), the private `writeConfigLane`, and the three exports, each with no lane argument (F2 B). The 818 `config adjudicator-role` verb writes through `setAdjudicatorRole` and keeps every refusal it had. Five selftest asserts (F8 B). |
 | `scripts/gate_tune.mjs` | `apply` and `score`'s revert call `applyTiers`, so the decision is judged on the bytes the sole writer read. The indent-2 `writeAtomic` is gone with the edit. The header says the organ OWNS the tiers proposal lane and WRITES THROUGH the thalamus. |
 | `scripts/watchman.mjs` | `probeWakeEconomy`'s default writer calls `refitWakeEconomy`, and the inline whole-file writer is gone (F5 A). The STATE_DIR gains the planted-tree door `ARSENAL_WATCHMAN_STATE_DIR`, honoured ONLY under os.tmpdir() through the organ's own `tmpDoor`. That is stricter than gate_tune's door, which is unguarded. |
-| `ci/mq2/witness/witness_mq2.mjs` | the witness (§2) |
+| `ci/mq2/witness_mq2.mjs` (moved from `ci/mq2/witness/` by row 1313, §14) | the witness (§2) |
 | `ci/mq2/run_mutants_mq2.mjs` | the mutants (§3) |
 | `ci/mq2/BASE`, `PROOF.md`, `LEDGER.jsonl`, `MQ2_SPEC.md`, `witness/probe_base.mjs` | the record (the last two are carried verbatim from `claude/mq2-spec` 7460be5) |
 
@@ -54,7 +54,7 @@ thalamus, which A8's budget forbids, and it loses the race too (§6 F9 has both 
 ## 2 · The witness, both ways
 
 ```
-node ci/mq2/witness/witness_mq2.mjs --org . --base-org <base tree>     (2026-11-20, build tip 92be65c)
+node ci/mq2/witness_mq2.mjs --org . --base-org <base tree>     (2026-11-20, build tip 92be65c)
 A1 base RED (apply exit 0 · tiers moved true · file indent2 · 818 setter exit 2) · build GREEN (apply exit 0 · tiers moved true · file indent1 · 818 setter exit 0) → held
 A2 base RED (score exit 0 · reverted true · file indent2 · 818 setter exit 2) · build GREEN (score exit 0 · reverted true · file indent1 · 818 setter exit 0) → held
 A3 base RED (child exit 0 · finding none · landed false · ...) · build GREEN (... RE-FIT — est_tokens_per_wake 1 → 2000 ... · landed true · others byte-identical true · file indent1) → held
@@ -196,7 +196,7 @@ The frozen graph is already stale for other organs (§4, xray selftest), so a re
   whether the two nightly writers have ever fired in the same minute.
 - **The witness on Windows** has not been run. It is written to be CRLF-proof and shell-free (node and git only,
   junctions for node_modules, pid probes through `process.kill(pid, 0)`), but it is measured on Linux only. On his
-  laptop: `node ci/mq2/witness/witness_mq2.mjs --org <worktree> --base-org <main worktree>`.
+  laptop: `node ci/mq2/witness_mq2.mjs --org <worktree> --base-org <main worktree>`.
 - **His live file**: the tracked `thalamus_config.json` is byte-equal on the indent-1 round trip (a boolean, no
   content printed, 2026-11-20; last commit touching it a4d3430). So after landing, the first lane write keeps its format
   (F7 A: no write at landing). The live (untracked-change) copy on his laptop is unmeasured:
@@ -243,12 +243,12 @@ last step, and its result is in the final message.
 - **On the merged tree**, 2026-11-21:
 
 ```
-node ci/mq2/witness/witness_mq2.mjs --org . --base-org <7bf008b tree>
+node ci/mq2/witness_mq2.mjs --org . --base-org <7bf008b tree>
 A1-A7 base RED · build GREEN → held · A8 base vs build GREEN — law pack rose: none · unresolved sinks 2112 → 2108
 A9 build RED (free race tiers+wake: LOST wake · tiers+adjudicator: LOST tiers · wake+adjudicator: LOST wake · forced overlap: holder refused out loud)
 BOUND GREEN — 10 path(s) differ · beyond the named files: none · LAST GREEN — 10 child process(es) started, 0 alive
 RED MQ2 · A9
-node ci/mq2/witness/witness_mq2.mjs --org <7bf008b tree> --base-org <7bf008b tree>
+node ci/mq2/witness_mq2.mjs --org <7bf008b tree> --base-org <7bf008b tree>
 RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9
 node ci/mq2/run_mutants_mq2.mjs --org . --base-org <7bf008b tree>
 run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control RED (A9)
@@ -281,7 +281,7 @@ gates types  · 21 organ(s) @ts-check'd (baseline 14, may only grow) · undefine
 gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides, and every schema'd state file matches
 ```
 
-- **The witness** (`node ci/mq2/witness/witness_mq2.mjs --org . --base-org <84cbc03 tree>`):
+- **The witness** (`node ci/mq2/witness_mq2.mjs --org . --base-org <84cbc03 tree>`):
   `RED MQ2 · A9`. A1–A7 held both ways · A8 GREEN (law pack rose: none · unresolved sinks 2128 → 2124) · BOUND GREEN
   (10 paths, none beyond the named files) · LAST GREEN. A9 is RED, which is fork F9 (§6), unruled.
 - **The mutants** (`node ci/mq2/run_mutants_mq2.mjs --org . --base-org <84cbc03 tree>`):
@@ -292,7 +292,7 @@ gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides
 ```
 organism_test: 121 passed, 6 failed · ruled 0 · UNRULED 6 · LIVE 0 (hermetic: named, not run)
 ```
-  - mq2 is NOT a member. Its witness sits at `ci/mq2/witness/witness_mq2.mjs` (the spec's path, which the runner
+  - mq2 was NOT a member then (until row 1313 moved it, §14). Its witness sat at `ci/mq2/witness/witness_mq2.mjs` (the spec's path, which the runner
     ruled wins), and the member looks for `ci/<unit>/witness_<unit>.mjs`. That matters at landing: if mq2 joins the
     member, A9 makes it RED until F9 is ruled.
   - Five of the six FAILs are this container's clone, not this unit: `mr3`, `mrf`, `mrj`, `mrt`, `mrv` · "its BASE is
@@ -350,7 +350,7 @@ the extra movement named in the landing. F11 a as a later one-line unit, named i
     (the witness's own pid) refuses, the file is byte-unchanged and the lock is untouched.
   - (iv) no `.lock` is left in any planted dir of the tree, across every clause's refusal and write paths.
   - (v) the lock path is `git check-ignore`d and untracked in the tree under judgement.
-- **The witness, repeated** (`node ci/mq2/witness/witness_mq2.mjs --org . --base-org <84cbc03 tree>`, 6 passes,
+- **The witness, repeated** (`node ci/mq2/witness_mq2.mjs --org . --base-org <84cbc03 tree>`, 6 passes,
   2026-11-22):
 
 ```
@@ -377,7 +377,7 @@ organism_test: 122 passed, 5 failed · ruled 0 · UNRULED 5 · LIVE 0 (hermetic:
 ```
   All five FAILs are `mr3`, `mrf`, `mrj`, `mrt`, `mrv` · "its BASE is in the clone". This container's clone is shallow
   and lacks those BASE commits, and the neutral machine fetches full history. mday is GREEN this run. mq2 is not a
-  member, because its witness is at `ci/mq2/witness/witness_mq2.mjs` (§11).
+  member then, because its witness was at `ci/mq2/witness/witness_mq2.mjs` (§11; moved by row 1313, §14).
 - **Windows:** the lock path is `path + ".lock"` (node:path, no separator typed), and liveness is
   `process.kill(pid, 0)`. The witness plants with node and git only. Not yet run on win32: the architect's laptop
   re-run is its first.
@@ -421,3 +421,46 @@ WITNESSES member: organism_test: 122 passed, 5 failed · ruled 0 · UNRULED 5 ·
   unchanged from §12. mq2 is not a member (§11).
 
 CHECKPOINT · 2026-11-22 · tip = this commit ([skip ci]) · BASE 84cbc03126eddb85c7d5cf54b51610068800315c · renamed A8 → "A8 BOUND" · named, same shape: A6's allowlist-equality sub-check (witness_mq2.mjs:209) · witness build GREEN MQ2 · 11 clause(s) 3 of 3 · base RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9 · mutants 9 of 9, control GREEN · WITNESSES 122 passed, 5 failed (shallow-clone BASE only) · resume from: the architect's re-run
+
+## 14 · Row 1313: the witness moved to where the WITNESSES member finds it (2026-11-22)
+
+- **The move:** `git mv ci/mq2/witness/witness_mq2.mjs ci/mq2/witness_mq2.mjs` (pushed alone first as 9f91e7d, so the
+  history follows). The member's `witnessFile` looks only for `ci/<unit>/witness_<unit>.mjs`, so until now mq2 was
+  never judged on main.
+  - **Paths that name it, all updated:** the mutant runner (`WITNESS = …/witness_mq2.mjs`, beside BASE); the witness's
+    own header and usage line; every command in this PROOF; the spec's file list (`MQ2_SPEC.md` §8, which notes the
+    first path).
+  - **`ci/mq2/witness/probe_base.mjs` keeps its folder.** It is the spec seat's standalone base probe, and nothing
+    imports it. The witness imports no file by a relative path; it re-invokes ITSELF for its children through
+    `import.meta.url`, so it runs from the member's copy under its working dir.
+- **One change the move required: A9 (v) now judges a plain tree.**
+  - **Why:** the member hands a witness two LF checkouts made with `git --work-tree=… checkout` and a private index.
+    They have no `.git`, so `git -C <tree> check-ignore` could not answer, and A9 would have been a real RED there.
+  - **Ignore check:** (v) now judges the tree's OWN `.gitignore` inside a throwaway git repo (`git init`, then
+    core.autocrlf=false).
+  - **Tracked check:** "untracked" is git's index when the tree is a git work tree (realpath-compared, case-folded on
+    win32). Otherwise it is "the checkout does not carry the file", since a checkout of HEAD would carry it.
+  - **BOUND in a plain tree** prints `NOT MEASURABLE — a tree is not a git tree`. The member drops BOUND by its own
+    law, and BOUND is judged at adoption on git trees, where it is GREEN (10 paths, none beyond the named files).
+- **Re-measured on main 84cbc03** (`git fetch origin main` → 84cbc03126eddb85c7d5cf54b51610068800315c, unchanged; BASE
+  stays it), LF trees:
+
+```
+node ci/mq2/witness_mq2.mjs --org . --base-org <84cbc03 tree>   (3 passes)
+GREEN MQ2 thalamus is the sole writer of thalamus_config.json through three lane doors · 11 clause(s)   (3 of 3, exit 0; A8 BOUND GREEN, A9 GREEN)
+node ci/mq2/witness_mq2.mjs --org <84cbc03 tree> --base-org <84cbc03 tree>
+RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9
+node ci/mq2/run_mutants_mq2.mjs --org . --base-org <84cbc03 tree>
+run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN
+ORGANISM_TEST_PROFILE=hermetic GITHUB_ACTIONS=true GITHUB_WORKSPACE=$PWD node scripts/organism_test.mjs witnesses
+  witness ‹mq2› 13.4 s · RED MQ2 · BOUND
+  ok   WITNESS ‹mq2› · ran in 13.4 s (B5)
+  ok   WITNESS ‹mq2› · GREEN at head against its BASE
+  ok   WITNESSES · 64 unit(s) judged in 1567.7 s
+organism_test: 124 passed, 5 failed · ruled 0 · UNRULED 5 · LIVE 0 (hermetic: named, not run)
+```
+  mq2 is now among the units the member judges: 64, one more than §12–§13's 63. It is GREEN after the BOUND drop.
+  The 5 FAILs are unchanged: `mr3`, `mrf`, `mrj`, `mrt`, `mrv` · "its BASE is in the clone" (this container's shallow
+  clone).
+
+CHECKPOINT · 2026-11-22 · tip = this commit ([skip ci]) · BASE 84cbc03126eddb85c7d5cf54b51610068800315c · A8 BOUND (row 1311) · moved: ci/mq2/witness/witness_mq2.mjs → ci/mq2/witness_mq2.mjs (probe_base.mjs keeps ci/mq2/witness/) · witness build GREEN MQ2 · 11 clause(s) 3 of 3 · base RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9 · mutants 9 of 9, control GREEN · WITNESSES 64 units judged, mq2 GREEN at head (RED MQ2 · BOUND, dropped), 124 passed 5 failed (shallow-clone BASE only) · resume from: the architect's re-run

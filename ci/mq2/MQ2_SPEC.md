@@ -238,7 +238,7 @@ setter.
 - `scripts/gate_tune.mjs`: `apply` `:210` and `score` `:253` through the export; the header `:18-19`, `:45`.
 - `scripts/watchman.mjs`: `probeWakeEconomy`'s default writer `:1917-1926` through the export; the STATE_DIR env door
   `:122`; the comment `:1899`.
-- `ci/mq2/witness/witness_mq2.mjs` (new), A1-A8 and M1-M8.
+- `ci/mq2/witness_mq2.mjs` (new; first written at `ci/mq2/witness/witness_mq2.mjs`, moved by row 1313), A1-A8 and M1-M8.
 
 **Beyond them, each a fork:** `scripts/xray.mjs` (untouched under A; the allowlist under B) · `scripts/cortex.mjs` and
 `scripts/models.mjs` (readers, untouched under A; moved under C) · `scripts/captains_call.mjs:1835` and
