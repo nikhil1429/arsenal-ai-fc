@@ -47,6 +47,8 @@ He types his answer; you type the bank line:
 node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --gut knew|shaky|guessed --asked "<the question you actually asked, verbatim>" --said "<his words, verbatim>" --surface code --latency_ms <n> [--probe recall|reconstruct|defend|novel|negative_space|jirah|cross_axis] [--register interview]
 ```
 
+- **His words are taken from the prompt record, never from your copy** (unit mbank): the bank reads his message through the one door, keeps HIS bytes (`--said` only selects a slice, and a `--said` that is not inside his message is REFUSED), reads his gut-word off his message (a `--gut` that disagrees is REFUSED), and stamps the turn id. Omit `--said` and his whole message is banked.
+
 - `--latency_ms` is the Stop→prompt clock the hook prints every turn. **If you cannot read it, LEAVE THE
   FLAG OFF** — a null latency is a measurement not made; an invented one corrupts the fluency ladder.
 - `--register interview` = the cold English line. `--probe negative_space` = "what does this NOT do" (the
