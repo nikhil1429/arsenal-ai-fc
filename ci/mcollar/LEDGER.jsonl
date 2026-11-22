@@ -1,0 +1,5 @@
+{"ts":"2026-11-21T07:55:51.946Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mcollar-build FETCH_HEAD","last_line":"main 7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f"}
+{"ts":"2026-11-21T07:55:51.946Z","act":"build","cmd":"edit scripts/audit_preload.mjs:319","last_line":"require_(\"module\").syncBuiltinESMExports(); after every patch, before EXIT"}
+{"ts":"2026-11-21T07:55:51.946Z","act":"witness-build","cmd":"node ci/mcollar/witness_mcollar.mjs --org <LF HEAD fa1fe57> --base-org <LF 7bf008b>","last_line":"GREEN MCOLLAR an ESM named-import writeFileSync is refused through the collar door bare and under a caller preload of node:fs, the write going through at base · 1 clause(s)"}
+{"ts":"2026-11-21T07:55:51.946Z","act":"witness-base","cmd":"node ci/mcollar/witness_mcollar.mjs --org <LF 7bf008b> --base-org <LF 7bf008b>","last_line":"RED MCOLLAR · M:preload"}
+{"ts":"2026-11-21T07:55:51.946Z","act":"mutants","cmd":"node ci/mcollar/run_mutants_mcollar.mjs","last_line":"run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN"}
