@@ -119,6 +119,10 @@ const WIT_MUTANTS = [
   { unit: "mprk", clause: "COVER", re: /\bCOVER\b/, what: "the parked member file removed", m: (t) => { const p = join(t, "suite", "members", "parked.json"); if (!existsSync(p)) return "parked.json absent"; unlinkSync(p); return null; } },
   { unit: "mcov", clause: "C1 COVERAGE", re: /C1 COVERAGE/, what: "the planted mcov_slow member file never written (the plant's member file removed)", m: (t) => edit(t, "ci/mcov/witness_mcov.mjs", null, 'for (const o of ["mcov_slow", "mcov_hang"])', 'for (const o of ["mcov_hang"])') },
   { unit: "mcov", clause: "C5 ONE RECORD", re: /C5 ONE RECORD/, what: "a second member file for one organ (PROBE.json beside probe.json)", m: (t) => { const p = join(t, "suite", "members", "probe.json"); if (!existsSync(p)) return "probe.json absent"; writeFileSync(join(t, "suite", "members", "PROBE.json"), readFileSync(p, "utf8")); return null; } },
+  { unit: "mdtl2", clause: "E10", tag: "E10-missing", re: /\bE10\b/, what: "one planted red missing on one tree (toy_salad's member file never written on the roll tree)", m: (t) => edit(t, "ci/mdtl2/witness_mdtl2.mjs", null, "for (const m of members) writeFileSync(join(into, \"suite\", \"members\"", "for (const m of members.filter((x) => x !== \"toy_salad\")) writeFileSync(join(into, \"suite\", \"members\"") },
+  { unit: "mdtl2", clause: "E10", tag: "E10-detail", re: /\bE10\b/, what: "one detail changed on one tree (toy_canary prints one more line at exit on the roll tree)", m: (t) => edit(t, "ci/mdtl2/witness_mdtl2.mjs", null,
+    'for (const [p, t] of Object.entries(files)) { mkdirSync(join(into, p, ".."), { recursive: true }); writeFileSync(join(into, p), t); }',
+    'for (const [p, t] of Object.entries(files)) { mkdirSync(join(into, p, ".."), { recursive: true }); writeFileSync(join(into, p), t); }\n  if (existsSync(join(into, "suite", "members")) && existsSync(join(into, "scripts", "toy_canary.mjs"))) writeFileSync(join(into, "scripts", "toy_canary.mjs"), \'process.on("exit", () => console.log("mhot planted detail change"));\\n\' + readFileSync(join(into, "scripts", "toy_canary.mjs"), "utf8"));') },
   { unit: "mdtl2", clause: "E1", re: /\bE1\b/, what: "the planted toy_member's member file never written", m: (t) => edit(t, "ci/mdtl2/witness_mdtl2.mjs", null, "for (const m of members) writeFileSync(join(into, \"suite\", \"members\"", "for (const m of members.filter((x) => x !== \"toy_member\")) writeFileSync(join(into, \"suite\", \"members\"") },
 ];
 const witLast = (t, unit) => {
@@ -169,13 +173,13 @@ try {
     for (const mu of WIT_MUTANTS) {
       if (!(mu.unit in ctl)) { const ct = join(TMP, `wctl-${mu.unit}`); copy(ct); ctl[mu.unit] = witLast(ct, mu.unit); for (const p of namingProcs(TMP)) { try { process.kill(p); } catch { /* gone */ } }
         console.log(`  ${ctl[mu.unit] ? "ok  " : "FAIL"} ${mu.unit.toUpperCase()} CONTROL · the unmutated copy → ${ctl[mu.unit]}`); try { unlinkSync(join(ct, "node_modules")); } catch { /* not linked */ } rmSync(ct, { recursive: true, force: true }); }
-      const t = join(TMP, `w-${mu.unit}-${mu.clause.split(" ")[0].toLowerCase()}`); copy(t);
+      const t = join(TMP, `w-${mu.unit}-${(mu.tag || mu.clause.split(" ")[0]).toLowerCase()}`); copy(t);
       const why = mu.m(t);
       const last = why || witLast(t, mu.unit);
       for (const p of namingProcs(TMP)) { try { process.kill(p); } catch { /* gone */ } }
       const ok = !why && /^RED /.test(last) && mu.re.test(last.replace(/^RED [A-Z0-9]+ · /, "")) && !mu.re.test(String(ctl[mu.unit]).replace(/^(RED|GREEN) [A-Z0-9]+ · ?/, ""));
       if (ok) kw++;
-      console.log(`  ${ok ? "ok  " : "FAIL"} M-${mu.unit.toUpperCase()}-${mu.clause.split(" ")[0]} · ${mu.what} → ${last}`);
+      console.log(`  ${ok ? "ok  " : "FAIL"} M-${mu.unit.toUpperCase()}-${mu.tag || mu.clause.split(" ")[0]} · ${mu.what} → ${last}`);
       try { unlinkSync(join(t, "node_modules")); } catch { /* not linked */ }
       rmSync(t, { recursive: true, force: true });
     }
