@@ -6,7 +6,7 @@
 // For the CONTROL and each mutant: the build tree's tracked files (git ls-files, dressing-room/state/ left out — data,
 // never copied) are copied under os.tmpdir(), node_modules is linked in (a junction on Windows), the copy is made a
 // git tree with core.autocrlf=false, ONE mutation is applied (its needle must match exactly once, or the mutant is
-// NOT APPLIED and counts against the run), and the witness ci/mq2/witness/witness_mq2.mjs runs with --org <copy>
+// NOT APPLIED and counts against the run), and the witness ci/mq2/witness_mq2.mjs runs with --org <copy>
 // --base-org <base tree>. A mutant is KILLED when the clause that names it does not hold on the copy.
 // The control is the unmutated copy: every clause the build holds must hold there too.
 // No port, no service, no model call; every copy is removed at the end. CRLF-proof: needles are matched on text read
@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 const argOf = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
 const ORG = argOf("--org") && resolve(argOf("--org")), BASE = argOf("--base-org") && resolve(argOf("--base-org"));
 if (!ORG || !BASE) { console.log("run_mutants: usage --org <build tree> --base-org <base tree>"); process.exit(1); }
-const WITNESS = join(dirname(fileURLToPath(import.meta.url)), "witness", "witness_mq2.mjs");
+const WITNESS = join(dirname(fileURLToPath(import.meta.url)), "witness_mq2.mjs");   // row 1313: beside BASE, where the WITNESSES member finds it
 const TH = "scripts/thalamus.mjs", GT = "scripts/gate_tune.mjs", WM = "scripts/watchman.mjs";
 const FS_GT_OLD = 'import { readFileSync, existsSync, readdirSync, appendFileSync } from "node:fs";';
 const FS_GT_NEW = 'import { readFileSync, existsSync, readdirSync, appendFileSync, writeFileSync } from "node:fs";';

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// ci/mq2/witness/witness_mq2.mjs — unit mq2 BUILD witness (forks row 1175). THE HEADER IS THE CONTRACT.
+// ci/mq2/witness_mq2.mjs — unit mq2 BUILD witness (forks row 1175). THE HEADER IS THE CONTRACT.
 //
-//   node ci/mq2/witness/witness_mq2.mjs --org <build tree> --base-org <base tree>
+//   node ci/mq2/witness_mq2.mjs --org <build tree> --base-org <base tree>
 //
 // WHAT IT HOLDS — thalamus.mjs is the SOLE WRITER of thalamus_config.json through three named lane exports
 // (applyTiers · refitWakeEconomy · setAdjudicatorRole): one format, a lane fence, a stale-read guard; gate_tune and
