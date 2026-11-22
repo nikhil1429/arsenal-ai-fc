@@ -52,7 +52,8 @@
 //   HB     THE SPLIT, planted: this witness as a child over a planted land commit whose parent carries two foreign landed
 //          paths reads BOUND green against --bound-base <parent>, RED naming them against the BASE-as-bound, and RED naming
 //          exactly the one unit path planted outside the named files
-//   BOUND  only the named files differ from --bound-base, package.json only in its six keys, audit.mjs only in its block
+//   BOUND  only the named files differ from --bound-base, package.json only in its six keys, audit.mjs only in its block —
+//          judged ONLY when --bound-base is named (row 1307 (1)'s bare form, row 1309 (3)); bare: `CLAUSE BOUND NOT JUDGED`
 //   LAST   no node process naming the temp root survives
 //
 // LAST LINE   GREEN MHOT the member roll · <n> clause(s)   (exit 0)   or   RED MHOT · <clauses>   (exit 1)
@@ -72,6 +73,10 @@ const ONLY = arg("--only") ? arg("--only").split(",") : null;
 // green on the build); BOUND is judged against --bound-base, the PARENT of the land commit (after a main-moved rebuild the
 // parent carries paths other units landed, which are not this unit's). Absent, the bound base is --base-org (the cut).
 const BOUND_BASE = arg("--bound-base") ? resolve(arg("--bound-base")) : BASE;
+// forks row 1309 (3) → row 1307 (1)'s BARE FORM: the form the suite's witnesses member runs (--org / --base-org only) never judges
+// BOUND against a frozen sha. BOUND is judged only when the caller NAMES the bound base (--bound-base: the adoption re-run, the
+// mutant runner); bare, it prints `CLAUSE BOUND NOT JUDGED` on its own line and the verdict line says so.
+const BOUND_JUDGED = !!arg("--bound-base");
 if (!ORG || !BASE || !existsSync(join(ORG, "package.json")) || !existsSync(join(BASE, "package.json"))) { console.log("RED MHOT · USAGE (--org <dir> --base-org <dir>, each with package.json)"); process.exit(1); }
 const T0 = Date.now();
 const wf = (() => { try { return readFileSync(join(ORG, ".github", "workflows", "suite.yml"), "utf8"); } catch { return ""; } })();
@@ -313,7 +318,7 @@ function hb() {
   const last = (r) => lines(r.out).map((x) => x.trim()).filter(Boolean).pop() || "";
   const bline = (r) => (lines(r.out).find((l) => /^\s*(ok|FAIL)\s+BOUND ·/.test(l)) || "").trim();
   const go = (org, extra) => sh(process.execPath, [me, "--org", org, "--base-org", Bp, ...extra, "--only", "HB-NONE"], { cwd: TMP });
-  const a = go(Lt, ["--bound-base", P]), b = go(Lt, []), c = go(L2, ["--bound-base", P]);
+  const a = go(Lt, ["--bound-base", P]), b = go(Lt, ["--bound-base", Bp]), c = go(L2, ["--bound-base", P]);
   const ok = a.code === 0 && /^GREEN MHOT /.test(last(a))
     && b.code === 1 && last(b) === "RED MHOT · BOUND" && /zz_landed_elsewhere\.mjs/.test(bline(b)) && /witness_zz_other\.mjs/.test(bline(b))
     && c.code === 1 && last(c) === "RED MHOT · BOUND" && /beyond the named: scripts\/zz_outside_named\.mjs ·/.test(bline(c));
@@ -339,9 +344,11 @@ try {
     if (!h.ok) bad.push("HB");
     console.log(`  ${h.ok ? "ok  " : "FAIL"} HB · THE BOUND SPLIT (row 1200 (2)-(3)), planted · ${h.why}`);
   }
-  const b = bound();
-  if (!b.ok) bad.push("BOUND");
-  console.log(`  ${b.ok ? "ok  " : "FAIL"} BOUND · ${b.why}`);
+  if (BOUND_JUDGED) {
+    const b = bound();
+    if (!b.ok) bad.push("BOUND");
+    console.log(`  ${b.ok ? "ok  " : "FAIL"} BOUND · ${b.why}`);
+  } else console.log("CLAUSE BOUND NOT JUDGED · no --bound-base named: the bare form never judges BOUND against a frozen sha (row 1307 (1), row 1309 (3))");
 } finally {
   // ── LAST ──
   for (const pid of children) { try { process.kill(pid, 0); survivors.push(pid); try { process.kill(pid); } catch { /* gone */ } } catch { /* dead — good */ } }
@@ -363,5 +370,5 @@ try {
 console.log(`  ${survivors.length ? "FAIL" : "ok  "} LAST · no node process naming the temp root survives${survivors.length ? ` (${survivors.join(", ")})` : ""}`);
 if (survivors.length) bad.push("LAST");
 if (bad.length) { console.log(`RED MHOT · ${bad.join(", ")}`); process.exit(1); }
-console.log(`GREEN MHOT the member roll · ${CLAUSES.filter(([id]) => want(id)).length + (want("HB") ? 1 : 0) + 2} clause(s)`);
+console.log(`GREEN MHOT the member roll · ${CLAUSES.filter(([id]) => want(id)).length + (want("HB") ? 1 : 0) + (BOUND_JUDGED ? 2 : 1)} clause(s)${BOUND_JUDGED ? "" : " · BOUND NOT JUDGED"}`);
 process.exit(0);

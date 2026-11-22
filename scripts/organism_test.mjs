@@ -486,9 +486,12 @@ function suites() {
   section("SUITES — every member run INDEPENDENTLY (one red never hides the rest)");
   const R = roll();
   const members = R.members;
-  // unit mhot: zero members, or a defect in the walk, is a red by name — never a vacuous "all 0 pass"
-  assert(`SUITES · the member roll names its members (${MEMBERS_REL}): an empty or defective roll is a red, never a pass`,
-    members.length > 0 && R.defects.length === 0, R.defects.map((d) => `${d.file}: ${d.why}`).join(" · ") || `${members.length} member(s)`);
+  // unit mhot: zero members, or a defect in the walk, is a red by name — never a vacuous "all 0 pass". It registers ONLY when it
+  // bites (row 1309 (1), ci/mdtl2 E11: a green run's pass count stays the one the string instrument counted; coverage() holds the
+  // roll's clean read as its own ok line on every run).
+  if (!(members.length > 0 && R.defects.length === 0))
+    assert(`SUITES · the member roll names its members (${MEMBERS_REL}): an empty or defective roll is a red, never a pass`,
+      false, R.defects.map((d) => `${d.file}: ${d.why}`).join(" · ") || `${members.length} member(s)`);
   const red = [];
   let reused = 0;
   let ran = 0;

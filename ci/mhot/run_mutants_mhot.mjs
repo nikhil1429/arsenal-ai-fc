@@ -2,6 +2,7 @@
 // ============================================================================
 // run_mutants_mhot.mjs — unit MHOT: ONE mutant per clause of ci/mhot/witness_mhot.mjs, each must turn RED the clause that names it.
 // CONTRACT:  node ci/mhot/run_mutants_mhot.mjs --org <build tree> --base-org <tree> [--bound-base <the land commit's parent>]
+//                                              [--unit-bases <dir holding one BASE tree per re-cut unit: mcov/, mprk/, mdtl2/>]
 //   (forks row 1200 (2)-(3): --bound-base is handed through to every witness run, so the bound reads the parent and the
 //   clauses read BASE; absent, the witness's own default holds.)
 //   Each mutant copies <org> under os.tmpdir() (node_modules rides as a link, never copied), breaks ONE thing in the copy (a
@@ -21,7 +22,9 @@ import { spawnSync } from "node:child_process";
 
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
 const ORG = arg("--org") && resolve(arg("--org")), BASE = arg("--base-org") && resolve(arg("--base-org"));
-const BB = arg("--bound-base") ? ["--bound-base", resolve(arg("--bound-base"))] : [];
+// row 1309 (3): the witness judges BOUND only when --bound-base is named, so the runner always names one (the base it is handed
+// when no other is given) — every BOUND-class mutant stays judged.
+const BB = ["--bound-base", arg("--bound-base") ? resolve(arg("--bound-base")) : BASE];
 if (!ORG || !BASE) { console.log("run_mutants: USAGE (--org <dir> --base-org <dir>)"); process.exit(1); }
 const T0 = Date.now();
 const jobMin = Number((/timeout-minutes:\s*(\d+)/.exec((() => { try { return readFileSync(join(ORG, ".github", "workflows", "suite.yml"), "utf8"); } catch { return ""; } })()) || [])[1]);
@@ -106,6 +109,23 @@ const mlawReds = (t) => {
   const m = /^RED MLAW · (.*)$/.exec(last);
   return { last, set: m ? m[1].split(" · ").map((x) => x.trim()).sort() : /^GREEN MLAW /.test(last) ? [] : null };
 };
+// ── THE ROW 1309 (1) RE-CUTS' MUTANTS (mcov, mprk, mdtl2: MHOT-M2 = A) ───────────────────────────────────────────────
+// Each breaks ONE thing in a copy of <org> (a member file, or the copy's own witness source) and runs the copy's witness of
+// that unit against THAT UNIT'S own BASE tree, handed in as <dir>/<unit> by --unit-bases <dir> (absent: the block is NOT RUN
+// and named). Judged by the named clause: RED on the mutant's last line, not red on the unmutated control's (the control runs
+// once per unit). A witness's other reds (its BOUND, this container's) ride both lines unchanged.
+const UB = arg("--unit-bases") ? resolve(arg("--unit-bases")) : null;
+const WIT_MUTANTS = [
+  { unit: "mprk", clause: "COVER", re: /\bCOVER\b/, what: "the parked member file removed", m: (t) => { const p = join(t, "suite", "members", "parked.json"); if (!existsSync(p)) return "parked.json absent"; unlinkSync(p); return null; } },
+  { unit: "mcov", clause: "C1 COVERAGE", re: /C1 COVERAGE/, what: "the planted mcov_slow member file never written (the plant's member file removed)", m: (t) => edit(t, "ci/mcov/witness_mcov.mjs", null, 'for (const o of ["mcov_slow", "mcov_hang"])', 'for (const o of ["mcov_hang"])') },
+  { unit: "mcov", clause: "C5 ONE RECORD", re: /C5 ONE RECORD/, what: "a second member file for one organ (PROBE.json beside probe.json)", m: (t) => { const p = join(t, "suite", "members", "probe.json"); if (!existsSync(p)) return "probe.json absent"; writeFileSync(join(t, "suite", "members", "PROBE.json"), readFileSync(p, "utf8")); return null; } },
+  { unit: "mdtl2", clause: "E1", re: /\bE1\b/, what: "the planted toy_member's member file never written", m: (t) => edit(t, "ci/mdtl2/witness_mdtl2.mjs", null, "for (const m of members) writeFileSync(join(into, \"suite\", \"members\"", "for (const m of members.filter((x) => x !== \"toy_member\")) writeFileSync(join(into, \"suite\", \"members\"") },
+];
+const witLast = (t, unit) => {
+  const r = spawnSync(process.execPath, [join(t, "ci", unit, `witness_${unit}.mjs`), "--org", t, "--base-org", join(/** @type {string} */ (UB), unit)], { encoding: "utf8", windowsHide: true, timeout: left(), env: childEnv(), cwd: TMP, maxBuffer: 1 << 28 });
+  return (String(r.stdout || "") + String(r.stderr || "")).split(/\r?\n/).map((x) => x.trim()).filter(Boolean).pop() || "";
+};
+let kw = 0;
 let km = 0, mlawControl = false;
 const hasMlaw = existsSync(join(ORG, "ci", "mlaw", "witness_mlaw.mjs"));
 
@@ -144,6 +164,22 @@ try {
       rmSync(t, { recursive: true, force: true });
     }
   }
+  if (UB) {
+    const ctl = {};
+    for (const mu of WIT_MUTANTS) {
+      if (!(mu.unit in ctl)) { const ct = join(TMP, `wctl-${mu.unit}`); copy(ct); ctl[mu.unit] = witLast(ct, mu.unit); for (const p of namingProcs(TMP)) { try { process.kill(p); } catch { /* gone */ } }
+        console.log(`  ${ctl[mu.unit] ? "ok  " : "FAIL"} ${mu.unit.toUpperCase()} CONTROL · the unmutated copy → ${ctl[mu.unit]}`); try { unlinkSync(join(ct, "node_modules")); } catch { /* not linked */ } rmSync(ct, { recursive: true, force: true }); }
+      const t = join(TMP, `w-${mu.unit}-${mu.clause.split(" ")[0].toLowerCase()}`); copy(t);
+      const why = mu.m(t);
+      const last = why || witLast(t, mu.unit);
+      for (const p of namingProcs(TMP)) { try { process.kill(p); } catch { /* gone */ } }
+      const ok = !why && /^RED /.test(last) && mu.re.test(last.replace(/^RED [A-Z0-9]+ · /, "")) && !mu.re.test(String(ctl[mu.unit]).replace(/^(RED|GREEN) [A-Z0-9]+ · ?/, ""));
+      if (ok) kw++;
+      console.log(`  ${ok ? "ok  " : "FAIL"} M-${mu.unit.toUpperCase()}-${mu.clause.split(" ")[0]} · ${mu.what} → ${last}`);
+      try { unlinkSync(join(t, "node_modules")); } catch { /* not linked */ }
+      rmSync(t, { recursive: true, force: true });
+    }
+  } else console.log(`  NOT RUN · the ${WIT_MUTANTS.length} re-cut-witness mutants (mcov, mprk, mdtl2) need --unit-bases <dir>`);
   const c = runWitness(ORG, null);
   var control = c.code === 0 && /^GREEN MHOT /.test(c.last);
   console.log(`  ${control ? "ok  " : "FAIL"} CONTROL · the unmutated witness over --org → exit ${c.code} · ${c.last}`);
@@ -151,6 +187,6 @@ try {
   for (const p of namingProcs(TMP)) { try { process.kill(p); } catch { /* gone */ } }
   rmSync(TMP, { recursive: true, force: true });
 }
-const n = MUTANTS.length + (hasMlaw ? MLAW_MUTANTS.length : 0), kk = k + km, ctlOk = control && (!hasMlaw || mlawControl);
+const n = MUTANTS.length + (hasMlaw ? MLAW_MUTANTS.length : 0) + (UB ? WIT_MUTANTS.length : 0), kk = k + km + kw, ctlOk = control && (!hasMlaw || mlawControl);
 console.log(`run_mutants: ${kk} of ${n} mutant(s) RED by the clause that names them · control ${ctlOk ? "GREEN" : "RED"}`);
 process.exit(kk === n && ctlOk ? 0 : 1);
