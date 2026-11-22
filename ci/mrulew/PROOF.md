@@ -124,3 +124,23 @@ CHECKPOINT · STOPPED at 2026-11-20T01:29:11Z · merged tip = the commit carryin
   `PLANTS mrulew · 7 of 7 plant(s) as expected` · mutants `run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN`.
 
 CHECKPOINT · STOPPED at 2026-11-21T07:35:06Z · merge of main 7bf008b = the parent of the commit carrying this line · base 7bf008b · conflicted files none · witness GREEN MRULEW (exit 0) · mutants 4 of 4 · control GREEN · neutral legs of this tip: read after the push and named in the final message (and the next push's proof)
+
+## 10 · crack-gap witnessed, main 84cbc03 merged (forks row 1298 (1), 22 Nov 2026)
+
+- The red the architect's re-run found: `FAIL P-ALL · want 0 · got 1 · RULE-WITNESSES RED · 17 rule(s) · 16 witnessed both ways · not: crack-gap(none)`.
+  Cause: unit mcrk2 landed the `crack-gap` seed row (`scripts/teaching_contract.mjs:222`); the map had no witness for it. The unit doing its job.
+- `git merge --no-edit 84cbc03126eddb85c7d5cf54b51610068800315c` into `fb152bd`: no conflict, no conflicted file. `ci/mrulew/BASE` = 84cbc03.
+- `rule_witness.json` gains `crack-gap`: its plants are crack rows judged by the tree's own `teaching_audit.mjs crackGapDrift`
+  (`:1489`), the shape of mcrk2's selftest case (`:2233`). RED: a teacher gap row (`moment-undeclared`) of the paired prompt. CLEAN: the same row,
+  `gap: null`. The witness's `rule` mode reads a plant carrying `crackRows` through that function (its header names it).
+  `node ci/witness/mrulew/witness_rules.mjs rule crack-gap --plant red` → `RULE crack-gap RED · the checker names it on the red plant` (exit 1);
+  `--plant clean` → `RULE crack-gap CLEAN · the checker does not name it on the clean plant` (exit 0).
+- Plants: `PLANTS mrulew · 7 of 7 plant(s) as expected` · `GREEN MRULEW plants · 7 case(s) both ways · 17 seed rule(s) witnessed (exit 0)`.
+- Judge: `GREEN MRULEW rule witnesses (17 seed rule(s): base 1 → head 0) · plants both ways · 4 clause(s) (exit 0)`.
+- Mutants: `run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN`.
+- Suite over the merged tree, the neutral machine's flags set so the WITNESSES member runs
+  (`GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo> ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`, 22 Nov 2026):
+  `organism_test: 303 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)` · `ok WITNESSES · 63 unit(s) judged …` ·
+  `ok CLAUSE WITNESS · ci/witness/mrulew/witness_rules.mjs plants — exit 0, every plant as expected (n > 0)`.
+
+CHECKPOINT · STOPPED at 2026-11-22T10:48:48Z · merge of main 84cbc03 = the parent of the commit carrying this line · base 84cbc03 · conflicted files none · crack-gap witnessed both ways · plants 7 of 7 · judge GREEN MRULEW (exit 0) · mutants 4 of 4 · control GREEN · WITNESSES member ok · pushed with [skip ci] by order (row 1298 (1))

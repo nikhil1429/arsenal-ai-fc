@@ -1,5 +1,5 @@
 {
-  "_comment": "unit mrulew (C:rule-witnesses, MWIT spec 88bf69d UNITS row 10). rules: <teaching rule id> -> its witness command (node <tracked path> [args], rung_receipt.mjs parseWitness). plants: <id> -> {red, clean}, one planted turn each, judged by the org tree teaching_audit.mjs (auditTurn args; a plant with blocks goes through pictureFacts + pictureDrift). A rule id the live teaching_contract.json holds without a row here reads RED.",
+  "_comment": "unit mrulew (C:rule-witnesses, MWIT spec 88bf69d UNITS row 10). rules: <teaching rule id> -> its witness command (node <tracked path> [args], rung_receipt.mjs parseWitness). plants: <id> -> {red, clean}, one planted turn each, judged by the org tree teaching_audit.mjs (auditTurn args; a plant with blocks goes through pictureFacts + pictureDrift, one with crackRows through crackGapDrift). A rule id the live teaching_contract.json holds without a row here reads RED.",
   "rules": {
     "one-idea": "node ci/witness/mrulew/witness_rules.mjs rule one-idea",
     "dheema-not-lamba": "node ci/witness/mrulew/witness_rules.mjs rule dheema-not-lamba",
@@ -17,7 +17,8 @@
     "act-mt2kgbt7": "node ci/witness/mrulew/witness_rules.mjs rule act-mt2kgbt7",
     "act-mt2kgn09": "node ci/witness/mrulew/witness_rules.mjs rule act-mt2kgn09",
     "max-intensity-check": "node ci/witness/mrulew/witness_rules.mjs rule max-intensity-check",
-    "act-mueywvag": "node ci/witness/mrulew/witness_rules.mjs rule act-mueywvag"
+    "act-mueywvag": "node ci/witness/mrulew/witness_rules.mjs rule act-mueywvag",
+    "crack-gap": "node ci/witness/mrulew/witness_rules.mjs rule crack-gap"
   },
   "plants": {
     "one-idea": {
@@ -289,6 +290,40 @@
           }
         ],
         "lastMessage": ""
+      }
+    },
+    "crack-gap": {
+      "red": {
+        "crackRows": [
+          {
+            "kind": "crack",
+            "id": "ck-plant",
+            "gap": "moment-undeclared",
+            "axis": "d",
+            "concept": "plant-concept",
+            "prompt_session_id": "s-plant",
+            "prompt_at": "2026-11-21T06:00:00.000Z",
+            "words": "planted words"
+          }
+        ],
+        "sessionId": "s-plant",
+        "promptAt": "2026-11-21T06:00:00.000Z"
+      },
+      "clean": {
+        "crackRows": [
+          {
+            "kind": "crack",
+            "id": "ck-plant",
+            "gap": null,
+            "axis": "d",
+            "concept": "plant-concept",
+            "prompt_session_id": "s-plant",
+            "prompt_at": "2026-11-21T06:00:00.000Z",
+            "words": "planted words"
+          }
+        ],
+        "sessionId": "s-plant",
+        "promptAt": "2026-11-21T06:00:00.000Z"
       }
     }
   }

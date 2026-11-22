@@ -17,8 +17,8 @@
 //       absent (:945-947), so the witness checks the file exists and parses first: a seed is not his rules.
 //   node ci/witness/mrulew/witness_rules.mjs rule <id> --plant red|clean [--org <dir>]
 //       ONE RULE's witness, run on a planted turn from the map's `plants.<id>`: the org tree's own pure checker
-//       (teaching_audit.mjs auditTurn :852, or pictureFacts + pictureDrift :1390/:1473 for a plant that carries
-//       `blocks`) judges it. exit 1 when the checker names <id> (the rule reads RED), 0 when it does not, 2 when the
+//       (teaching_audit.mjs auditTurn, or pictureFacts + pictureDrift for a plant that carries `blocks`, or
+//       crackGapDrift for a plant that carries `crackRows` — unit mcrk2's crack-gap, forks row 1298 (1)) judges it. exit 1 when the checker names <id> (the rule reads RED), 0 when it does not, 2 when the
 //       checker cannot be imported. A rule with no plant exits 1 (not witnessed). Without --plant: 2 (the real-day
 //       verdict of a rule is teaching_audit's own lane, never this witness's).
 //   node ci/witness/mrulew/witness_rules.mjs plants [--org <dir>]
@@ -112,7 +112,8 @@ async function rule(org, id, which) {
   try { ta = await imp(org, "teaching_audit.mjs"); } catch (e) { return { exit: 2, line: `RULE ${id} UNREAD · teaching_audit.mjs not importable (${String(e && e.message).slice(0, 80)})` }; }
   let named;
   try {
-    if (Array.isArray(plant.blocks)) { const d = ta.pictureDrift(ta.pictureFacts(plant.blocks, plant.lastMessage || "")); named = !!d && d.rule === id; }
+    if (Array.isArray(plant.crackRows)) { const d = ta.crackGapDrift({ rows: plant.crackRows, sessionId: plant.sessionId, promptAt: plant.promptAt, turnId: plant.turnId || null }); named = !!d && d.rule === id; }
+    else if (Array.isArray(plant.blocks)) { const d = ta.pictureDrift(ta.pictureFacts(plant.blocks, plant.lastMessage || "")); named = !!d && d.rule === id; }
     else {
       const { session = {}, ...rest } = plant;
       const res = ta.auditTurn({ ...rest, session: { concept: "plant-concept", step: 4, question_moments: {}, axes_done: [], ...session } });
