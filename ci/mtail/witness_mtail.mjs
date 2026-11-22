@@ -44,9 +44,16 @@
 //       does not rise.~~  (struck by unit mrt, forks row 1120 (1) F5 B / row 1112 (1)) RE-CUT by unit mrt, forks row 1120 (1)
 //       (T3 fate (b) REPAIR on main, F5 B the edge-set form): the depcruise no-circular count read on both trees does not rise
 //       AND every no-circular from→to row of --org is a row of --base-org (a cycle swapped for another does not pass).
-//   T4  mpm F1 · captureDay has ONE definition in scripts/ — gaffer_brain.mjs, exported; postmatch.mjs imports it and defines
+//   ~~T4  mpm F1 · captureDay has ONE definition in scripts/ — gaffer_brain.mjs, exported; postmatch.mjs imports it and defines
 //       none; the close evidence of mpm reads as before: the same queue-only close (captures either side of an IST midnight)
-//       writes a post_match record byte-equal to BASE's, naming exactly the captures of that IST day.
+//       writes a post_match record byte-equal to BASE's, naming exactly the captures of that IST day.~~  (struck by unit mjset,
+//       forks row 1292 (2) (a))
+//   T4  mpm F1 (RE-CUT IN PLACE by unit mjset, forks row 1292 (2) (a), naming row 1245 (1): the judge line of a day record is
+//       kept per carrier, each try a line of its own) · captureDay has ONE definition in scripts/ — gaffer_brain.mjs, exported;
+//       postmatch.mjs imports it and defines none; the same queue-only close (captures either side of an IST midnight) names
+//       exactly the captures of that IST day; and its post_match record is byte-equal to BASE's once the lines row 1245 (1)
+//       rules are SET ASIDE BY NAME — every line beginning `JUDGE TRY · ` (the kept try: its carrier, its instant, its JUDGE line),
+//       on both sides. Every other line, and the order of every other line, is compared byte for byte as before.
 //   BOUND --org differs from --base-org ONLY in the five named files (scripts/postmatch.mjs, sitting.mjs, gaffer_brain.mjs,
 //       brain.mjs, claudegen.mjs); ci/mtail/** is this unit's own output and .claude/settings.json the seat's effort key, both
 //       left out by name.
@@ -249,10 +256,14 @@ try {
     const o = closeOnce(copyOf(ORG, "t4", q), { runMs: RUN });
     const b = BASE_ORG ? closeOnce(copyOf(BASE_ORG, "t4b", q), { runMs: RUN }) : null;
     const want = "t4-early, t4-mid, t4-dayonly";
+    // forks row 1292 (2) (a): the ruled lines of row 1245 (1), set aside BY NAME on both sides — nothing else is
+    const RULED_TRY = "JUDGE TRY · ";
+    const setAside = (rec) => String(rec == null ? "" : rec).split("\n").filter((l) => !l.startsWith(RULED_TRY)).join("\n");
+    const asideN = (rec) => String(rec == null ? "" : rec).split("\n").filter((l) => l.startsWith(RULED_TRY)).length;
     const named = (o.rec || "").includes(`grade queue: 3 outstanding capture(s) of ${D}`) && (o.rec || "").includes(want);
     clause("T4 F1", defs.length === 1 && defs[0] === "gaffer_brain.mjs (exported)" && imports && kOrg["gaffer_brain.mjs:captureDay"] === "function"
-      && o.status === 0 && named && !!b && b.status === 0 && o.rec === b.rec,
-      `captureDay defined in: ${defs.join(", ") || "none"} · postmatch ${imports ? "imports it from gaffer_brain.mjs" : "does NOT import it"} · the queue-only close of ${D} names ${named ? `exactly ${want}` : "NOT the planted IST day's captures"} · record ${b ? (o.rec === b.rec ? "byte-equal to BASE's" : "DIFFERS from BASE's") : "(no --base-org)"}`);
+      && o.status === 0 && named && !!b && b.status === 0 && typeof o.rec === "string" && setAside(o.rec) === setAside(b.rec),
+      `captureDay defined in: ${defs.join(", ") || "none"} · postmatch ${imports ? "imports it from gaffer_brain.mjs" : "does NOT import it"} · the queue-only close of ${D} names ${named ? `exactly ${want}` : "NOT the planted IST day's captures"} · record ${b ? (setAside(o.rec) === setAside(b.rec) ? "byte-equal to BASE's" : "DIFFERS from BASE's") : "(no --base-org)"} with ${asideN(o.rec)} ruled "${RULED_TRY}" line(s) set aside by name (row 1292 (2) (a); BASE ${b ? asideN(b.rec) : "-"})`);
   }
 
   // ── BOUND ──

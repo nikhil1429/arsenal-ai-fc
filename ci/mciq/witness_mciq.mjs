@@ -7,19 +7,23 @@
 //   COPIES each org's suite.yml under ONE temp root R (mkdtemp under os.tmpdir()) and judges the copies. CRLF-proof (every
 //   line split on \r?\n), no POSIX-only shell, no dependency: the YAML read and GitHub's glob are both implemented here.
 // THE LAW IT HOLDS (row 1256 (2)): a push to the superseded namespace or to a cloud seat's queue branch draws no run;
-//   everything that can land or be adopted still runs both legs — main, land tips, build tips, spec tips, every other ref.
+//   everything that can land or be adopted still runs both legs — main, land tips, ~~build tips, spec tips,~~ every other ref.
+//   RE-CUT by unit mq3 (row 1289 (1), 22 Nov 2026): a seat's build tip (claude/*-build) and spec tip (claude/*-spec) draw no
+//   push run either — no landing reads them; the land verb reads the land tip's own two legs.
 //   The gate is not loosened: no ref that is ever judged loses a leg.
 // GLOB (GitHub's filter pattern cheat sheet, push branches): `*` = any run of characters except `/`; `**` = any run of
 //   characters; `?` = zero or one of the preceding character; `+` = one or more of the preceding character; `[...]` = one
 //   character of a set or range; `\` escapes; a leading `!` negates. In `branches` the patterns are read IN ORDER and the
 //   LAST one that matches a ref decides (a `!` one excludes); a ref no pattern matches does not trigger. `branches-ignore`:
 //   a ref triggers iff no pattern matches. Neither key under push (or `on: push`): every branch triggers.
-// THE NAMED REFS: main · land/mbank · claude/mbank-build · claude/mjset-spec · ordinary-branch (must trigger) ·
-//   claude/mbank-queue · superseded/mgat-007676e (must not).
+// THE NAMED REFS: main · land/mbank · ~~claude/mbank-build · claude/mjset-spec ·~~ ordinary-branch (must trigger) ·
+//   claude/mbank-queue · superseded/mgat-007676e (must not) · RE-CUT by unit mq3: claude/mbank-build · claude/mjset-spec
+//   (must not).
 // CLAUSES (judged on --org; --base-org is the reference):
 //   MAIN   · `main` triggers a push run.
 //   LAND   · `land/mbank` triggers (row 1256 (2), named: a land tip is what lands).
-//   BUILD  · `claude/mbank-build`, `claude/mjset-spec` and `ordinary-branch` trigger.
+//   BUILD  · ~~`claude/mbank-build`, `claude/mjset-spec` and `ordinary-branch` trigger.~~ RE-CUT by unit mq3 (row 1289 (1)):
+//            `ordinary-branch` triggers; `claude/mbank-build` and `claude/mjset-spec` do NOT. RED on the base (both run there).
 //   IGNORE · `claude/mbank-queue` and `superseded/mgat-007676e` do NOT trigger. RED on the base (both trigger there).
 //   LEGS   · every job whose strategy matrix names `node` names both 22 and 24, and npm-test is one of them.
 //   KEEP   · pull_request and workflow_dispatch are still triggers, and the concurrency group is keyed by github.ref —
@@ -47,8 +51,8 @@ const WF = join(".github", "workflows", "suite.yml");
 export const REFS = [
   { ref: "main", run: true, clause: "MAIN" },
   { ref: "land/mbank", run: true, clause: "LAND" },
-  { ref: "claude/mbank-build", run: true, clause: "BUILD" },
-  { ref: "claude/mjset-spec", run: true, clause: "BUILD" },
+  { ref: "claude/mbank-build", run: false, clause: "BUILD" },   // ~~run: true~~ RE-CUT by unit mq3 (row 1289 (1))
+  { ref: "claude/mjset-spec", run: false, clause: "BUILD" },    // ~~run: true~~ RE-CUT by unit mq3 (row 1289 (1))
   { ref: "ordinary-branch", run: true, clause: "BUILD" },
   { ref: "claude/mbank-queue", run: false, clause: "IGNORE" },
   { ref: "superseded/mgat-007676e", run: false, clause: "IGNORE" },
@@ -242,7 +246,8 @@ function main() {
   const reds = CLAUSES.filter((c) => v[c] && !v[c].ok);
   for (const c of CLAUSES) if (v[c]) console.log(`  ${v[c].ok ? "ok  " : "FAIL"} MCIQ ${c}${v[c].ok ? "" : ` · ${v[c].why}`}`);
   if (reds.length) { console.log(`RED MCIQ · ${reds.join(", ")}`); process.exit(1); }
-  console.log(`GREEN MCIQ the push trigger runs main, land/**, claude/*-build, claude/*-spec and every other branch and draws no run for superseded/** or claude/*-queue, both legs and the other triggers kept · ${CLAUSES.length} clause(s)`);
+  // ~~GREEN MCIQ the push trigger runs main, land/**, claude/*-build, claude/*-spec and every other branch and draws no run for superseded/** or claude/*-queue~~ (RE-CUT by unit mq3)
+  console.log(`GREEN MCIQ the push trigger runs main, land/** and every other branch and draws no run for superseded/**, claude/*-queue, claude/*-build or claude/*-spec, both legs and the other triggers kept · ${CLAUSES.length} clause(s)`);
   process.exit(0);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main();

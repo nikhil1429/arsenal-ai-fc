@@ -79,6 +79,10 @@
 // IT NEVER BLOCKS. Fail-silent, no stdout on the hook path, no throw. A checker
 // that can break his session is a worse defect than the drift it catches.
 //
+// UNIT maud43 (forks rows 1282 / 1286): `rebuild-mismatch --from <ISO> --to <ISO> [--apply]` rebuilds, ONCE and by
+// APPENDED rows only, the confusion check of the Stop rows written `session-mismatch`, from each session's own transcript
+// (the section above rebuildMain). Dry run unless --apply; run on his tree by the runner's hand only.
+//
 // WRITES: teaching_audit.jsonl + teaching_audit_last.json (this organ is their
 // single writer). Unit mbank (forks row 1246): teaching_audit_last.json also carries
 // `prompts_by_session` — the prompt record kept PER Claude session (the shared `prompt`
@@ -148,7 +152,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { randomUUID } from "node:crypto";   // unit mbank (row 1230): the prompt record's turn id is minted HERE, by its single writer
+import { randomUUID, createHash } from "node:crypto";   // unit mbank (row 1230): the prompt record's turn id is minted HERE, by its single writer · unit maud43: the rebuilt row's supersede key (sha256 of the old line)
 import { subjectsOf, coreAxes, REGISTRY_PATH } from "./registry.mjs";   // S10 #10 sources + #12 core axes — rows, never literals · row 583 (5): REGISTRY_PATH, for the selftest's proof that it reads its OWN registry
 import { SCOPE_GLOBAL, humanText, SLASH_NOISE, BANKED_MOMENTS, transcriptPathFor } from "./study_scope.mjs";   // G0 (23 Sep 2026): the dispatcher's study-scope verdict, stamped on every row · L4 (6 Oct 2026): his last prompt bounds the turn (the reader the gate and the replay use) and the test moments are the landed test-moment case's own set
 import { recordPicture, loadRegistry, pictureLines } from "./widget.mjs";   // L4 (fate 54): the registry's OWN writer — widget.mjs stays the sole writer of widgets.json (nobody's hook callee, so never a shim no-op)
@@ -1664,7 +1668,10 @@ const momentsByKind = (session) => (session && session.question_moments && typeo
 const mapOf = (m) => (m && typeof m === "object" && !Array.isArray(m) ? m : {});
 const stubOf = (v) => ({ stub: true, session_id: v.session_id || null, stop_at: v.stop_at || v.consumed_at || null,
   stop_kinds: Array.isArray(v.stop_kinds) ? v.stop_kinds : null, transcript_path: typeof v.transcript_path === "string" ? v.transcript_path : null });
-const transcriptAlive = (sid, v) => { try { return existsSync(v.transcript_path || transcriptPathFor(sid)); } catch { return false; } };
+// unit maud43: the ONE expression that names a session's transcript (its own record's path, else transcriptPathFor) — the
+// stub keeper below and the rebuild verb both read it here, never a second copy.
+const transcriptOf = (sid, v) => (v && typeof v === "object" && v.transcript_path) || transcriptPathFor(sid);
+const transcriptAlive = (sid, v) => { try { return existsSync(transcriptOf(sid, v)); } catch { return false; } };
 const keptPrompts = (m) => Object.fromEntries(Object.entries(mapOf(m)).flatMap(([k, v]) => {
   if (!v || typeof v !== "object") return [];
   if (!v.stub && !v.consumed_at) return [[k, v]];
@@ -2949,6 +2956,160 @@ function replayMain(file) {
   console.log(replaySamajh(raw).line);
 }
 
+// ===========================================================================
+// UNIT maud43 · THE ONE-TIME REBUILD OF THE SESSION-MISMATCH TURNS (forks rows 1250 (4) / 1282 / 1283 (2) / 1286;
+// spec ci/maud43/MAUD43_SPEC.md). A Stop row written `session-mismatch` lost the one check that reads his words
+// (confusion-is-literal): another session's prompt sat in the shared slot. His prompt is still in his session's own
+// transcript. This verb rebuilds that check from it, ONCE, as APPENDED rows (his law 9: the old row is never rewritten).
+//   THE JOIN (row 1282 (1)): the session id names ONE file (transcriptOf); inside it, the row's turn is the LAST human
+//     prompt (promptOfLine) stamped before the row's own ts. Time orders lines of that one file only: no other session's
+//     file is opened, no folder is scanned, no string of his is compared with anything.
+//   THE CROSS-CHECK: the row's own samajh_check.seen and new_idea, which this organ read from that same file at Stop time,
+//     must agree, or the row is UNPAIRABLE. new_idea is read as the Stop read it (row 1283 (2)): over the STOP-TIME VIEW
+//     (the turn's lines stamped at or before the row) with that view's last text block as last_assistant_message.
+//   A SHARED TURN (several rows reach one prompt) is rebuilt ONCE, its row naming every row it supersedes; its step,
+//     concept and assistantText come from the LAST superseded row (row 1286 (1): its Stop saw the whole turn).
+//   WHAT IS WRITTEN carries no ts / scope / drifts key, so teaching_contract windowDrift, watchman and study_scope's day
+//     reader never count it (maud43-3 (a)); a rebuilt drift never auto-counts (maud43-4 (a)): no contract call is made.
+//   REFUSED: a gone file is LOST, one row per old row, latched; an UNPAIRABLE row is counted and left for a later ruling;
+//     a row already superseded is never touched again (the once-latch over every supersedes id).
+//   THE DRY RUN is the default: counts only, nothing written, nothing of his printed. `--apply` writes.
+// The live rebuild is the RUNNER'S hand on his laptop, once (spec §7); every proof of it is planted (ci/maud43/).
+// ===========================================================================
+export const REBUILT_FROM = "transcript";
+/** The supersede key of an old row: sha256 of its exact line bytes (no newline). Pure. */
+export const rowIdOf = (line) => createHash("sha256").update(String(line), "utf8").digest("hex");
+const lineTs = (l) => { try { const o = JSON.parse(l); return o && typeof o.timestamp === "string" ? Date.parse(o.timestamp) : NaN; } catch { return NaN; } };
+const isMismatchRow = (r) => /^session-mismatch/.test(String((r && r.user_text_source) || ""));
+/** The row's turn inside ONE file's lines: the last human prompt stamped before rowTs, up to his next prompt. Pure. */
+export function turnAt(lines, rowTs) {
+  const L = Array.isArray(lines) ? lines : [];
+  let at = -1;
+  for (let i = 0; i < L.length; i++) {
+    if (promptOfLine(L[i]) === null) continue;
+    const t = lineTs(L[i]);
+    if (Number.isFinite(t) && t < rowTs) at = i;
+  }
+  if (at < 0) return null;
+  let end = L.length;
+  for (let i = at + 1; i < L.length; i++) if (promptOfLine(L[i]) !== null) { end = i; break; }
+  return { at, end };
+}
+/** The Stop-time view of a turn (row 1283 (2)): its lines stamped at or before rowTs (an unstamped line is kept), read by
+ *  turnOf, and the Stop's message rebuilt as that view's last text block. Pure. */
+export function stopView(lines, at, end, rowTs) {
+  const view = turnOf(lines.slice(at, end).filter((l) => { const t = lineTs(l); return !Number.isFinite(t) || t <= rowTs; }).join("\n"));
+  const fin = Array.isArray(view.blocks) ? [...view.blocks].reverse().find((b) => b.kind === "text") : null;
+  return { view, stopMsg: fin ? String(fin.text || "") : "" };
+}
+/** THE PLAN — pure over what it is handed: the log's text, the per-session record, the window, and a file reader
+ *  (sid, path) → { lines } | { lost: true } | { unreadable: true }. Writes nothing. */
+export function rebuildPlan({ logText = "", auditLast = null, from, to, readFile, now = new Date().toISOString() } = {}) {
+  const all = [];
+  String(logText || "").split("\n").forEach((line) => {
+    if (!line.trim()) return;
+    let r; try { r = JSON.parse(line); } catch { return; }
+    if (r && typeof r === "object") all.push({ line, r });
+  });
+  const done = new Set(all.filter((x) => x.r.rebuilt_from === REBUILT_FROM && Array.isArray(x.r.supersedes)).flatMap((x) => x.r.supersedes));
+  const own = all.filter((x) => !x.r.rebuilt_from && typeof x.r.ts === "string");   // the organ's own Stop rows, log order
+  const lo = Date.parse(String(from)), hi = Date.parse(String(to));
+  const cand = own.filter((x) => { const t = Date.parse(x.r.ts); return t >= lo && t < hi && isMismatchRow(x.r); });
+  const c = { candidates: cand.length, paired: 0, turns: 0, shared: 0, shared_rows: 0, lost: 0, unpairable: 0,
+    no_prompt: 0, cross_check: 0, unreadable: 0, already: 0, drifts: 0 };
+  const files = new Map(), groups = new Map(), out = [];
+  const records = mapOf(auditLast && auditLast.prompts_by_session);
+  const fileOf = (sid) => {
+    if (!files.has(sid)) {
+      let path = null;
+      try { path = transcriptOf(sid, records[sid]); } catch { path = null; }
+      files.set(sid, path ? readFile(sid, path) : { lost: true });
+    }
+    return files.get(sid);
+  };
+  for (const x of cand) {
+    const id = rowIdOf(x.line), sid = typeof x.r.session_id === "string" ? x.r.session_id : "";
+    if (done.has(id)) { c.already++; continue; }
+    const f = fileOf(sid);
+    if (f.lost) {
+      c.lost++;
+      out.push({ rebuilt_at: now, rebuilt_from: REBUILT_FROM, supersedes: [id], of_ts: [x.r.ts], session_id: sid || null, lost: true, why: "transcript gone" });
+      continue;
+    }
+    if (f.unreadable || !Array.isArray(f.lines)) { c.unpairable++; c.unreadable++; continue; }
+    const rt = Date.parse(x.r.ts);
+    const span = turnAt(f.lines, rt);
+    if (!span) { c.unpairable++; c.no_prompt++; continue; }
+    const turn = turnOf(f.lines.slice(span.at, span.end).join("\n"));
+    const { view, stopMsg } = stopView(f.lines, span.at, span.end, rt);
+    const oldSeen = x.r.samajh_check && typeof x.r.samajh_check === "object" ? x.r.samajh_check.seen : null;
+    const oldIdea = x.r.new_idea;
+    const seenNow = turn.blocks ? samajhOf(turn).seen : null;
+    const ideaNow = Array.isArray(view.blocks) ? pictureFacts(view.blocks, stopMsg).new_idea : null;
+    if ((oldSeen !== null && oldSeen !== undefined && oldSeen !== seenNow) || (oldIdea !== null && oldIdea !== undefined && oldIdea !== ideaNow)) {
+      c.unpairable++; c.cross_check++; continue;
+    }
+    c.paired++;
+    const key = `${sid}#${span.at}`;
+    if (!groups.has(key)) groups.set(key, { sid, turn, members: [] });
+    groups.get(key).members.push({ x, id, stopMsg });
+  }
+  for (const g of groups.values()) {
+    c.turns++;
+    if (g.members.length > 1) { c.shared++; c.shared_rows += g.members.length; }
+    const first = g.members[0], last = g.members[g.members.length - 1];
+    const sameSession = own.filter((y) => y.r.session_id === g.sid);
+    const prev = sameSession[sameSession.indexOf(first.x) - 1] || null;
+    const prevStep = prev && prev.r.measured && Number.isFinite(prev.r.measured.step) ? prev.r.measured.step : null;
+    const lr = last.x.r;
+    const step = lr.measured && Number.isFinite(lr.measured.step) ? lr.measured.step : (Number.isFinite(lr.step) ? lr.step : null);
+    const concept = typeof lr.concept === "string" ? lr.concept : null;
+    const res = auditTurn({ assistantText: last.stopMsg, userText: String(g.turn.prompt || ""), session: { concept, step }, prevStep });
+    const kept = (res.drifts || []).filter((d) => d.rule === "confusion-is-literal");
+    c.drifts += kept.length;
+    out.push({
+      rebuilt_at: now, rebuilt_from: REBUILT_FROM,
+      supersedes: g.members.map((m) => m.id), of_ts: g.members.map((m) => m.x.r.ts),
+      session_id: g.sid || null, concept, step,
+      // row 1286 (1) / (2): the two ruled choices, NAMED on the row itself
+      shared_turn_source: "the last superseded row (its Stop saw the whole turn)",
+      stop_message_source: "the stop-time view's last text block",
+      user_text_source: "rebuilt-from-transcript",
+      prev_step: prevStep, prev_step_source: prevStep === null ? null : "own-session previous row",
+      drifts_rebuilt: kept.map((d) => d.rule), evidence_rebuilt: kept.map((d) => d.evidence), excerpts_rebuilt: kept.map((d) => d.excerpt),
+      window: { moments: null, reps: null, moments_by_kind: null, why: "a prompt-time state snapshot is in no transcript" },
+      staged: [],
+    });
+  }
+  return { counts: c, rows: out };
+}
+const planLine = (from, to, c) => `rebuild-mismatch · window ${from}..${to} · candidates ${c.candidates} · paired ${c.paired} · turns ${c.turns} (shared ${c.shared}, rows ${c.shared_rows}) · lost ${c.lost} · unpairable ${c.unpairable} (no prompt ${c.no_prompt} · cross-check ${c.cross_check} · unreadable ${c.unreadable}) · already ${c.already} · drifts found ${c.drifts}`;
+const readTranscriptFile = (sid, path) => {
+  try { if (!existsSync(path)) return { lost: true }; } catch { return { lost: true }; }
+  try { return { lines: readFileSync(path, "utf8").split("\n") }; } catch { return { unreadable: true }; }
+};
+// THE VERB. ONE line on stdout, counts only — never a word of his, a concept, a path or a session id.
+function rebuildMain(argv) {
+  const arg = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : undefined; };
+  const from = arg("--from"), to = arg("--to"), apply = argv.includes("--apply");
+  if (!from || !to || !Number.isFinite(Date.parse(from)) || !Number.isFinite(Date.parse(to))) {
+    console.error("teaching_audit rebuild-mismatch: usage — rebuild-mismatch --from <ISO> --to <ISO> [--apply] (both bounds required; no default)");
+    process.exitCode = 2; return;
+  }
+  let logText = "";
+  try { logText = existsSync(LOG) ? readFileSync(LOG, "utf8") : ""; } catch { console.error("teaching_audit rebuild-mismatch: the audit log is unreadable"); process.exitCode = 2; return; }
+  const plan = rebuildPlan({ logText, auditLast: readLast(), from, to, readFile: readTranscriptFile });
+  if (!apply) { console.log(`${planLine(from, to, plan.counts)} · DRY RUN: nothing written`); return; }
+  for (const row of plan.rows) appendLogReal(row);
+  // written is MEASURED, not assumed: the rows whose ids the re-read log now latches (appendLogReal never throws)
+  let after = "";
+  try { after = readFileSync(LOG, "utf8"); } catch { after = ""; }
+  const latched = new Set(after.split("\n").flatMap((l) => { try { const r = JSON.parse(l); return r && r.rebuilt_from === REBUILT_FROM && Array.isArray(r.supersedes) ? r.supersedes : []; } catch { return []; } }));
+  const written = plan.rows.filter((r) => latched.has(r.supersedes[0])).length;
+  console.log(`${planLine(from, to, plan.counts)} · written ${written}`);
+  if (written !== plan.rows.length) process.exitCode = 1;
+}
+
 // IMPORT GUARD (7 Sep 2026). Until today this dispatch ran on IMPORT as well as
 // on spawn — `import("./teaching_audit.mjs")` from any other module printed the
 // usage banner (measured), and under a different argv would have run a COMMAND.
@@ -2973,5 +3134,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
   else if (cmd === "hook") await hookMain();
   else if (cmd === "replay") replayMain(process.argv[3]);
-  else console.log("teaching_audit: hook | report | probe [--clean|--text \"...\"] | seed-terms [--concept <c>] | replay <transcript.jsonl> | selftest");
+  else if (cmd === "rebuild-mismatch") rebuildMain(process.argv.slice(3));   // unit maud43: the one-time rebuild (dry run unless --apply)
+  else console.log("teaching_audit: hook | report | probe [--clean|--text \"...\"] | seed-terms [--concept <c>] | replay <transcript.jsonl> | rebuild-mismatch --from <ISO> --to <ISO> [--apply] | selftest");
 }
