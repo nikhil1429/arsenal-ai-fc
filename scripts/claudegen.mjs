@@ -258,6 +258,7 @@ function parseOut(stdout, prompt, t0) {
     // parse — while threading it would have meant changing the two signatures the
     // WIRE scans below pin, for no extra truth.
     arg_profile: ARG_PROFILE(),
+    total_cost_usd: (() => { try { const c = JSON.parse(stdout).total_cost_usd; return typeof c === "number" && Number.isFinite(c) ? c : null; } catch { return null; } })(),   // unit mjset · forks row 1279 (1): the envelope's own cost, handed back unchanged; null when it has none, never 0
   };
 }
 function parseErr(e, prompt, t0) {

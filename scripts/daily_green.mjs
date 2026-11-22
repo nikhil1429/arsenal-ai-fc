@@ -76,8 +76,28 @@
 // THE CODE SHA (unit mmeter, F2 A / F5): every row this organ appends carries `code_sha`, the HEAD commit of the tree the
 //   meter ran in (git rev-parse HEAD at its root; null when git cannot say). It is a stamp, not a fact of the day: it is
 //   kept OUT of the row's identity, so re-running the same facts on newer code appends nothing (ONE ROW PER DATE holds).
-// MODES: line (default) | --json | --date YYYY-MM-DD | selftest
-// CLI:   node scripts/daily_green.mjs [--json] [--date YYYY-MM-DD] | selftest      exit 0 = 11/11 study day · 3 below · 1 unreadable
+// THE FINAL READ (unit mdayv, forks rows 1195 / 1196 (2) / 1229). Every row carries `read`: "provisional" from every run
+//   but `final`, "final" (+ `final_at`) from the `final` mode, which takes the ONE final read of each IST day that is OVER
+//   (its IST midnight passed) and has none yet, at the first carrier after it (day.mjs start · the conductor MORNING
+//   `meter-final` step — F1 C, both, idempotent: the second finds the row and appends nothing). WRITTEN ONCE: once a day
+//   has a final row, no mode appends another row for it, and a `--date` run prints the final row's line. The line keeps
+//   its head byte for byte and ends `· read provisional` or `· read FINAL` (F10 A).
+//   · WHICH DAYS (F2 B, floor (i)): every day from FINAL_FLOOR (the IST day of the ONE recorded stamp FINAL_FLOOR_STAMP —
+//     the day this unit lands; never 2026-11-13 or older) or the ledger's first date, whichever is later, through
+//     yesterday, oldest first, that has no final row. No row is ever written for a day before the floor. An EMPTY ledger
+//     has no day to finalise (the meter never read one).
+//   · THE SETTLE (F4 B, the ruling over the spec's (a)): a final row is written once, so it waits for its inputs. A day
+//     whose close has not settled — its post_match/<D>.md absent, or a sitting of D open or closed less than the close's
+//     own budget ago (postmatch.mjs autocloseBudget, read from its owner) — gets ONE provisional row marked `unsettled`,
+//     and the NEXT carrier takes it final whatever it reads (the second start at the latest).
+//   · CLAUSES 9-11 in a final read (F3 A) are carried from D's newest row written ON D (they measured the machine on D),
+//     each why suffixed `(carried HH:MM IST)`; with no such row they are read now, marked `(as of now)` as before.
+//   · READ-ONLY on every file but the ledger: it closes no sitting, ends no day, fires no judge, spawns nothing but git.
+//   · THE EXIT of `final` (F7 A): 0 when every asked day has a final row or its one unsettled row (the next carrier's);
+//     1 when the ledger is unreadable or `--through` is not over yet (REFUSED, nothing written). A red DAY is a measured
+//     fact, never a failed step. With CLAUDE_CODE_REMOTE set, `final` writes nothing (F6 A: a cloud clone's ledger is stale).
+// MODES: line (default) | --json | --date YYYY-MM-DD | final [--through YYYY-MM-DD] | selftest
+// CLI:   node scripts/daily_green.mjs [--json] [--date YYYY-MM-DD] | final [--through D] | selftest      exit 0 = 11/11 study day · 3 below · 1 unreadable (final: 0 done · 1 unreadable/refused)
 // ============================================================================
 import { readFileSync, appendFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -88,7 +108,7 @@ import { gitFacts, daemonFacts, suiteFacts, sittingFacts } from "./state.mjs";
 import { supersedeReps } from "./capture.mjs";                     // reps_log's owner defines what a correction means
 import { readLog as rejirahRows, loadCapsules, openRound, relockIndexFrom, intervalsOf } from "./rejirah.mjs";
 import { readingFor } from "./oura_coach.mjs";
-import { KAL_RE } from "./postmatch.mjs";
+import { KAL_RE, autocloseBudget } from "./postmatch.mjs";       // unit mdayv F4 B: the close's own budget, read from its owner
 import { emitRows, REGISTRY_PATH } from "./registry.mjs";
 import { DAEMONS } from "./daemon_watchdog.mjs";
 import { sessionsNamedOn } from "./exchanges.mjs";                  // the archive's own reader: who it names on a day
@@ -361,6 +381,12 @@ const CLAUSES = Object.freeze([
 
 // ── THE LEDGER (this organ's ONE file) ───────────────────────────────────────
 const identity = (row) => JSON.stringify({ date: row.date, study: row.study, clauses: row.clauses });
+// THE FINAL READ (unit mdayv) — the floor is derived from ONE recorded stamp (F2 B (i): the IST day the unit lands; row 1229:
+// never 2026-11-13 or older — the selftest asserts it). A final read never writes a row for a day before it.
+export const FINAL_FLOOR_STAMP = "2026-11-21T06:55:00Z";
+export const FINAL_FLOOR = istDay(FINAL_FLOOR_STAMP);
+const isFinal = (r) => !!(r && r.read === "final");
+const hhmmIst = (iso) => { const t = Date.parse(String(iso || "")); return Number.isFinite(t) ? new Date(t + IST_MS).toISOString().slice(11, 16) : "?"; };
 /** The latest row per date (append order: the last row for a date wins). Exported for the clause witness
  *  ci/witness/mmeter/witness_meter.mjs (unit mmeter): one read path, never a copy. */
 export function latestByDate(rows) {
@@ -401,7 +427,7 @@ function codeSha(root, exec) {
 
 /** THE WITNESS. `fixture` is the ONE root override, passed in-process by selftest() only:
  *  { root, intervals, gitExec }. Production callers pass nothing and read the live tree. */
-async function witness({ date = null, now = new Date(), write = true } = {}, fixture = null) {
+async function witness({ date = null, now = new Date(), write = true, read = "provisional", carry = null, unsettled = null } = {}, fixture = null) {
   const root = fixture ? fixture.root : ROOT;
   const st = join(root, "dressing-room", "state");
   const ledger = fixture ? join(st, "daily_green.jsonl") : LEDGER;
@@ -429,28 +455,92 @@ async function witness({ date = null, now = new Date(), write = true } = {}, fix
     else {
       try { v = c.fn(ctx); } catch (e) { v = UNREADABLE(`${c.key} (${clip(e && e.message, 40)})`); }
     }
+    // F3 A (unit mdayv): a FINAL read carries clauses 9-11 from D's newest row written ON D — they measured the machine on D
+    if (read === "final" && carry && Array.isArray(carry.clauses) && c.n >= 9) {
+      const k = carry.clauses.find((x) => x && x.n === c.n);
+      if (k) return { n: c.n, key: c.key, status: k.status, why: `${String(k.why || "").replace(/ \(as of now\)$/, "")} (carried ${hhmmIst(carry.at)} IST)` };
+    }
     return { n: c.n, key: c.key, status: v.status, why: v.why };
   });
   const reds = clauses.filter((c) => c.status === "RED").length;
   const greens = clauses.filter((c) => c.status === "GREEN").length;
   const row = { date: day, study: sd.known ? sd.study : null, study_why: sd.why, green: reds === 0 && sd.known === true, greens, reds, clauses,
-    code_sha: codeSha(root, fixture && fixture.gitExec ? fixture.gitExec : execFileSync) };
+    code_sha: codeSha(root, fixture && fixture.gitExec ? fixture.gitExec : execFileSync),
+    read: read === "final" ? "final" : "provisional", ...(read === "final" ? { final_at: now.toISOString() } : {}), ...(unsettled ? { unsettled } : {}) };
 
   const prior = readJsonl(ledger);
   if (prior.born && prior.error) return { ok: false, why: `unreadable: daily_green.jsonl (${prior.error})`, row };
   const rows = prior.rows || [];
   const last = latestByDate(rows).get(day);
+  // WRITTEN ONCE (unit mdayv): a day that has a final row takes no later row from any mode; its line is the final row's
+  const kept = rows.filter((r) => r && r.date === day && isFinal(r)).pop();
+  if (kept) { const streak = streakFrom(rows, day); return { ok: true, line: lineOf(kept, streak), row: kept, streak, appended: false, kept: true }; }
   let appended = false;
-  if (write && (!last || identity(last) !== identity(row))) {
+  if (write && (read === "final" || unsettled || !last || identity(last) !== identity(row))) {
     mkdirSync(dirname(ledger), { recursive: true });
     appendFileSync(ledger, JSON.stringify({ at: now.toISOString(), ...row }) + "\n");
-    rows.push(row);
+    rows.push({ at: now.toISOString(), ...row });
     appended = true;
   }
   const streak = streakFrom(write ? rows : [...rows, row], day);
+  return { ok: true, line: lineOf(row, streak), row, streak, appended };
+}
+/** THE LINE — its head byte for byte as before; ONE trailing token says whether the row is the day's verdict (F10 A). */
+function lineOf(row, streak) {
   const token = (c) => `${c.n}.${c.key} ${c.status === "GREEN" ? "G" : c.status === "RED" ? `R(${clip(c.why, 44)})` : "N-A"}`;
-  const line = `DAILY GREEN ${day} IST · ${greens}/11 · streak ${streak} study day(s) · ${clauses.map(token).join(" · ")}`;
-  return { ok: true, line, row, streak, appended };
+  return `DAILY GREEN ${row.date} IST · ${row.greens}/11 · streak ${streak} study day(s) · ${row.clauses.map(token).join(" · ")} · read ${isFinal(row) ? "FINAL" : "provisional"}`;
+}
+
+/** THE SETTLE (F4 B): has the close of `day` settled? Read-only over the sitting organ's and the close's own files.
+ *  Unsettled when post_match/<day>.md is absent, or a sitting of the day is open, or one closed less than the close's own
+ *  budget (postmatch.mjs autocloseBudget) before `now`. */
+function settleOf(st, day, now) {
+  if (!existsSync(join(st, "post_match", `${day}.md`))) return { settled: false, why: `no post_match/${day}.md` };
+  const closes = [];
+  const s = readJsonFile(join(st, "sitting.json"));
+  if (s.born && !s.error && s.json && s.json.id && s.json.opened_at) {
+    const from = istDay(s.json.opened_at), to = s.json.closed_at ? istDay(s.json.closed_at) : todayIst(now);
+    if (from && to && from <= day && day <= to) {
+      if (!s.json.closed_at) return { settled: false, why: `sitting ${s.json.id} of ${day} still open` };
+      closes.push(Date.parse(s.json.closed_at));
+    }
+  }
+  const rv = readJsonl(join(st, "sitting_reviews.jsonl"));
+  for (const r of (rv.rows || [])) if (r && r.kind === "sitting_review" && (istDay(r.opened_at) === day || istDay(r.closed_at) === day)) closes.push(Date.parse(r.closed_at));
+  const lastClose = Math.max(-Infinity, ...closes.filter(Number.isFinite));
+  if (Number.isFinite(lastClose) && now.getTime() - lastClose < autocloseBudget()) return { settled: false, why: `sitting of ${day} closed ${hhmmIst(new Date(lastClose).toISOString())} IST, inside the close's own budget` };
+  return { settled: true, why: "settled" };
+}
+
+/** THE FINAL READ (unit mdayv): every IST day from the floor through `through` (default yesterday) with no final row.
+ *  Returns { ok, refused?, why?, lines, written, kept, deferred }. Same ONE root override as witness(). */
+async function finalRead({ through = null, now = new Date() } = {}, fixture = null) {
+  const root = fixture ? fixture.root : ROOT;
+  const st = join(root, "dressing-room", "state");
+  const ledger = fixture ? join(st, "daily_green.jsonl") : LEDGER;
+  const yesterday = addDays(todayIst(now), -1);
+  const T = through || yesterday;
+  if (T > yesterday) return { ok: false, refused: true, why: `final: REFUSED — ${T} is not over yet (a day has its final read only after its IST midnight; the newest is ${yesterday})`, lines: [] };
+  const prior = readJsonl(ledger);
+  if (prior.born && prior.error) return { ok: false, why: `unreadable: daily_green.jsonl (${prior.error})`, lines: [] };
+  const rows = (prior.rows || []).filter((r) => r && /^\d{4}-\d{2}-\d{2}$/.test(String(r.date)));
+  const out = { ok: true, lines: [], written: [], kept: [], deferred: [], floor: FINAL_FLOOR, through: T };
+  if (!rows.length) return out;   // an EMPTY ledger: the meter never read a day, so there is no day to finalise
+  const first = rows.map((r) => r.date).sort()[0];
+  for (let d = first > FINAL_FLOOR ? first : FINAL_FLOOR; d <= T; d = addDays(d, 1)) {
+    const ofDay = rows.filter((r) => r.date === d);
+    if (ofDay.some(isFinal)) { out.kept.push(d); continue; }
+    const set = settleOf(st, d, now);
+    const unsettled = !set.settled && !ofDay.some((r) => r.unsettled) ? set.why : null;   // the NEXT carrier takes it final
+    const carry = ofDay.filter((r) => istDay(r.at) === d).pop() || null;
+    const w = await witness({ date: d, now, read: unsettled ? "provisional" : "final", carry, unsettled }, fixture);
+    if (!w.ok) return { ...out, ok: false, why: w.why };
+    rows.push(w.row);
+    (unsettled ? out.deferred : out.written).push(d);
+    out.lines.push(w.line);
+  }
+  if (out.kept.includes(T)) out.lines.push(lineOf(rows.filter((r) => r.date === T && isFinal(r)).pop(), streakFrom(rows, T)));   // confirmed, never re-read
+  return out;
 }
 
 // ── SELFTEST — fixture state dirs under the OS temp dir, never the live tree ─
@@ -781,6 +871,95 @@ async function selftest() {
       latestByDate([{ date: DAY, greens: 6 }, { date: "x" }, { date: DAY, greens: 11 }]).get(DAY).greens === 11 && latestByDate([{ date: "x" }]).size === 0);
   }
 
+  // ── THE FINAL READ (unit mdayv, forks rows 1195 / 1196 (2) / 1229) — each law in-process on a fixture clock ──
+  {
+    const held = (f) => { try { return !!f(); } catch { return false; } };
+    const V = {};
+    try {
+      const FD = FINAL_FLOOR;                                    // the floor day itself is a day the floor allows
+      const on = (day, hhmm) => new Date(Date.parse(`${day}T${hhmm}:00+05:30`));
+      const pm = (day) => ({ [`post_match/${day}.md`]: `POST-MATCH · ${day}\n\nRESULT: HIT.\n\nKAL-LINE → start with axis b\n` });
+      const sit = (day, closed = at(day, "11:00")) => ({ "sitting.json": JSON.stringify({ id: `s-${day}`, opened_at: at(day, "09:00"), closed_at: closed }) });
+      const wd = (when, ports = {}) => ({ "daemon_watchdog.json": JSON.stringify({ at: when.toISOString(), ports: { ...Object.fromEntries(DAEMONS.map((d) => [d.name, true])), ...ports }, unknown: [] }) });
+      const plant = (f, files) => { for (const [k, v] of Object.entries(files)) { mkdirSync(dirname(join(f.st, k)), { recursive: true }); writeFileSync(join(f.st, k), v); } };
+      const led = (f) => readJsonl(join(f.st, "daily_green.jsonl")).rows || [];
+      const W = (f, o) => witness(o, fx(f.root));
+      const F = (f, o) => finalRead(o, fx(f.root));
+      // A · the mark, the final at the next day, written once
+      const a = mk({ ...sit(FD), ...pm(FD) });
+      V.prov = await W(a, { date: FD, now: on(FD, "15:48") });
+      V.fin1 = await F(a, { now: on(addDays(FD, 1), "09:00") });
+      V.ledA1 = led(a);
+      V.fin2 = await F(a, { now: on(addDays(FD, 1), "09:30") });
+      V.plainD = await W(a, { date: FD, now: on(addDays(FD, 1), "10:00") });
+      V.ledA2 = led(a);
+      V.refused = await F(a, { through: addDays(FD, 1), now: on(addDays(FD, 1), "10:00") });
+      V.ledA3 = led(a);
+      // C · skipped days, oldest first, never before the floor
+      const c = mk({ ...sit(addDays(FD, 1)), ...pm(FD), ...pm(addDays(FD, 1)), ...pm(addDays(FD, 2)) });
+      await W(c, { date: addDays(FD, -1), now: on(addDays(FD, -1), "15:00") });
+      await W(c, { date: FD, now: on(FD, "15:00") });
+      await W(c, { date: addDays(FD, 1), now: on(addDays(FD, 1), "15:00") });
+      V.gap = await F(c, { now: on(addDays(FD, 3), "09:00") });
+      V.ledC = led(c);
+      // D · the settle (F4 B): no post_match → ONE unsettled provisional row, final at the next carrier; inside the budget; open
+      const d = mk({ ...sit(FD), [`post_match/${DAY}.md`]: null });
+      await W(d, { date: FD, now: on(FD, "15:48") });
+      V.def1 = await F(d, { now: on(addDays(FD, 1), "09:00") });
+      V.ledD1 = led(d);
+      V.def2 = await F(d, { now: on(addDays(FD, 1), "09:01") });
+      V.ledD2 = led(d);
+      const e = mk({ ...sit(FD, on(addDays(FD, 1), "08:59").toISOString()), ...pm(FD) });
+      await W(e, { date: FD, now: on(FD, "15:48") });
+      V.budget = await F(e, { now: on(addDays(FD, 1), "09:00") });
+      const o = mk({ ...sit(FD, null), ...pm(FD) });
+      await W(o, { date: FD, now: on(FD, "15:48") });
+      V.open = await F(o, { now: on(addDays(FD, 1), "09:00") });
+      // E · clauses 9-11 carried from D's own row (F3 A), read now when none
+      const g2 = mk({ ...sit(FD), ...pm(FD), ...wd(on(FD, "15:40"), { cortex: false }) });
+      await W(g2, { date: FD, now: on(FD, "15:48") });
+      plant(g2, wd(on(addDays(FD, 1), "08:55")));
+      V.carry = await F(g2, { now: on(addDays(FD, 1), "09:00") });
+      V.ledE = led(g2);
+      const h = mk({ ...sit(FD), ...pm(FD) });
+      await W(h, { date: addDays(FD, -1), now: on(addDays(FD, -1), "15:00") });   // a ledger with a row, none of FD itself
+      V.nowRead = await F(h, { now: on(addDays(FD, 1), "09:00") });
+      V.ledH = led(h);
+      // G · an empty ledger has no day to finalise
+      const z = mk({ ...sit(FD), ...pm(FD) });
+      V.empty = await F(z, { now: on(addDays(FD, 1), "09:00") });
+      V.emptyBorn = existsSync(join(z.st, "daily_green.jsonl"));
+      V.FD = FD;
+    } catch (err) { V.err = String(err && err.stack || err).slice(0, 300); }
+    const ofDay = (rows, day) => rows.filter((r) => r.date === day);
+    const HEAD = /^DAILY GREEN \d{4}-\d{2}-\d{2} IST · \d+\/11 · /;
+    assert("MDAYV PROVISIONAL MARK — every run but `final` writes read:\"provisional\"; the line keeps its head and ends `· read provisional`",
+      held(() => V.prov.row.read === "provisional" && !("final_at" in V.prov.row) && HEAD.test(V.prov.line) && / · read provisional$/.test(V.prov.line)), V.err || (V.prov && V.prov.line));
+    assert("MDAYV FINAL — the first carrier after D writes ONE row of D with read:\"final\" and final_at, even on identical facts; its line ends `· read FINAL`",
+      held(() => V.fin1.ok && V.fin1.written.join() === V.FD && ofDay(V.ledA1, V.FD).length === 2 && ofDay(V.ledA1, V.FD).at(-1).read === "final"
+        && typeof ofDay(V.ledA1, V.FD).at(-1).final_at === "string" && / · read FINAL$/.test(V.fin1.lines[0])), V.err || JSON.stringify(V.fin1 && { w: V.fin1.written, d: V.fin1.deferred }));
+    assert("MDAYV ONCE — a second `final` and a plain `--date D` append NOTHING; both print the final row's line (`read FINAL`); the final row stays D's last",
+      held(() => V.fin2.written.length === 0 && V.fin2.kept.includes(V.FD) && / · read FINAL$/.test(V.fin2.lines.at(-1)) && V.plainD.appended === false && V.plainD.kept === true
+        && / · read FINAL$/.test(V.plainD.line) && V.ledA2.length === V.ledA1.length && ofDay(V.ledA2, V.FD).at(-1).read === "final"), V.err || (V.plainD && V.plainD.line));
+    assert("MDAYV NOT BEFORE IT IS OVER — `final --through <today>` is REFUSED and writes nothing",
+      held(() => V.refused.ok === false && V.refused.refused === true && /REFUSED/.test(V.refused.why) && V.ledA3.length === V.ledA2.length), V.err || (V.refused && V.refused.why));
+    assert("MDAYV SKIPPED DAYS — every day from the floor through yesterday with no final row is read final, oldest first; a day before the floor never is",
+      held(() => V.gap.written.join() === [V.FD, addDays(V.FD, 1), addDays(V.FD, 2)].join() && !ofDay(V.ledC, addDays(V.FD, -1)).some((r) => r.read === "final")
+        && ofDay(V.ledC, addDays(V.FD, 2)).length === 1 && ofDay(V.ledC, addDays(V.FD, 2))[0].read === "final"), V.err || JSON.stringify(V.gap && V.gap.written));
+    assert("MDAYV FLOOR — FINAL_FLOOR is the IST day of the ONE recorded stamp, and later than 2026-11-13 (that day can never move)",
+      FINAL_FLOOR === istDay(FINAL_FLOOR_STAMP) && FINAL_FLOOR > "2026-11-13", FINAL_FLOOR);
+    assert("MDAYV SETTLE (F4 B) — D with no post_match file: the first carrier writes ONE provisional row marked unsettled, no final; the NEXT carrier takes it final",
+      held(() => V.def1.deferred.join() === V.FD && V.def1.written.length === 0 && ofDay(V.ledD1, V.FD).at(-1).read === "provisional" && /no post_match/.test(ofDay(V.ledD1, V.FD).at(-1).unsettled)
+        && V.def2.written.join() === V.FD && ofDay(V.ledD2, V.FD).at(-1).read === "final"), V.err || JSON.stringify(V.def1 && { d: V.def1.deferred, w: V.def1.written }));
+    assert("MDAYV SETTLE (F4 B) — a sitting of D closed inside the close's own budget (postmatch.mjs autocloseBudget) or still open stays provisional",
+      held(() => V.budget.deferred.join() === V.FD && V.budget.written.length === 0 && V.open.deferred.join() === V.FD && V.open.written.length === 0), V.err || JSON.stringify(V.budget && V.budget.deferred));
+    assert("MDAYV CARRY (F3 A) — a final read carries clauses 9-11 from D's newest row written ON D, why `(carried HH:MM IST)`; with none they read now `(as of now)`",
+      held(() => { const f = ofDay(V.ledE, V.FD).at(-1), n = ofDay(V.ledH, V.FD).at(-1); return f.read === "final" && f.clauses[8].status === "RED" && /^down: cortex \(carried 15:48 IST\)$/.test(f.clauses[8].why)
+        && n.read === "final" && / \(as of now\)$/.test(n.clauses[8].why); }), V.err || JSON.stringify(V.ledE && ofDay(V.ledE, V.FD).at(-1).clauses[8]));
+    assert("MDAYV EMPTY — an empty ledger has no day to finalise: nothing written, the ledger is not born",
+      held(() => V.empty.ok && V.empty.written.length === 0 && V.emptyBorn === false), V.err || "");
+  }
+
   // ── HERMETIC + ONE WRITE ──
   const liveLedgerAfter = readFile(LEDGER);
   assert("HERMETIC — the live ledger is byte-identical after the whole selftest", JSON.stringify(liveLedgerBefore) === JSON.stringify(liveLedgerAfter));
@@ -800,6 +979,17 @@ async function main() {
   const args = process.argv.slice(2);
   const mode = args[0] || "line";
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
+  if (mode === "final") {   // THE FINAL READ (unit mdayv) — its own exit (F7 A), never the strict exit of a day
+    if (process.env.CLAUDE_CODE_REMOTE) { console.log("DAILY GREEN · final: cloud session — the final read is his laptop's (nothing written)"); process.exit(0); }   // F6 A
+    const ti = args.indexOf("--through");
+    const through = ti >= 0 ? args[ti + 1] : null;
+    if (ti >= 0 && !/^\d{4}-\d{2}-\d{2}$/.test(String(through))) { console.log("daily_green: final --through needs YYYY-MM-DD (IST)"); process.exit(1); }
+    const f = await finalRead({ through });
+    for (const l of f.lines) console.log(l);
+    if (!f.ok) { console.log(`DAILY GREEN · ${f.why}`); process.exit(1); }
+    console.log(`DAILY GREEN · final through ${f.through} · floor ${f.floor} · written ${f.written.length ? f.written.join(",") : "none"} · kept ${f.kept.length} · provisional (unsettled, the next carrier's) ${f.deferred.length ? f.deferred.join(",") : "none"}`);
+    process.exit(0);
+  }
   const di = args.indexOf("--date");
   const date = di >= 0 ? args[di + 1] : null;
   if (di >= 0 && !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) { console.log("daily_green: --date needs YYYY-MM-DD (IST)"); process.exit(1); }

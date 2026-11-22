@@ -30,6 +30,13 @@
 //         ready(): a clause with no keeper answering kills what is left, waits for its planted port to bind (a-2, bounded
 //         by BOOT + SLACK, one `PORT_HELD` machine line), starts its OWN keeper and waits for it as a BOOT (a-1).
 //   KEPT, none loosened (row 1135 (2)): every DEFERRED wait, every retire wait, the lane and drain waits, their bounds.
+// UNIT mt1 (forks row 1276, witness-only, re-cut in place, BASE kept). Every clause whose last wait was the SINGLE-SAMPLE
+// shape (the retire AND the respawned worker inside one first-boot sample + SLACK: ~~`waitFor(<a new worker>, BOUND)`~~)
+// takes T2's repair (rows 1135 / 1139, unit mrv): the RETIRE keeps its bound (a RETIRING line, or the keeper's clean-retire
+// `worker exit … respawn now` line, within BOOT + SLACK of the act that retires it), and the RESPAWNED worker is a BOOT that
+// ends on an event: it answers · a worker exit that is not a clean retire, or a second one · "keeper waiting" · the
+// keeper's exit. The clause prints `retire <ms> · respawn <ms>`, so a later red carries its own measurement. No claim about
+// the code is loosened: what each clause asserts is unchanged, and every DEFERRED / drain / lane wait keeps its bound.
 // LAST LINE: GREEN MLV2 <what> · <n> clause(s) (exit 0) or RED MLV2 · <clauses> (exit 1)
 // ============================================================================
 import { mkdtempSync, writeFileSync, readFileSync, appendFileSync, rmSync, readdirSync, cpSync, existsSync, statSync, symlinkSync } from "node:fs";
@@ -175,12 +182,28 @@ const POLL = Number((/setInterval\(\(\) => \{ retireIfArmed\(\); fire\(\); \}, (
 const BEHAVIOUR = [];
 const behaviour = async (id, fn) => { await clause(id, fn); BEHAVIOUR.push(results[results.length - 1]); };
 
+// UNIT mt1 (row 1276): the retire keeps its bound; the respawn is a BOOT that ends on an event (T2's shape)
+const retireThenBoot = async (n0, isNew) => {
+  const w0 = Date.now(), end = w0 + BOUND; let retireAt = null;
+  for (;;) {
+    const s2 = await isNew(), now = Date.now();
+    if (retireAt === null && (linesSince(n0, /RETIRING/) || linesSince(n0, /worker exit.*respawn now$/))) retireAt = now;
+    if (s2) { if (retireAt === null) retireAt = now; return { s2, why: `retire ${retireAt - w0} ms · respawn ${now - retireAt} ms` }; }
+    if (retireAt === null && now > end) return { s2: null, why: `no RETIRING line within ${BOUND} ms of the act` };
+    const ex = out.slice(n0).filter((l) => /worker exit/.test(l));
+    if (ex.length > 1 || ex.some((l) => !/respawn now$/.test(l)) || linesSince(n0, /keeper waiting/) || keeper.exitCode != null || keeper.signalCode != null)
+      return { s2: null, why: `retire ${retireAt === null ? "unseen" : `${retireAt - w0} ms`} · the respawn did not come up (${(ex.pop() || "keeper waiting or exited").slice(0, 120)})` };
+    await sleep(SLACK);
+  }
+};
 await behaviour("C1 IDLE · no lane in flight: a closure write retires the worker and the new bytes serve", async () => {
   const s1 = await portUp(); if (!s1) return { ok: false, why: "cannot run: no daemon answers its planted port" };
+  const nR = out.length;
   touchClosure();
   const wrote = statSync(ENTRY).mtimeMs;
-  const s2 = await waitFor(async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }, BOUND);
-  return { ok: !!s2 && Date.parse(s2.booted_at) >= Math.floor(wrote) - 1, why: s2 ? `pid ${s1.pid} → ${s2.pid}` : `the same pid ${s1.pid} after ${BOUND} ms (no retire)` };
+  // UNIT mt1 (row 1276): ~~const s2 = await waitFor(async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }, BOUND);~~
+  const rb = await retireThenBoot(nR, async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }), s2 = rb.s2;
+  return { ok: !!s2 && Date.parse(s2.booted_at) >= Math.floor(wrote) - 1, why: s2 ? `pid ${s1.pid} → ${s2.pid} · ${rb.why}` : `the same pid ${s1.pid} · ${rb.why} (no retire)` };
 });
 
 await behaviour("C2 LANE · a lane in flight defers the retire; its close lets it retire; the moment reached home exactly once", async () => {
@@ -196,12 +219,14 @@ await behaviour("C2 LANE · a lane in flight defers the retire; its close lets i
   touchClosure();
   const deferred = await waitFor(async () => linesSince(n, /retire DEFERRED/), BOUND);
   const during = await portUp();
+  const nR = out.length;
   hold = false; for (const a of parked.splice(0)) a();
-  const s2 = await waitFor(async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }, BOUND);
+  // UNIT mt1 (row 1276): ~~const s2 = await waitFor(async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }, BOUND);~~
+  const rb = await retireThenBoot(nR, async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }), s2 = rb.s2;
   if (s2) await sleep(BOUND);   // the new worker's boot dispatch has run: a re-dispatch would be counted below
   const times = posts.filter((p) => p.moment_id === mid).length;
   return { ok: !!deferred && during && during.pid === s1.pid && !!s2 && times === 1,
-    why: `${deferred ? "DEFERRED" : "no DEFERRED line"} with the lane in flight · pid ${s1.pid} → ${during && during.pid} · after the lane closed → ${s2 ? s2.pid : "no retire"} · the moment reached home ${times} time(s)` };
+    why: `${deferred ? "DEFERRED" : "no DEFERRED line"} with the lane in flight · pid ${s1.pid} → ${during && during.pid} · after the lane closed → ${s2 ? s2.pid : "no retire"} (${rb.why}) · the moment reached home ${times} time(s)` };
 });
 
 await behaviour("C3 JUDGE · a held judge port defers the retire; freed, the next write retires", async () => {
@@ -214,17 +239,21 @@ await behaviour("C3 JUDGE · a held judge port defers the retire; freed, the nex
   const deferred = await waitFor(async () => linesSince(n, /retire DEFERRED.*judge/), BOUND);
   const mid = await portUp();
   await new Promise((r) => judge.close(r));
+  const nR = out.length;
   touchClosure();
-  const s2 = await waitFor(async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }, BOUND);
-  return { ok: !!deferred && mid && mid.pid === s1.pid && !!s2, why: `${deferred ? "DEFERRED naming the judge" : "no DEFERRED line"} · held pid ${s1.pid} → ${mid && mid.pid} · freed → ${s2 ? s2.pid : "no retire"}` };
+  // UNIT mt1 (row 1276): ~~const s2 = await waitFor(async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }, BOUND);~~
+  const rb = await retireThenBoot(nR, async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }), s2 = rb.s2;
+  return { ok: !!deferred && mid && mid.pid === s1.pid && !!s2, why: `${rb.why} · ${deferred ? "DEFERRED naming the judge" : "no DEFERRED line"} · held pid ${s1.pid} → ${mid && mid.pid} · freed → ${s2 ? s2.pid : "no retire"}` };
 });
 
 await behaviour("K5 DOOR · his restart door exits as a retire and the keeper brings the fresh build up", async () => {
   const s1 = await ready(); /* UNIT mrv (I3): ~~const s1 = await portUp(); if (!s1)~~ */ if (!s1) return { ok: false, why: `cannot run: no daemon up · ${READY_WHY}` };
   let r = {};
+  const nR = out.length;
   try { r = await (await call(CPORT, "/restart", { method: "POST" })).json(); } catch (e) { r = { error: String(e.message || e) }; }
-  const s2 = await waitFor(async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }, BOUND);
-  return { ok: r.armed === true && !!s2, why: `armed ${r.armed} · pid ${s1.pid} → ${s2 ? s2.pid : `NOTHING answers :${CPORT} (the clean stop: the unit is down)`}` };
+  // UNIT mt1 (row 1276): ~~const s2 = await waitFor(async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }, BOUND);~~
+  const rb = await retireThenBoot(nR, async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }), s2 = rb.s2;
+  return { ok: r.armed === true && !!s2, why: `armed ${r.armed} · ${rb.why} · pid ${s1.pid} → ${s2 ? s2.pid : `NOTHING answers :${CPORT} (the clean stop: the unit is down)`}` };
 });
 
 await killTree(keeper);
