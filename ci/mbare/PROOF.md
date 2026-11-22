@@ -228,3 +228,37 @@ bound. That is a fork (K8, below), not a timeout to raise: this seat types no bu
   is a redesign that needs a ruling on what the witness may drop.
 
 CHECKPOINT · merge 4395471 (tip 7825664) of main 7bf008b · legs (run 44877900695): hermetic twice node 22 success · node 24 success · npm test node 22 / node 24 cancelled at the 1h job bound (K8) · 21 Nov 2026
+
+## 10. The runner M order (architect row 1300 (2), 22 Nov 2026): main 84cbc03 merged, the four train reds explained
+
+- `git fetch origin` · `git merge --no-edit origin/main` (84cbc03) → merge commit `cc76f31`, a merge, no rebase, no force push.
+  **Conflicted files: none**; every landed line of every other unit kept. `ci/mbare/BASE` is now `84cbc03126eddb85c7d5cf54b51610068800315c`.
+- The train car `land/mbare` 7f99aa5 carries `scripts/organism_test.mjs` **byte-equal** to this merge's (`git diff cc76f31 7f99aa5 --
+  scripts/organism_test.mjs ci/mbare` lists only `ci/mbare/BASE`, 22 Nov 2026). No other `land/*` head carries the guard.
+
+**The four reds, explained.** `RED MBARE · REACH · NEVER-A-PASS · TRANSPARENT · RETHROW` is, clause for clause, the witness's
+reading of a tree whose laws mode has **no guard that fires on the empty plant** — the BASE signature (row "witness BASE" below):
+REACH (the mode threw before its end), NEVER-A-PASS (0 guard reds), TRANSPARENT ("the guard NEVER fired on Z(org)"), RETHROW (the
+unplanted Z(org) also stopped). All four follow from ONE fact: Z(org) stopped at a throw the guard did not catch as an absent input,
+or never got past its bound. They are not four defects.
+- On Linux, the train car's own bytes read GREEN on all four (`witness_mbare.mjs --org <7f99aa5> --base-org <5301f15>` →
+  `RED MBARE · BOUND` only, the tolerated seat-time id, 22 Nov 2026). So the laptop red is not in the merged `organism_test.mjs`
+  bytes; it is the laptop's run. Two mechanisms give exactly this signature and nothing on Linux can tell them apart:
+  (i) Z(org) THREW at a block the guard does not wrap, or with an error the guard rightly refuses to call an input (a Windows-only
+  error on the bare plant); (ii) the laws runs were KILLED at the tree's bound before the first guarded block.
+- **The witness's defect:** its reds did not say which. Fixed (own file): every run now prints one `stop ·` line — KILLED (ms
+  against the bound), THREW (the MODE red's first detail line, the plant path masked: organ code text, never a state byte), or
+  ended. A re-run on the laptop names its cause in one line. Also fixed in the planter (own file): on Windows the env keeps ONE PATH
+  key (`Path`), where it used to add a second `PATH` beside it.
+- **Open for the runner:** the laptop's four `stop ·` lines from a re-run of this tip settle (i) vs (ii); not settled here.
+
+| run on the merge `661a926` (22 Nov 2026, linux) | last line |
+|---|---|
+| `witness_mbare.mjs --org <661a926> --base-org <84cbc03>` (build) | `GREEN MBARE the laws mode passes a bare state dir by naming each blocked input, and changes nothing where the inputs exist · 4 clause(s)` |
+| `witness_mbare.mjs --org <84cbc03> --base-org <84cbc03>` (base) | `RED MBARE · REACH · NEVER-A-PASS · TRANSPARENT · RETHROW` |
+| `run_mutants_mbare.mjs --org <661a926> --base-org <84cbc03>` | `run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN` (control unchanged) |
+| `ORGANISM_TEST_PROFILE=hermetic GITHUB_ACTIONS=true GITHUB_WORKSPACE=<clone> node scripts/organism_test.mjs witnesses` at `661a926`, 22 Nov 2026 | `organism_test: 135 passed, 0 failed · ruled 0 · UNRULED 0` · 64 units `GREEN at head against its BASE`, mbare among them (17.1 s) |
+
+Main re-read at the checkpoint (`git fetch origin main`, 22 Nov 2026): still `84cbc03`, an ancestor of this tip, so no second merge.
+
+CHECKPOINT · runner M order (row 1300 (2)) · merge cc76f31 of main 84cbc03 · BASE 84cbc03 · witness build GREEN 4 clause(s) / base RED 4 · mutants 4 of 4 · WITNESSES 135 passed 0 failed (64 units GREEN) · the four train reds are one cause (Z(org) stopped before a guard fired), not reproduced on linux on the same bytes; the stop line now names it · 22 Nov 2026
