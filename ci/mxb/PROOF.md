@@ -1,3 +1,5 @@
+CHECKPOINT · MERGED at 2026-11-22 (row 1300 (2)) · merge sha d4c6027 (5bfa45a + main 84cbc03126eddb85c7d5cf54b51610068800315c) · BASE 84cbc03 · witness RED base / GREEN build · mutants 15 of 15 · WITNESSES 64 units, 135 passed 0 failed · gates GREEN (checkJs 296)
+
 CHECKPOINT · MERGED at 2026-11-21T08:13Z (forks rows 1233 (2) / 1236) · merge sha b3f2cf7638d37a601545680ef0d32f0639eb3260 (e2cbcf0 + main 7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f) · BASE 7bf008b · conflicted files: NONE · witness base: RED MXB · W1 W2 W3 W4 W5 W6 W7 W11 · witness build: GREEN MXB … LF and CRLF · 13 clause(s) · mutants: run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN · legs of b3f2cf7 (run 44880052649) at 2026-11-21T08:13Z: npm test · node 22 in_progress · npm test · node 24 queued · hermetic twice · node 22 queued · hermetic twice · node 24 queued — not yet judged, none red; no retry
 
 CHECKPOINT · MERGED at 2026-11-20T01:36Z (row 1172) · merged tip 54095396ce874e295254ac524d0ecc6ee44cd65e (merge of 129917e + main 5759cce) · BASE 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90 · resolution hunks: NONE (a clean merge; scripts/organism_test.mjs and package.json are main's whole, this unit touches neither; scripts/xray.mjs main blob 47b9de0 = fb42118's, ours 157a8f0) · witness base: RED MXB · W1 W2 W3 W4 W5 W6 W7 W11 · witness build: GREEN MXB … LF and CRLF · 13 clause(s) · mutants: run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN · STOPPED here (row 1172 (5))
@@ -202,4 +204,21 @@ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (merged tree):
 organism_test: 166 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)
 # 2026-11-21 — curl GET /commits/b3f2cf7638d37a601545680ef0d32f0639eb3260/check-runs (no token), run 44880052649
 npm test · node 22 in_progress · npm test · node 24 queued · hermetic twice · node 22 queued · hermetic twice · node 24 queued
+```
+
+## 14 · The merge of main 84cbc03 (row 1300 (2), 2026-11-22)
+
+- Merged into this BUILD branch: no conflict; main never touched scripts/xray.mjs nor ci/mxb. BASE re-keyed to 84cbc03.
+
+```
+# 2026-11-22 — git merge --no-edit origin/main (84cbc03126eddb85c7d5cf54b51610068800315c)  ->  d4c6027
+witness on BASE (plant of 84cbc03): RED MXB · W1 W2 W3 W4 W5 W6 W7 W11  (exit 1)
+witness on BUILD (merged tree)     : GREEN MXB the six Q6 blindnesses resolved by the five rules + the guard, no writer invented, the NUL asserts state main, LF and CRLF · 13 clause(s)  (exit 0)
+run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN  (exit 0)
+ORGANISM_TEST_PROFILE=hermetic GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo> node scripts/organism_test.mjs witnesses (merged tree):
+  witness ‹mxb› 28.2 s · GREEN MXB … · 13 clause(s) · ok WITNESS ‹mxb› · GREEN at head against its BASE
+  ok WITNESSES · 64 unit(s) judged in 1945.9 s
+organism_test: 135 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)
+node scripts/gates.mjs: other checkJs diagnostics 296 (baseline 296, may only fall)
+gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides, and every schema'd state file matches
 ```
