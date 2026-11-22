@@ -10,7 +10,10 @@
 // MUTANTS:
 //   M1 LAND   · the land/** trigger dropped (`"!land/**"` appended to the push branches) — row 1256 (2)'s one named mutant.
 //   M2 MAIN   · main dropped (`"!main"` appended).
-//   M3 IGNORE · the ignore removed (the push branches back to the match-all alone).
+//   M3 IGNORE · the ignore removed ~~(the push branches back to the match-all alone)~~ RE-CUT by unit mq3: the two mciq
+//              negations (superseded/**, claude/*-queue) dropped, every other pattern kept — so it is RED by IGNORE alone.
+//   M4 BUILD  · the old list restored (unit mq3, row 1289 (1)): `["**", "!superseded/**", "!claude/*-queue"]`, so a build
+//              and a spec tip draw a run again.
 // LAST LINE: `run_mutants: k of n mutant(s) RED by the clause that names them · control GREEN|RED` (exit 0 iff k = n and
 //   the control is GREEN).
 // ----------------------------------------------------------------------------------------------------------------------
@@ -25,16 +28,18 @@ const WITNESS = join(HERE, "witness_mciq.mjs");
 const WF = join(".github", "workflows", "suite.yml");
 const a = process.argv.slice(2), arg = (k) => { const i = a.indexOf(k); return i >= 0 ? a[i + 1] : null; };
 const org = arg("--org") ? resolve(String(arg("--org"))) : null, baseOrg = arg("--base-org") ? resolve(String(arg("--base-org"))) : null;
-if (!org || !baseOrg || !existsSync(join(org, WF)) || !existsSync(join(baseOrg, WF))) { console.log("run_mutants: 0 of 3 mutant(s) RED by the clause that names them · control RED (--org and --base-org must each hold suite.yml)"); process.exit(1); }
+if (!org || !baseOrg || !existsSync(join(org, WF)) || !existsSync(join(baseOrg, WF))) { console.log("run_mutants: 0 of 4 mutant(s) RED by the clause that names them · control RED (--org and --base-org must each hold suite.yml)"); process.exit(1); }
 const min = Number((/timeout-minutes:\s*(\d+)/.exec(readFileSync(join(org, WF), "utf8")) || [])[1]);
-if (!(min > 0)) { console.log("run_mutants: 0 of 3 mutant(s) RED by the clause that names them · control RED (no timeout-minutes in the build's suite.yml)"); process.exit(1); }
+if (!(min > 0)) { console.log("run_mutants: 0 of 4 mutant(s) RED by the clause that names them · control RED (no timeout-minutes in the build's suite.yml)"); process.exit(1); }
 
 const PUSH = /^(\s*branches:\s*)\[([^\]\r\n]*)\]/m;
 /** @type {{id: string, clause: string, what: string, edit: (t: string) => string}[]} */
 const MUTANTS = [
   { id: "M1", clause: "LAND", what: "the land/** trigger dropped", edit: (t) => t.replace(PUSH, (_, k, l) => `${k}[${l}, "!land/**"]`) },
   { id: "M2", clause: "MAIN", what: "main dropped", edit: (t) => t.replace(PUSH, (_, k, l) => `${k}[${l}, "!main"]`) },
-  { id: "M3", clause: "IGNORE", what: "the ignore removed", edit: (t) => t.replace(PUSH, (_, k) => `${k}["**"]`) },
+  // ~~{ id: "M3", ..., edit: (t) => t.replace(PUSH, (_, k) => `${k}["**"]`) }~~ RE-CUT by unit mq3 (would also redden BUILD)
+  { id: "M3", clause: "IGNORE", what: "the ignore removed", edit: (t) => t.replace(PUSH, (_, k, l) => `${k}[${l.split(",").map((x) => x.trim()).filter((x) => !/^["']!(superseded\/\*\*|claude\/\*-queue)["']$/.test(x)).join(", ")}]`) },
+  { id: "M4", clause: "BUILD", what: "the old list restored (mq3's two exclusions dropped)", edit: (t) => t.replace(PUSH, (_, k) => `${k}["**", "!superseded/**", "!claude/*-queue"]`) },
 ];
 const R = mkdtempSync(join(tmpdir(), "mciq-mut-"));
 const plant = (name, edit) => {

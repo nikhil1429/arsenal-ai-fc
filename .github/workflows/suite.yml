@@ -59,11 +59,23 @@ name: suite
 # `branches-ignore` cannot both sit on one event, and keeping the match-all "**" first leaves every other ref exactly as it
 # was). It composes: the filter gates the push event alone, so pull_request and workflow_dispatch trigger as before, and an
 # excluded ref never starts a run, so it never enters the concurrency group below, which is unchanged. The gate is NOT
-# loosened: main, land/**, claude/*-build, claude/*-spec and every other branch still run both legs (node 22 and 24).
+# loosened: main, land/**, ~~claude/*-build, claude/*-spec~~ and every other branch still run both legs (node 22 and 24).
+#   (STRUCK by unit mq3, row 1289 (1): claude/*-build and claude/*-spec draw no push run since mq3; the block below.)
 # Witness: ci/mciq/witness_mciq.mjs proves it by name (`*` never crosses a `/`, so claude/*-queue is one segment).
+#
+# unit mq3 · THE SEAT BRANCHES DRAW NO RUN (forks row 1289 (1), 22 Nov 2026). MEASURED by the runner (public actions API,
+# 11:06 IST): the runs of land/mjset 83d5710 and land/maud43 72bf874 sat QUEUED behind runs of claude/*-build tips whose
+# trees EQUAL theirs (83d5710 = 6afe819, 72bf874 = f3c06b2), so each seat-branch run duplicated the run that decides a
+# landing — and no landing reads a seat branch's verdict: the land verb reads the land tip's own two legs. So a push to a
+# seat's build or spec branch (claude/*-build, claude/*-spec) draws NO run either, by the same negated-pattern syntax,
+# appended after mciq's two (the LAST match decides). main, land/** and every other branch (an ordinary branch, a claude/*
+# branch with any other suffix) still run both legs (node 22 and 24); pull_request, workflow_dispatch and the concurrency
+# group are unchanged. No gate is loosened: nothing lands except on a land tip's own two legs, both node versions.
+# A seat that needs the neutral machine before its cut asks the runner for a land tip.
+# Witnesses: ci/mq3/witness_mq3.mjs proves by name which refs draw a run; ci/mciq/witness_mciq.mjs is re-cut to this list.
 on:
   push:
-    branches: ["**", "!superseded/**", "!claude/*-queue"]
+    branches: ["**", "!superseded/**", "!claude/*-queue", "!claude/*-build", "!claude/*-spec"]
   pull_request:
   workflow_dispatch: {}
 
