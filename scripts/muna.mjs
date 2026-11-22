@@ -56,19 +56,19 @@ const readJsonl = (p) => (p && existsSync(p) ? readFileSync(p, "utf8").split(/\r
 function journal(row) { const p = gitPath("muna_journal.jsonl"); if (p) { try { appendFileSync(p, JSON.stringify({ ts: new Date().toISOString(), ...row }) + "\n"); } catch { /* status names an unwritable journal */ } } }
 
 // ── THE DOOR ────────────────────────────────────────────────────────────────────────────────────────────────────
-/** @returns {{ ok: true, door: any } | { ok: false, why: string }} */
+/** @returns {{ ok: boolean, door: any, why: string }} */
 function readDoor() {
   const p = gitPath("muna_door.json");
-  if (!p || !existsSync(p)) return { ok: false, why: ".git/muna_door.json is absent" };
-  let d; try { d = JSON.parse(readFileSync(p, "utf8")); } catch { return { ok: false, why: ".git/muna_door.json is unreadable" }; }
+  if (!p || !existsSync(p)) return { ok: false, door: null, why: ".git/muna_door.json is absent" };
+  let d; try { d = JSON.parse(readFileSync(p, "utf8")); } catch { return { ok: false, door: null, why: ".git/muna_door.json is unreadable" }; }
   const argv = (a) => Array.isArray(a) && a.length > 0 && a.every((x) => typeof x === "string" && x.length > 0);
-  if (!argv(d.gate)) return { ok: false, why: "the door names no gate argv" };
-  if (!argv(d.land)) return { ok: false, why: "the door names no landing command" };
-  if (typeof d.names_dir !== "string" || !d.names_dir) return { ok: false, why: "the door names no names directory" };
+  if (!argv(d.gate)) return { ok: false, door: null, why: "the door names no gate argv" };
+  if (!argv(d.land)) return { ok: false, door: null, why: "the door names no landing command" };
+  if (typeof d.names_dir !== "string" || !d.names_dir) return { ok: false, door: null, why: "the door names no names directory" };
   const top = git(["rev-parse", "--show-toplevel"]).out || ROOT;
   const rel = relative(resolve(top), resolve(d.names_dir));
-  if (!rel.startsWith("..") && !isAbsolute(rel)) return { ok: false, why: "the names directory is inside the work tree (the names tool refuses it, and .git is inside it)" };
-  return { ok: true, door: d };
+  if (!rel.startsWith("..") && !isAbsolute(rel)) return { ok: false, door: null, why: "the names directory is inside the work tree (the names tool refuses it, and .git is inside it)" };
+  return { ok: true, door: d, why: "" };
 }
 
 // ── THE STEPS ───────────────────────────────────────────────────────────────────────────────────────────────────
