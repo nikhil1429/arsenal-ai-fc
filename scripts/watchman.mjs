@@ -115,11 +115,14 @@ import { stats as outboxStats, findings as outboxFindings } from "./outbox.mjs";
 // W0-D (2 Sep 2026): the forge staleness predicate + its number come from the OWNER
 // now — see the frozen mirror below the imports for what this replaces and why.
 import { staleHours as forgeStaleHours, STALE_HOURS as FORGE_STALE_HOURS } from "./forge_session.mjs";
-import { afferentLiveness } from "./thalamus.mjs";   // LOAD ZERO BLOCK 9 (19 Aug 2026): the INBOUND liveness contract — declared states, never a flat age scan (that scored 3 false positives out of 3)   // LOAD ZERO BLOCK 3 (19 Aug 2026): THE DEAD-MAN'S SWITCH — the relay is now the single point of failure for everything he sees, so the watchman sits OUTSIDE it   // LOAD ZERO BLOCK 1 (19 Aug 2026): RED task-stuck (a runner died holding a key) · RED task-failed (never retried in 24 h) · INFO tasks-daily   // MODELS + ACTS Block 2 (18 Aug 2026): LAW A — RED act-failed (an owner error unfixed 24 h) · INFO acts-daily   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — RED model-role-dead · WARN model-fell-back · RED embed-dim-changed · INFO quota-keys; the nightly probe rides run() as a step
+import { afferentLiveness, refitWakeEconomy } from "./thalamus.mjs";   // unit mq2 (row 1175): refitWakeEconomy — the thalamus's wake-economy lane door, the config's one writer ·   // LOAD ZERO BLOCK 9 (19 Aug 2026): the INBOUND liveness contract — declared states, never a flat age scan (that scored 3 false positives out of 3)   // LOAD ZERO BLOCK 3 (19 Aug 2026): THE DEAD-MAN'S SWITCH — the relay is now the single point of failure for everything he sees, so the watchman sits OUTSIDE it   // LOAD ZERO BLOCK 1 (19 Aug 2026): RED task-stuck (a runner died holding a key) · RED task-failed (never retried in 24 h) · INFO tasks-daily   // MODELS + ACTS Block 2 (18 Aug 2026): LAW A — RED act-failed (an owner error unfixed 24 h) · INFO acts-daily   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — RED model-role-dead · WARN model-fell-back · RED embed-dim-changed · INFO quota-keys; the nightly probe rides run() as a step
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
-const STATE_DIR = join(ROOT, "dressing-room", "state");
+// unit mq2 (forks row 1175, MQ2_SPEC.md §5 A): THE PLANTED-TREE DOOR — a witness can plant the wake-economy
+// re-fit on a copy. Honoured ONLY when it resolves strictly under os.tmpdir() (tmpDoor below); unset or
+// anywhere else, the live state dir stands, byte for byte what it was.
+const STATE_DIR = process.env.ARSENAL_WATCHMAN_STATE_DIR && tmpDoor(process.env.ARSENAL_WATCHMAN_STATE_DIR) || join(ROOT, "dressing-room", "state");
 const FORGE = join(STATE_DIR, "forge_session.json");
 const CONTRACT = join(STATE_DIR, "teaching_contract.json");
 const AUDIT_LAST = join(STATE_DIR, "teaching_audit_last.json");
@@ -1896,8 +1899,12 @@ export async function probeSentinel(today, deps = {}) {
 // PRESENT — those exist only post-G1), needs ten of them (the G14 probe-count
 // precedent, stated not hidden), takes p95×2, and writes it into
 // thalamus_config.deep.est_tokens_per_wake with a dated receipt (the same
-// blanket-ruling note pattern gate_tune uses for tiers; this probe owns ONLY
-// this one key + its receipt). wake_cap 15 is untouched — the humane clamp.
+// blanket-ruling note pattern gate_tune uses for tiers; this probe OWNS the
+// fit of ONLY this one key + its receipt, and WRITES THROUGH the thalamus's
+// refitWakeEconomy — unit mq2, forks row 1175: the config's sole writer fences
+// the edit to that lane, writes indent 1 and refuses a stale read; the inline
+// whole-file writer that lived here, invisible to the code graph, is gone with
+// the edit, F5 A). wake_cap 15 is untouched — the humane clamp.
 // ---------------------------------------------------------------------------
 export function probeWakeEconomy(deps = {}) {
   const rows = deps.rows !== undefined ? deps.rows : (() => {
@@ -1915,14 +1922,17 @@ export function probeWakeEconomy(deps = {}) {
   const p95 = totals[Math.min(totals.length - 1, Math.floor(totals.length * 0.95))];
   const fit = Math.ceil(p95 * 2);
   const write = deps.writeCfg || ((f) => {
-    const p = join(STATE_DIR, "thalamus_config.json");
-    const c = readJson(p);
-    if (!c || !c.deep) return null;
-    const prev = c.deep.est_tokens_per_wake;
-    if (prev === f) return { prev, unchanged: true };
-    c.deep.est_tokens_per_wake = f;
-    c._wake_economy_refit = { at: new Date().toISOString(), n: honest.length, p95, fit: f, prev, by: "watchman probeWakeEconomy (LADDER G15, blanket ladder haan — this probe owns only this key + this receipt)" };
-    try { writeFileSync(p + ".tmp" + process.pid, JSON.stringify(c, null, 1)); renameSync(p + ".tmp" + process.pid, p); return { prev }; } catch (e) { swallow("probeWakeEconomy: writeFileSync(p + \".tmp\" + process.pid) unwritable → null", e); return null; }
+    let res = null;
+    const w = refitWakeEconomy((c) => {
+      if (!c.deep || typeof c.deep !== "object") return null;
+      const prev = c.deep.est_tokens_per_wake;
+      if (prev === f) { res = { prev, unchanged: true }; return null; }
+      c.deep.est_tokens_per_wake = f;
+      c._wake_economy_refit = { at: new Date().toISOString(), n: honest.length, p95, fit: f, prev, by: "watchman probeWakeEconomy (LADDER G15, blanket ladder haan — this probe owns only this key + this receipt)" };
+      res = { prev };
+      return c;
+    }, { path: join(STATE_DIR, "thalamus_config.json") });
+    return w.ok ? res : null;   // a refusal (stale read, fence, unreadable) reads as the honest "the config write failed"
   });
   const res = write(fit);
   return [{ id: "wake-economy-refit", level: "INFO",

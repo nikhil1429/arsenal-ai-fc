@@ -1,0 +1,47 @@
+{"ts":"2026-11-19T12:26:55Z","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mq2-spec FETCH_HEAD","last_line":"fb42118"}
+{"ts":"2026-11-19T12:28:00Z","act":"read-input","cmd":"git show 4d329ff:ci/mxb/MXB_SPEC.md","last_line":"F-Q2 · the base Q2 row. thalamus_config.json has two writers on main"}
+{"ts":"2026-11-19T12:30:00Z","act":"deps","cmd":"npm ci --ignore-scripts","last_line":"npm notice"}
+{"ts":"2026-11-19T12:32:00Z","act":"grep-writers","cmd":"grep -rn \"\\\"thalamus_config.json\\\"\" scripts/*.mjs","last_line":"scripts/watchman.mjs:1918:    const p = join(STATE_DIR, \"thalamus_config.json\");"}
+{"ts":"2026-11-19T12:35:00Z","act":"ir-row","cmd":"node <scratch>/m.mjs <repo>","last_line":"declared [] · Q2 dressing-room/state/thalamus_config.json W=gate_tune.mjs,thalamus.mjs · Q5 []"}
+{"ts":"2026-11-19T12:40:00Z","act":"ir-watchman","cmd":"node <scratch>/w.mjs <repo>","last_line":"reads dressing-room/state/brain_ledger.jsonl 1905 (no thalamus_config edge)"}
+{"ts":"2026-11-19T12:45:00Z","act":"live-format","cmd":"node -e <round-trip booleans on the live file, no content printed>","last_line":"rt1 true rt2 false"}
+{"ts":"2026-11-19T12:50:00Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-19T13:00:00Z","act":"probe","cmd":"node ci/mq2/witness/probe_base.mjs --repo .","last_line":"mq2 probe: 3 RED of 3"}
+{"ts":"2026-11-19T13:20:00Z","act":"push","cmd":"git push -u origin claude/mq2-spec","last_line":"branch claude/mq2-spec set up to track origin/claude/mq2-spec. (d11aa70)"}
+{"ts":"2026-11-19T13:35:00Z","act":"ci","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/d11aa707db4d82535e9502b8bdf41beb8119a5e0/check-runs","last_line":"135564419787 npm test · node 22 success · 135564420245 npm test · node 24 success (run 44525377613)"}
+{"ts":"2026-11-19T13:36:00Z","act":"effort-receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs --fleet mq2 --seat 00 --model claude-opus-5-5","last_line":"Error: Cannot find module /home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs (exit 1)"}
+{"ts":"2026-11-20T01:42:55Z","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mq2-build origin/main","last_line":"main 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts": "2026-11-20T01:10:00Z", "act": "probe-base", "cmd": "node ci/mq2/witness/probe_base.mjs --repo . (at 5759cce)", "last_line": "mq2 probe: 3 RED of 3"}
+{"ts": "2026-11-20T01:12:00Z", "act": "lawpack-base", "cmd": "node scripts/lawpack.mjs gate (base LF tree)", "last_line": "lawpack: 1 RED — jugad-literal-subject-list ROSE — 93, baseline 90 (on main, before this unit)"}
+{"ts": "2026-11-20T01:20:00Z", "act": "push", "cmd": "git push -u origin claude/mq2-build", "last_line": "b480af7 (BASE + carried spec)"}
+{"ts": "2026-11-20T01:30:00Z", "act": "push", "cmd": "git push", "last_line": "77506ef (the code)"}
+{"ts": "2026-11-20T01:30:30Z", "act": "probe-build", "cmd": "node ci/mq2/witness/probe_base.mjs --repo .", "last_line": "mq2 probe: 0 RED of 3"}
+{"ts": "2026-11-20T01:45:00Z", "act": "race-measure", "cmd": "scratch counter over A9's free race (tiers+wake), 20 races each", "last_line": "compare-then-writeAtomic: a reported write lost 17/20 · tmp-compare-rename: 8/20"}
+{"ts": "2026-11-20T01:50:00Z", "act": "push", "cmd": "git push", "last_line": "a3886e8 (the witness)"}
+{"ts": "2026-11-20T01:52:00Z", "act": "ci", "cmd": "curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs", "last_line": "77506ef run 44656418778 cancelled both legs · a3886e8 run 44657671812 cancelled both legs (superseded)"}
+{"ts": "2026-11-20T02:00:00Z", "act": "push", "cmd": "git push", "last_line": "92be65c (the mutant runner)"}
+{"ts": "2026-11-20T02:05:00Z", "act": "suite-build", "cmd": "ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all", "last_line": "organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts": "2026-11-20T02:06:00Z", "act": "suite-base", "cmd": "ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (base blobs in place)", "last_line": "organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts": "2026-11-20T02:06:30Z", "act": "models-check", "cmd": "node scripts/models.mjs check", "last_line": "exit 0 (base and build)"}
+{"ts": "2026-11-20T02:15:00Z", "act": "mutants", "cmd": "node ci/mq2/run_mutants_mq2.mjs --org . --base-org <base tree>", "last_line": "run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts": "2026-11-20T02:16:00Z", "act": "witness-build", "cmd": "node ci/mq2/witness/witness_mq2.mjs --org . --base-org <base tree>", "last_line": "RED MQ2 · A9"}
+{"ts": "2026-11-20T02:17:00Z", "act": "witness-base", "cmd": "node ci/mq2/witness/witness_mq2.mjs --org <base tree> --base-org <base tree>", "last_line": "RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9"}
+{"ts": "2026-11-20T02:18:00Z", "act": "effort-receipt", "cmd": "node campaign-2026-09/tools/effort_receipt.mjs --fleet mq2b --seat 00 --model claude-opus-5-5", "last_line": "Error: Cannot find module /home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs (exit 1)"}
+{"ts":"2026-11-20T03:26:29Z","act":"ci","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/ae2b32d/check-runs","last_line":"run 44659072079 · 136032500823 npm test · node 22 success · 136032500577 npm test · node 24 success (92be65c run 44658184054 cancelled, superseded)"}
+{"ts": "2026-11-21T07:30:00Z", "act": "merge", "cmd": "git fetch origin main; git merge FETCH_HEAD", "last_line": "a0b39c6 (parents b6cf269 7bf008b) · no conflict"}
+{"ts": "2026-11-21T07:31:00Z", "act": "ci", "cmd": "curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/b6cf269/check-runs", "last_line": "run 44667737438 · node 22 success · node 24 success"}
+{"ts": "2026-11-21T07:50:00Z", "act": "witness-build", "cmd": "node ci/mq2/witness/witness_mq2.mjs --org . --base-org <7bf008b tree>", "last_line": "RED MQ2 · A9"}
+{"ts": "2026-11-21T07:51:00Z", "act": "witness-base", "cmd": "node ci/mq2/witness/witness_mq2.mjs --org <7bf008b tree> --base-org <7bf008b tree>", "last_line": "RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9"}
+{"ts": "2026-11-21T07:55:00Z", "act": "mutants", "cmd": "node ci/mq2/run_mutants_mq2.mjs --org . --base-org <7bf008b tree>", "last_line": "run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control RED (A9)"}
+{"ts": "2026-11-21T09:15:00Z", "act": "ci", "cmd": "curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/159e430/check-runs", "last_line": "run 44879917708 · npm test node 22 success · npm test node 24 success · hermetic twice node 22 success · hermetic twice node 24 success"}
+{"ts": "2026-11-22T10:20:00Z", "act": "merge", "cmd": "git fetch origin main; git merge FETCH_HEAD", "last_line": "7cc2b3f (parents 501bc83 84cbc03) · no conflict"}
+{"ts": "2026-11-22T10:30:00Z", "act": "gates", "cmd": "node scripts/gates.mjs", "last_line": "gates: GREEN — other checkJs diagnostics 296 (baseline 296)"}
+{"ts": "2026-11-22T10:45:00Z", "act": "witness", "cmd": "node ci/mq2/witness/witness_mq2.mjs --org . --base-org <84cbc03 tree>", "last_line": "RED MQ2 · A9"}
+{"ts": "2026-11-22T10:50:00Z", "act": "mutants", "cmd": "node ci/mq2/run_mutants_mq2.mjs --org . --base-org <84cbc03 tree>", "last_line": "run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control RED (A9)"}
+{"ts": "2026-11-22T11:20:00Z", "act": "witnesses-member", "cmd": "ORGANISM_TEST_PROFILE=hermetic GITHUB_ACTIONS=true GITHUB_WORKSPACE=$PWD node scripts/organism_test.mjs witnesses", "last_line": "organism_test: 121 passed, 6 failed · ruled 0 · UNRULED 6 · LIVE 0 (hermetic: named, not run)"}
+{"ts": "2026-11-22T11:25:00Z", "act": "mday-alone", "cmd": "node ci/mday/witness_mday.mjs --org . --base-org <669200d tree>", "last_line": "GREEN W7.1 (445 ms slow plant, bound 421 ms, settled 854 ms)"}
+{"ts": "2026-11-22T11:40:00Z", "act": "build", "cmd": "F9 a THE LOCK in scripts/thalamus.mjs (row 1305 (1))", "last_line": "node scripts/thalamus.mjs selftest → ALL CHECKS PASSED · gates: GREEN (296)"}
+{"ts": "2026-11-22T12:00:00Z", "act": "witness-repeat", "cmd": "node ci/mq2/witness/witness_mq2.mjs --org . --base-org <84cbc03 tree> (6 passes)", "last_line": "GREEN MQ2 thalamus is the sole writer of thalamus_config.json through three lane doors · 11 clause(s) (6 of 6)"}
+{"ts": "2026-11-22T12:05:00Z", "act": "witness-base", "cmd": "node ci/mq2/witness/witness_mq2.mjs --org <84cbc03 tree> --base-org <84cbc03 tree>", "last_line": "RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9"}
+{"ts": "2026-11-22T12:15:00Z", "act": "mutants", "cmd": "node ci/mq2/run_mutants_mq2.mjs --org . --base-org <84cbc03 tree>", "last_line": "run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts": "2026-11-22T13:00:00Z", "act": "witnesses-member", "cmd": "ORGANISM_TEST_PROFILE=hermetic GITHUB_ACTIONS=true GITHUB_WORKSPACE=$PWD node scripts/organism_test.mjs witnesses", "last_line": "organism_test: 122 passed, 5 failed · ruled 0 · UNRULED 5 · LIVE 0 (hermetic: named, not run)"}
