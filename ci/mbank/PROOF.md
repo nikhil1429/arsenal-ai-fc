@@ -477,3 +477,44 @@ judges no red there. The full profile's 11 failures are identical at base and bu
 the members that need his machine.
 
 CHECKPOINT · RED (mf2 F4, nine A3 asserts of the organism_test path lane: ok at 7bf008b, FAIL at 6e5dca6) REPAIRED by FORK mbank-10 A at 9074365 · the lane's bank helper plants his record through the real teaching_audit hook (organism_test.mjs:2541-2549) · last lines: `GREEN MBANK … · 22 clause(s)` · `RED MBANK · B1 … B20` (main) · `run_mutants: 20 of 20 mutant(s) RED by the clause that names them · control GREEN` · mf2 `GREEN F4 · … ok→FAIL none` (last line `RED MF2 · BOUND`, the seat-time bound the suite drops) · NEXT: the architect's re-run on this tip, with the mbank witness whole, and the two legs read on this BUILD tip before any land tip is cut
+
+## 14 · MAIN a0645d2 (mshard + mgat landed; forks row 1273 (4), 22 Nov 2026)
+
+`git merge FETCH_HEAD` of a0645d2 made `e5439a6`, with **no conflicted file**. The TIER-0 gates read checkJs 297 against
+the frozen 296 on the merged tree. The one diagnostic that rose was this unit's own line,
+`scripts/organism_test.mjs(2549,226): TS2339 … 'ARSENAL_ORGAN'`, from `delete` on a typed env literal. It is repaired in
+`b626774` by building the lane's env without that key (`Object.fromEntries(… .filter(([k]) => k !== "ARSENAL_ORGAN"))`). The
+behaviour is the same, the baseline is not touched, and no ignore or disable was added. Runs on LF clones, 22 Nov 2026:
+```
+$ node scripts/gates.mjs report                                    # tip b626774
+gates types  · 21 organ(s) @ts-check'd (baseline 14, may only grow) · undefined-symbol family 0 (must be 0) · other checkJs diagnostics 296 (baseline 296, may only fall)
+gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides, and every schema'd state file matches
+$ node ci/mbank/witness_mbank.mjs --org <tip> --base-org <main a0645d2>
+GREEN MBANK … · 22 clause(s)
+$ node ci/mshard/witness_mshard.mjs --org <tip> --base-org <5759cce, its BASE>
+RED MSHARD · BOUND            # every W-S clause ✓; BOUND is mshard's own seat-time file bound, which this unit's files trip
+$ node ci/mgat/witness_mgat.mjs --org <tip> --base-org <5759cce, its BASE>
+RED MGAT · BOUND              # W1-W9 org GREEN (W9: checkJs 296 · frozen 296); BOUND is mgat's own seat-time bound
+```
+The suite judges each witness's last line with BOUND dropped (`scripts/organism_test.mjs`, F1 A).
+
+CHECKPOINT · main a0645d2 merged · checkJs back to 296 at b626774 · gates GREEN · mbank GREEN (22 clauses) · mshard / mgat every clause green, BOUND only · NEXT: the four seats stacked on f635d68 rebase their stacks on this tip
+
+## 15 · THE mlv3 T1 FIFTY (forks row 1275, 22 Nov 2026)
+
+Main 0ee0516 (mpres2, mdayv) is merged into this branch as `5b4a321`, with no conflicted file. The tip is that merge and the
+base is 0ee0516. The mlv3 unit witness was run in this cloud seat, each run on an LF clone, against mlv3's own BASE
+40347a6 (as the suite runs it): twenty runs ALONE on the tip, twenty ALONE on the base, then ten on the tip with
+`ci/mbank/witness_mbank.mjs` running beside it. Each line of `ci/mbank/MLV3_50.txt` holds the run's first boot, the bound,
+T1's own why line and the witness's last line (`RED MLV3 · BOUND`, mlv3's seat-time file bound, which the suite drops).
+```
+tip alone        T1 red 0 / 20
+base alone       T1 red 0 / 20
+tip beside mbank T1 red 0 / 10      (the ten mbank runs beside it: GREEN MBANK, each)
+bound range      231 ms to 368 ms
+```
+**Branch (c) of row 1275: no red in fifty runs.** No repair is made. The fifty lines go back to the architect. The
+neutral machine's T1 red (node 24, run 137021937008; node 22 green, run 137021937242) is not reproduced here, alone or
+beside this unit's witness.
+
+CHECKPOINT · main 0ee0516 merged (5b4a321) · mlv3 T1: 0/20 tip alone · 0/20 base alone · 0/10 beside mbank → branch (c), no repair · ci/mbank/MLV3_50.txt committed · NEXT: the architect's ruling with the fifty lines

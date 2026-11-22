@@ -104,6 +104,10 @@ export const MORNING = [
   // fsrs · calibration · nemesis · learningstate the sheet needs. No `needs` on it and none on any later step: a killed, refused
   // or over-deadline close fails ITS OWN step only. Its budget is the close's own sum (postmatch.mjs autocloseBudget).
   { id: "dayclose-prev", at: "07:05", args: ["scripts/postmatch.mjs", "autoclose", "--date", "chain-1", "--anchor", "morning"], budget: autocloseBudget() },
+  // unit mdayv (forks rows 1195 / 1229 F1 C) — THE FINAL READ of every day that is over, right after the slept day's close: the
+  // meter's own `final` mode (idempotent with day.mjs start — the second carrier finds the row and appends nothing). No `needs`:
+  // a failed close never stops the read, and the read never stops the chain; its exit is the final mode's (F7 A), never a day's.
+  { id: "meter-final",   at: "07:06", args: ["scripts/daily_green.mjs", "final"] },
   { id: "physio",        at: "07:30", args: ["scripts/physio.mjs"] },
   // ---- the body read. EVERYTHING below depends on this file existing and being today's.
   // (network flag removed 9 Aug F6 — nothing ever read it; the chain treats every step alike)
@@ -1439,9 +1443,14 @@ async function selftest() {
       !!dc && (dc.args || []).join(" ") === "scripts/postmatch.mjs autoclose --date chain --anchor evening" && !dc.needs && !dc.daemon && !dc.arm
       && rep.order.indexOf("dayclose") === rep.order.indexOf("examiner") + 1 && rep.order.indexOf("wall-pm") === rep.order.indexOf("dayclose") + 1
       && seen.includes("scripts/postmatch.mjs autoclose --date chain --anchor evening"));
-    ok("DAYCLOSE (mclose, row 919 (A)) — the MORNING closes the SLEPT day: dayclose-prev, postmatch.mjs autoclose --date chain-1 --anchor morning, right after the three daemons and before physio, the first reader of reps_log — outside the signals→sheet gate",
+    // unit mdayv (row 1229 F1 C) folds its METER FINAL pin INTO this one, never beside it: the conductor's selftest headline is
+    // pinned to the base's by another unit's witness (ci/mtxt3 T2), so the count stays and this check only gets stricter
+    const mf = MORNING.find(s => s.id === "meter-final");
+    ok("DAYCLOSE (mclose, row 919 (A)) — the MORNING closes the SLEPT day: dayclose-prev, postmatch.mjs autoclose --date chain-1 --anchor morning, right after the three daemons and before physio, the first reader of reps_log — outside the signals→sheet gate; METER FINAL (mdayv, row 1229 F1 C) sits between them: scripts/daily_green.mjs final, no needs, no daemon, no arm, the organ default budget",
       !!dp && (dp.args || []).join(" ") === "scripts/postmatch.mjs autoclose --date chain-1 --anchor morning" && !dp.needs && !dp.daemon && !dp.arm
-      && MORNING.indexOf(dp) === MORNING.findIndex(s => s.id === "turnstile") + 1 && MORNING[MORNING.indexOf(dp) + 1].id === "physio");
+      && MORNING.indexOf(dp) === MORNING.findIndex(s => s.id === "turnstile") + 1
+      && !!mf && (mf.args || []).join(" ") === "scripts/daily_green.mjs final" && !mf.needs && !mf.daemon && !mf.arm && !("budget" in mf)
+      && MORNING.indexOf(mf) === MORNING.indexOf(dp) + 1 && MORNING[MORNING.indexOf(mf) + 1].id === "physio");
     const repClose = await conduct(EVENING, {
       ...base,
       run: (a) => (a.join(" ").includes("postmatch.mjs autoclose") ? { status: 1, stderr: "autoclose: the record could not be written" } : { status: 0, stderr: "" }),

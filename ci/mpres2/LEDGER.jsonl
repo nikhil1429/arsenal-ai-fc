@@ -1,0 +1,12 @@
+{"ts":"2026-11-21T12:35:53.840Z","act":"base","cmd":"git fetch origin main && git rev-parse origin/main","last_line":"7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f"}
+{"ts":"2026-11-21T12:35:53.840Z","act":"cut","cmd":"git checkout -b claude/mpres2-build 7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f","last_line":"Switched to a new branch 'claude/mpres2-build'"}
+{"ts":"2026-11-21T12:35:53.840Z","act":"build presence+senses","cmd":"node scripts/presence.mjs selftest | tail -1","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-21T12:35:53.840Z","act":"build presence+senses","cmd":"node scripts/senses.mjs selftest | tail -1","last_line":"senses selftest: 21 passed, 0 failed"}
+{"ts":"2026-11-21T12:35:53.840Z","act":"witness base","cmd":"node ci/mpres2/witness_mpres2.mjs --org <7bf008b> --base-org <7bf008b>","last_line":"RED MPRES2 · M1, M2, M4, M6, R1, R2, R4, R5, F8, F10, S1, S3, S4, S6, S7, S8"}
+{"ts":"2026-11-21T12:35:53.840Z","act":"witness tip","cmd":"node ci/mpres2/witness_mpres2.mjs --org <tip> --base-org <7bf008b>","last_line":"GREEN MPRES2 the repair door asks once per span, never beside a running launcher, and reads busy, not dead, while the port is held · 20 clause(s)"}
+{"ts":"2026-11-21T12:35:53.840Z","act":"mutants","cmd":"node ci/mpres2/run_mutants_mpres2.mjs --org <tip> --base-org <7bf008b>","last_line":"run_mutants: 16 of 16 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T12:35:53.840Z","act":"mpres proof cut","cmd":"node ci/mpres/run_mutants_mpres.mjs --org <cut> --base-org <cut>","last_line":"run_mutants: 16 of 16 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T12:35:53.840Z","act":"mpres proof tip","cmd":"node ci/mpres/run_mutants_mpres.mjs --org <tip without ci/mpres2> --base-org <cut>","last_line":"run_mutants: 16 of 16 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T12:35:53.840Z","act":"suite cut","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (at 7bf008b)","last_line":"organism_test: 150 passed, 8 failed · ruled 0 · UNRULED 8 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-21T12:35:53.840Z","act":"suite tip","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (at the tip)","last_line":"organism_test: 150 passed, 8 failed · ruled 0 · UNRULED 8 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-21T12:35:53.840Z","act":"models","cmd":"node scripts/models.mjs check (cut and tip)","last_line":"exit 0 · exit 0"}
