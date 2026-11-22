@@ -44,6 +44,12 @@ build tree and on BASE by the command in LEDGER.jsonl — 64 units at the build,
 no port, names no live service and prints the member's grammar (`GREEN MUNA …` / `RED MUNA · …`); the member runs it only on the
 neutral machine.
 
+The hermetic suite on a clean clone of the build commit, 22 Nov 2026 (`ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`,
+node_modules from `npm ci`): last line `organism_test: 173 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)`.
+A first run beside a parallel BASE run read the checkJs count risen by three (`readDoor`'s union return, fixed in the next commit, the
+gate back at its baseline) and one clause-witness plant red that moved between units across the two parallel runs (mdayv on BASE, mcap
+at head) and is absent from the single run above.
+
 ## 5. What the runner does by hand at switch-on (row 1301 (8), unchanged by this build)
 
 1. Write `.git/muna_door.json` in his laptop clone: `gate` = `node tools/m/units.mjs gate` with `gate_cwd` the campaign root;
