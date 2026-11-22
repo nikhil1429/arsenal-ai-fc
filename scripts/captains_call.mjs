@@ -52,6 +52,10 @@
 //   5. benchmark regression — benchmark.json (benchmark.mjs owns): a bucket's
 //      counted evidence went DOWN since the last run (Ruling 5 max-flow edge:
 //      "captains_call card on bucket regression").
+//   6. PARKED ITEMS (unit mprk, forks rows 1173 (3) / 1190) — parked.jsonl (parked.mjs owns it; this only
+//      reads openParks / closedIds): ONE card per open park, key `park:<id>`, rank 0 beside hand-filed (F1 a —
+//      they are his own words). haan / na close the park through its owner; baad sleeps the card a day; a park
+//      closed by another door (an act undo) retires its card at source in the sync (F3 a, RETIRE_AT_SOURCE_KEYS).
 //
 // WRITES: dressing-room/state/captains_call.json (sole) — its `grade_cursor` field (unit mjd7) is this file's
 //   own too: the sweep's place in the judge's grade queue, written only by sync, in the deck's one write.
@@ -70,6 +74,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { resolveIntent } from "./acts.mjs";   // LOAD ZERO BLOCK 5: the ONE intent door
+import { openParks, closedIds } from "./parked.mjs";   // unit mprk · source 6 — READ-ONLY; parked.mjs is the SOLE WRITER of parked.jsonl
 // W0-D (2 Sep 2026): the forge staleness predicate now comes from its OWNER instead of
 // being re-derived here. See the frozen mirror below for what this replaces and why.
 import { isStale as forgeIsStale, staleHours as forgeStaleHours, STALE_HOURS as FORGE_STALE_HOURS } from "./forge_session.mjs";
@@ -348,6 +353,9 @@ export const WHY_CODE_CANNOT_DECIDE = Object.freeze({
   // the live case, and it is the one card in the deck whose key is `manual:<iso>`.
   "manual:":          "he filed this himself with no key — it is his own note, and only he can say it is done or move the day",
 });
+// unit mprk (row 1190): the park card's reason rides ON THE CARD (`why_code_cannot_decide`, the field whyForCard reads first —
+// the hand-filed door's shape), never as a 17th row above: the suite's LOAD ZERO BLOCK 6 law holds this table to SHRINK-ONLY.
+export const PARK_WHY = "these are his own parked words, and only he can say whether to take them up now or drop them";
 // The `file --line` door carries its own reason per call (--why-code-cannot-decide), because a
 // hand-filed ask has no fixed source to key on. `manual:` keys with no stated reason are gated
 // exactly like everything else.
@@ -384,7 +392,7 @@ export function decisionGate(state, now = new Date(), post = null) {
 export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "", marketNoopFiles = [], gate2 = null, missions = null, bench = null, tiers = null,
   rejirah = null, gem = null, claudeOut = null, oura = null, geminiLogin = null, geminiLane = { live: true }, gatetune = null, gatetuneSource = null, pendingFacts = [], m2 = null, canonPatches = [], staleFacts = [], model = null, awayday = null,
   gateStates = null, daemonPorts = null, watchmanLast = null,
-  forge = null } = {}, now = new Date()) {   // W0-D · SD-05: the stale open loop, read from the pacer's own file
+  forge = null, parks = null } = {}, now = new Date()) {   // W0-D · SD-05: the stale open loop, read from the pacer's own file
   const s = { ...state, cards: state.cards.map((c) => ({ ...c })) };
   const byKey = new Map(s.cards.map((c) => [c.key, c]));
   const ts = now.toISOString();
@@ -946,7 +954,36 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
       "superseded by this week's audit card");
   }
 
+  // SOURCE 6 (unit mprk, row 1190) — ONE card per OPEN park, never serialized into a list: the ladder (pickCard) already
+  // deals one card per anchor and rests a card dealt today. A park's card is minted once (byKey); its close is the owner's.
+  for (const p of (parks && Array.isArray(parks.open) ? parks.open : [])) {
+    if (!p || !p.id) continue;
+    mint(`park:${p.id}`, "parked", `Parked (${p.concept || "bina concept"}) — ab uthayein? "${String(p.text || "")}"`, { kind: "park", id: p.id });
+    const pc = byKey.get(`park:${p.id}`);
+    if (pc && !pc.why_code_cannot_decide) pc.why_code_cannot_decide = PARK_WHY;   // the decision gate keeps it: his own words
+  }
+
   return s;
+}
+
+// THE CLOSED-PARK SWEEP (unit mprk, F3 a) — PURE. A park closed by ANOTHER door (the act's undo, at-source) retires its
+// card in the owner's own sync pass, through retireCard (only the declared key class, only a live card, never twice).
+// Positive reading only: a park this deck holds a card for is retired only when its id is NAMED by a close row.
+export const PARK_SWEEP_WHY = "the park was closed at its owner (parked.mjs) — nothing left to ask (row 1190 F3 a)";
+export function sweepClosedParks(state, closed, now = new Date()) {
+  let s = state;
+  const retired = [];
+  if (!closed || !closed.size) return { state: s, retired };
+  for (const c of ((state && state.cards) || [])) {
+    if (!c || c.answer || c.retired_at) continue;
+    const m = /^park:(.+)$/.exec(String(c.key || ""));
+    if (!m || !closed.has(m[1])) continue;
+    const r = retireCard(s, { key: c.key, why: PARK_SWEEP_WHY, now });
+    if (r.refuse || !r.changed) continue;
+    s = r.state;
+    retired.push({ id: r.card.id, key: r.card.key });
+  }
+  return { state: s, retired };
 }
 
 // WIRING REPAIR (10 Aug 2026) — THE FIRE-NUDGE READS THE FIRE STAMP.
@@ -995,7 +1032,7 @@ export function pickCard(state, { today }) {
   // LADDER B (9 Aug 2026): teaching/identity integrity (gate2 · rejirah · his
   // facts) shares the tier under the drifts; everything operational rides the
   // outward tier. Still an ORDER, never a number.
-  const rank = (c) => (c.source === "hand-filed" ? 0
+  const rank = (c) => (c.source === "hand-filed" || c.source === "parked" ? 0   // F1 a (row 1190): a park is his own words
     : c.source === "teaching_contract.staged" ? 1
     : ["tape_room.gate2", "rejirah.pending", "hippocampus.pending_fact", "hippocampus.stale_fact"].includes(c.source) ? 2 : 3);
   // LADDER A1 (9 Aug 2026): the c9 monopoly. A serialized card nobody answered used
@@ -1092,6 +1129,11 @@ export function applyAnswer(state, id, word, now = new Date()) {
   // hippocampus.mjs's own doors, dispatched by the CLI layer.
   if (c.dispatch.kind === "pending-fact") {
     return { state: s, action: { kind: "pending-fact-dispatch", verb: word === "haan" ? "promote" : "drop-pending", at: c.dispatch.at, cardId: c.id } };
+  }
+  // unit mprk (row 1190) — a parked item: haan (take it up now) and na (dropped by his word) both CLOSE the park
+  // through its owner; baad never reaches here (it sleeps the card above, and the park stays open).
+  if (c.dispatch.kind === "park") {
+    return { state: s, action: { kind: "park-dispatch", id: c.dispatch.id, by: word, cardId: c.id } };
   }
   // LADDER B11 — haan forgets via the owner's own CLI; na falls through (fact stays).
   if (c.dispatch.kind === "forget-fact" && word === "haan") {
@@ -1365,7 +1407,9 @@ function gatherSources() {
     gateStates: liveGateStates(), daemonPorts: readJson(join(STATE_DIR, "daemon_watchdog.json")), watchmanLast: readJson(join(STATE_DIR, "watchman_last.json")),
     // W0-D · SD-05 — the pacer's live file, read-only (forge_session.mjs is its sole
     // writer). Same read dealGuard already does one function down; one source, two uses.
-    forge: readJson(FORGE) };
+    forge: readJson(FORGE),
+    // unit mprk · source 6 — the park owner's own readers over THIS deck's state dir; unreadable = null (no opinion)
+    parks: (() => { try { return { open: openParks(STATE_DIR), closed: closedIds(STATE_DIR) }; } catch { return null; } })() };
 }
 
 // LOAD ZERO BLOCK 6 (19 Aug 2026) — THE ROAD, as this organ reaches it. Owners-only: this file
@@ -1429,7 +1473,8 @@ function sync(now = new Date()) {
   // missing, ahead or rewritten cursor falls back to ONE whole read. The re-seated cursor rides this pass's one write.
   const base = loadState();
   const q = readGradeQueueSince(GRADE_QUEUE, base[GRADE_CURSOR_FIELD]);
-  const next = sweepSettledFromDoubt(deriveCards(base, gatherSources(), now), q.rows, now).state;
+  const src = gatherSources();
+  const next = sweepClosedParks(sweepSettledFromDoubt(deriveCards(base, src, now), q.rows, now).state, src.parks && src.parks.closed, now).state;   // unit mprk F3 a
   next[GRADE_CURSOR_FIELD] = q.cursor;
   // THE DECISION GATE runs AFTER derive, so it sees this sync's fresh mints too: a card minted and
   // gated in the same pass never reaches his lane at all. It runs BEFORE the write, so the retire
@@ -1602,7 +1647,8 @@ export function relineCard(state, { family = null, key = null, line = "" } = {})
 //     no-op, and a second retire of the same key retires nothing twice (already settled → no-op);
 //   · the epitaph is the filing organ's own reason, as every other retire-at-source writes it.
 // ---------------------------------------------------------------------------
-export const RETIRE_AT_SOURCE_KEYS = [/^judge:in-doubt:[^\s:]+$/];
+// unit mprk: `park:<id>` joins by forks row 1190 (1) F3 a — an undone park must not still ask him.
+export const RETIRE_AT_SOURCE_KEYS = [/^judge:in-doubt:[^\s:]+$/, /^park:[^\s:]+$/];
 /** retireCard — PURE: {state, card, changed} with ONLY the target's retired_at + resolution set, or {refuse}. */
 export function retireCard(state, { key = null, why = "", now = new Date() } = {}) {
   const k = key == null ? "" : String(key);
@@ -1688,7 +1734,7 @@ export function seatGradeCursor(buf, start, floor, prev, why) {
   const line = buf.subarray(lineStart, nl + 1);
   return { offset: start + nl + 1, anchor_len: line.length, anchor: sha256(line), last_read: why };
 }
-const parseRows = (buf) => { const o = []; for (const l of buf.toString("utf8").split(/\r?\n/)) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch { } } return o; };
+const parseRows = (buf) => { const o = []; for (const l of buf.toString("utf8").split(/\r?\n/)) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch { /* a torn tail never parses and the cursor stays before it (seatGradeCursor); a merged line drops a settled row, so its card stays LIVE — the safe side */ } } return o; };
 // The ONE disk door the cursor reads through — READ ONLY (no write, no open for write), injectable so the selftest needs no file.
 export const GRADE_QUEUE_IO = {
   size(p) { try { return statSync(p).size; } catch { return 0; } },
@@ -1696,7 +1742,7 @@ export const GRADE_QUEUE_IO = {
   readRange(p, from, len) {
     const buf = Buffer.alloc(Math.max(0, len));
     let fd = null, got = 0;
-    try { fd = openSync(p, "r"); while (got < len) { const n = readSync(fd, buf, got, len - got, from + got); if (!n) break; got += n; } } catch { } finally { if (fd !== null) { try { closeSync(fd); } catch { } } }
+    try { fd = openSync(p, "r"); while (got < len) { const n = readSync(fd, buf, got, len - got, from + got); if (!n) break; got += n; } } catch { /* a short read: readGradeQueueSince's anchor-length check falls back to ONE whole read */ } finally { if (fd !== null) { try { closeSync(fd); } catch { /* opened above, closed only here: EBADF is the one way in, and a finally has nothing to hand back */ } } }
     return buf.subarray(0, got);
   },
 };
@@ -1814,7 +1860,7 @@ async function main() {
     // LADDER B — the three owner-CLI dispatches, all on the ratify pattern:
     // success retires the card with the owner's own words; failure keeps the
     // card LIVE (his word must never be consumed by a dispatch that died).
-    if (["pending-fact-dispatch", "forget-dispatch", "gatetune-dispatch", "gate-wake-dispatch", "restart-dispatch"].includes(action.kind)) {
+    if (["park-dispatch", "pending-fact-dispatch", "forget-dispatch", "gatetune-dispatch", "gate-wake-dispatch", "restart-dispatch"].includes(action.kind)) {
       // 11 Aug 2026: restart-dispatch joins the same pattern. The argv comes from
       // the RESTART_DOOR TABLE keyed by the daemon's name — never from the card —
       // so a hand-edited state file can name a daemon but never a command. An
@@ -1824,7 +1870,9 @@ async function main() {
         console.error(`captains_call: ${id} ${word} NOT recorded — no restart door for daemon "${action.name}" (card stays live)`);
         process.exit(1);
       }
-      const argvFor = action.kind === "pending-fact-dispatch"
+      const argvFor = action.kind === "park-dispatch"
+        ? [join(__dirname, "parked.mjs"), "close", action.id, "--by", action.by]   // unit mprk: the park's OWNER closes it
+        : action.kind === "pending-fact-dispatch"
         ? [join(__dirname, "hippocampus.mjs"), action.verb, "--at", action.at]
         : action.kind === "forget-dispatch"
           ? [join(__dirname, "hippocampus.mjs"), "forget", action.id]
@@ -2764,6 +2812,33 @@ function selftest() {
     assert("CURSOR — the cursor is a field of this deck only: sync seats it in the one write, and its disk door opens the queue read-only",
       /next\[GRADE_CURSOR_FIELD\] = q\.cursor;/.test(own.slice(own.indexOf("function sync("), own.indexOf("writeAtomic(CALL, next)")))
       && !/openSync\([^)]*,\s*"[wa+]/.test(own) && /openSync\(p, "r"\)/.test(own));
+  }
+
+  // ── SOURCE 6 · PARKED ITEMS (unit mprk, row 1190) — pure, on fixtures ──
+  {
+    const TP = new Date("2026-11-20T10:00:00Z");
+    const P = (id, o = {}) => ({ v: 1, ev: "park", id, ts: "2026-11-20T09:00:00.000Z", text: `words ${id}`, concept: null, axis: null, step: null, door: "act", act: null, why: null, ...o });
+    const d1 = deriveCards(blank(), { parks: { open: [P("pkA", { concept: "embeddings" }), P("pkB")], closed: new Set() } }, TP);
+    const cA = d1.cards.find((c) => c.key === "park:pkA"), cB = d1.cards.find((c) => c.key === "park:pkB");
+    assert("PARK — ONE card per open park, keyed park:<id>, source parked, dispatch {kind:park,id}, the line carrying his words and the concept",
+      d1.cards.length === 2 && !!cA && !!cB && cA.source === "parked" && cA.dispatch.kind === "park" && cA.dispatch.id === "pkA" && cA.line.includes("words pkA") && cA.line.includes("embeddings") && cB.line.includes("bina concept"));
+    assert("PARK — the reason rides on the card (whyForCard), so the decision gate keeps it and the table does not grow",
+      whyForCard(cA) === PARK_WHY && decisionGate(JSON.parse(JSON.stringify(d1)), TP, null).routed.length === 0 && !Object.keys(WHY_CODE_CANNOT_DECIDE).some((k) => k.startsWith("park")));
+    const d2 = deriveCards(d1, { parks: { open: [P("pkA"), P("pkB")], closed: new Set() } }, TP);
+    assert("PARK — a re-derive mints nothing twice", d2.cards.length === 2);
+    const withOut = { ...blank(), cards: [{ id: "c7", key: "market:2026-11-01.md", source: "brain_out/market", line: "x", dispatch: { kind: "none" }, filed_at: "2026-11-01T00:00:00Z", dealt: [], answer: null, answered_at: null, sleep_until: null, retired_at: null, resolution: null }] };
+    const d3 = deriveCards(withOut, { parks: { open: [P("pkC")], closed: new Set() } }, TP);
+    assert("PARK — F1 a: a park card ranks beside hand-filed (0), ahead of the outward tier", pickCard(d3, { today: "2026-11-20" }).key === "park:pkC");
+    const h = applyAnswer(d1, cA.id, "haan", TP), n = applyAnswer(d1, cB.id, "na", TP), b = applyAnswer(d1, cA.id, "baad", TP);
+    assert("PARK — haan and na hand the owner its close (by his word); baad only sleeps the card to the next day",
+      h.action.kind === "park-dispatch" && h.action.id === "pkA" && h.action.by === "haan" && n.action.kind === "park-dispatch" && n.action.by === "na"
+      && b.action.kind === "sleep" && b.action.until === "2026-11-21");
+    const sw = sweepClosedParks(d1, new Set(["pkB"]), TP);
+    assert("PARK — F3 a: a park closed at its owner retires its card at source through the declared key class; an open one is untouched",
+      sw.retired.length === 1 && sw.retired[0].key === "park:pkB" && !sw.state.cards.find((c) => c.key === "park:pkA").retired_at
+      && RETIRE_AT_SOURCE_KEYS.some((re) => re.test("park:pkB")) && sweepClosedParks(d1, new Set(), TP).retired.length === 0);
+    const settled = { ...d1, cards: d1.cards.map((c) => (c.key === "park:pkB" ? { ...c, answer: "na", retired_at: TP.toISOString() } : c)) };
+    assert("PARK — his word on a card is history: the sweep never rewrites an answered card", sweepClosedParks(settled, new Set(["pkB"]), TP).retired.length === 0);
   }
 
   console.log(`\ncaptains_call selftest: ${pass} passed, ${fail} failed`);

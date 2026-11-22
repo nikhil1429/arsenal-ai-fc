@@ -107,7 +107,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { requiredTerms, conceptOwnTerms, closedDerive, SKELETON_CARRIED } from "./teaching_terms.mjs";
 // The bank's moments are ONE predicate shared with the gate (forks row 264 (1)). study_scope is a CALL-shape
 // callee that turn_hook already imports statically, so reaching it from here is never a shim no-op.
-import { classifyPrompt, bankDueAt } from "./study_scope.mjs";
+import { classifyPrompt, bankDueAt, ownStopOf } from "./study_scope.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(HERE, "..", "dressing-room", "state");
@@ -287,6 +287,11 @@ export const CARRIED_BY_SLOT = Object.freeze({
  *  teaching_audit_last.json (owner teaching_audit.mjs, read-only here). Another session's turn → []. */
 export function prevMomentKinds({ sessionId = null, auditLast = null } = {}) {
   const L = auditLast && typeof auditLast === "object" ? auditLast : null;
+  // unit mbank (forks row 1250, mbank-9): HIS OWN session's last Stop (its record or its stub) names the kinds it
+  // declared, so a parallel session's turn in the shared slot can no longer hide the [BANK] line; the shared slot below
+  // is only for a session with no record.
+  const own = sessionId ? ownStopOf(L, sessionId) : null;
+  if (own && Array.isArray(own.kinds)) return own.kinds;
   if (!L || !L.stop || !L.prompt || !sessionId || L.stop.session_id !== sessionId || L.prompt.session_id !== sessionId) return [];
   const open = L.prompt.moments_by_kind, close = L.stop.moments_by_kind;
   if (!open || !close || typeof open !== "object" || typeof close !== "object") return [];
@@ -346,7 +351,9 @@ export function barLines(session, turn = 0, unopened = [], ctx = {}) {
     L.push(`    check_q → end "samajh aaya — haan ya nahi", NO gut trio · pehle_guess / sharp_check (the axis-close check, his answer is banked) / jirah → ONE line after it: "pehle gut-word: ${GUT_TRIO}" · otherwise at most ONE blank line after it: "maine socha ___, phir ___"`);
   }
   L.push(`  ⛔ ALWAYS — ${HARD_STOPS.replace(/^ALWAYS — /, "")} · Hinglish = English content words on Hindi glue (never akshar · shabd · niyam · sira) · address him as "tum", never the familiar singular · ONE \`\`\`diff (+ sahi / - galat, ≤ 4 lines) only at a correction · emoji only ✅ ❌ ⚠ ⭐ (≤ 2, ≤ 1 a line) · bold ≤ 1 a paragraph, ≤ 2 words · no italics`);
-  if (!ctx || ctx.park !== false) L.push(`  [PARK] his message is about the system or tools, not the concept → ONE line naming it parked + the pointer question back, nothing else`);
+  // unit mprk (row 1190): the park reaches its OWNER (parked.mjs) through the reply's own act tail — the one write door (F4 a) —
+  // and returns as ONE Captain's Call card at his next anchor. Same slot, same byte weight as before: the skeleton budget stands.
+  if (!ctx || ctx.park !== false) L.push(`  [PARK] system/tool talk → ONE parked line + the pointer question back; reply ends <<ACT {"acts":[{"verb":"park","args":{"text":"<his words>"}}]}>>`);
   return L;
 }
 

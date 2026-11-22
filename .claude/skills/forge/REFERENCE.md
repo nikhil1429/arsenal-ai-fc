@@ -81,6 +81,7 @@ if no drills, read `dressing-room/state/cards.json` for what's due).
 
 `scripts/forge_session.mjs` is the sole writer of `state/forge_session.json`, and a
 `UserPromptSubmit` hook re-injects the contract **every turn**. You MUST drive it:
+**`crack` (unit mcrk):** in the turn you write the ```diff for his broken answer, run `node scripts/forge_session.mjs crack` (no args) — it is the SOLE WRITER of `state/cracks.jsonl` (his words of that turn verbatim, read from the prompt record; refused when absent, never typed by you). Declare the moment (and `axis <x> now`) BEFORE his answer: an undeclared moment, or no axis ON, still writes his words and reds on you, the teacher, by name (unit mcrk2, row 1258 F7 B).
 *(precision added 10 Aug 2026 — both halves re-verified true, and one thing was missing. It is
 sole writer of **two** files, not one: `forge_session.json` (live pacer state) AND
 `forge_sessions.jsonl` (the append-only history `close` writes) — its own header says so,
@@ -137,6 +138,7 @@ node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --
 
 - `--said` is new and is why this is one command: no heredoc, no stdin, nothing to get wrong
   mid-lesson. (`<<< "…"` still works and is what the voice lane uses.)
+- **His words are taken from the prompt record, never from your copy** (unit mbank): the bank reads his message through the one door, keeps HIS bytes (`--said` only selects a slice, and a `--said` that is not inside his message is REFUSED), reads his gut-word off his message (a `--gut` that disagrees is REFUSED), and stamps the turn id. Omit `--said` and his whole message is banked.
 - `--latency_ms` is the **Stop→prompt clock** — how long he took to answer. `forge_session.mjs
   contract` prints it every turn. **If you cannot read it, LEAVE THE FLAG OFF.** A null latency
   is a measurement that was not made; an invented one corrupts the fluency ladder permanently.

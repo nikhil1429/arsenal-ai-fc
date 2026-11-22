@@ -38,10 +38,11 @@
 //   `unbound` line, CALL shape) · teaching_audit.mjs (stamps scope on its rows through the
 //   dispatcher's global) · teaching_contract.mjs (R8's windowed rank reads the row stamp and,
 //   for unstamped rows, the transcript entrypoint) · P2's teaching_gate.mjs and rails G3.
-// CASES: exported as scopeSelfCheck(), run by `node scripts/turn_hook.mjs selftest` (the
-//   teaching_bar precedent — this leaf has no `selftest` verb of its own, so the suite's coverage
-//   law is met by the entry that is already in organism:selftest). Its two CLI verbs, `scope` and
-//   `unbound`, are read-only hand checks (the architect's adoption re-run uses them).
+// CASES: exported as scopeSelfCheck(), run by `node scripts/turn_hook.mjs selftest` AND, since
+//   unit mcov (forks row 1137 (5)), by this leaf's own `selftest` verb, which the suite runs under
+//   this leaf's name (the coverage law read this header's word and found no suite naming the leaf).
+//   Its other two CLI verbs, `scope` and `unbound`, are read-only hand checks (the architect's
+//   adoption re-run uses them).
 // ============================================================================
 import { readFileSync, openSync, readSync, closeSync, statSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
@@ -213,6 +214,58 @@ export async function unboundMain() {
 // kind: answer › confusion › system › question › other (a system flag riding an answer or a confusion
 // does not make the message a park).
 const GUT_LEAD = /^\s*(?:gut[\s-]*word\s*(?:is|=|:|-|—)?\s*)?(pakka|pakaa|pkka|shayad|shaya|shyad|shayd|pata\s*nahi|pata\s*nhi|knew|shaky|guessed)\b\s*[—–\-:,.;!]/i;
+// unit mbank (forks row 1230, mbank-7 a) — his ANSWER, the GUT_LEAD prefix the classifier matched stripped off: the
+// gut-word is his calibration, not a hedge, so the bank's hedge meter counts over this (register.mjs is not touched).
+export const answerOf = (text) => { const s = String(text || ""); const m = GUT_LEAD.exec(s); return m ? s.slice(m[0].length) : s; };
+// ── THE ONE DOOR TO HIS WORDS (unit mbank, forks rows 1189 (1) / 1194 (2) / 1230 / 1250, mbank-1 d) ───────────────────
+// The prompt record teaching_audit.mjs writes at UserPromptSubmit (its single writer) is read HERE and nowhere new:
+// forge_session.mjs crackRow and gaffer_brain.mjs capture's code door both take his words through hisPrompt. PURE: the caller
+// reads the file (readHisPrompt is that one read). Every check beyond `absent` is opted into by the caller, so the crack
+// row keeps exactly the refusals it had (`since` only) and the bank adds its own (row 1230 mbank-6 a: no turn id = refused).
+//   since       an ISO floor: a prompt before it (or a floor that does not parse) is "before"
+//   sessionId   a Claude session id: a prompt written by another session is "other-session"
+//   fresh       true: a prompt its turn's Stop already consumed is "consumed" (it is not THIS turn's)
+//   needTurn    true: a prompt with no turn_id (written before this unit) is "no-turn-id"
+/** @returns {{ok:true,text:string,at:string,session_id:string|null,turn_id:string|null}|{ok:false,reason:string,why:string}} */
+export function hisPrompt(auditLast, { since = null, sessionId = null, fresh = false, needTurn = false } = {}) {
+  const p = auditLast && typeof auditLast === "object" ? auditLast.prompt : null;
+  const at = p && typeof p === "object" && typeof p.at === "string" ? Date.parse(p.at) : NaN;
+  if (!p || typeof p !== "object" || typeof p.text !== "string" || !p.text.trim() || !Number.isFinite(at))
+    return { ok: false, reason: "absent", why: "the UserPromptSubmit record is absent" };
+  if (since !== null) { const f = Date.parse(String(since)); if (!Number.isFinite(f) || at < f) return { ok: false, reason: "before", why: "the UserPromptSubmit record is from before this session" }; }
+  if (fresh && p.consumed_at) return { ok: false, reason: "consumed", why: "the prompt record was already consumed by its turn's Stop — it is not this turn's message" };
+  if (sessionId && p.session_id !== sessionId) return { ok: false, reason: "other-session", why: "the prompt record was written by another Claude session" };
+  const turn = typeof p.turn_id === "string" && p.turn_id ? p.turn_id : null;
+  if (needTurn && !turn) return { ok: false, reason: "no-turn-id", why: "the prompt record carries no turn_id (written before unit mbank) — ask again, one turn" };
+  return { ok: true, text: p.text, at: p.at, session_id: typeof p.session_id === "string" ? p.session_id : null, turn_id: turn };
+}
+export const AUDIT_LAST_PATH = join(STATE_DIR, "teaching_audit_last.json");   // READ-ONLY here; owned by teaching_audit.mjs
+const auditLastOf = (path = AUDIT_LAST_PATH) => { try { const j = JSON.parse(readFileSync(path, "utf8")); return j && typeof j === "object" && !Array.isArray(j) ? j : null; } catch { return null; } };
+/** ownRecordOf — THIS session's own prompt record (never a stub, never another session's), or null. */
+export function ownRecordOf(last, sessionId) {
+  const m = sessionId && last && last.prompts_by_session && typeof last.prompts_by_session === "object" ? last.prompts_by_session : null;
+  const e = m ? m[sessionId] : null;
+  return e && typeof e === "object" && !e.stub && typeof e.text === "string" ? e : null;
+}
+/** ownStopOf (row 1250, mbank-9) — THIS session's own last Stop: {at, kinds} from its consumed record or its stub, or the
+ *  previous Stop its open record carries forward; null when the session has no record. None of his words. */
+export function ownStopOf(last, sessionId) {
+  const m = sessionId && last && last.prompts_by_session && typeof last.prompts_by_session === "object" ? last.prompts_by_session : null;
+  const e = m ? m[sessionId] : null;
+  if (!e || typeof e !== "object") return null;
+  const at = e.stub || e.consumed_at ? (e.stop_at || e.consumed_at || null) : (e.prev_stop_at || null);
+  const kinds = e.stub || e.consumed_at ? e.stop_kinds : e.prev_stop_kinds;
+  return at ? { at, kinds: Array.isArray(kinds) ? kinds : null } : null;
+}
+/** readHisPrompt — the door's one file read (gaffer_brain imports it statically, never a second reader).
+ *  Unit mbank (row 1246): with a sessionId it reads THAT session's own record (`prompts_by_session[sessionId]`, written by
+ *  teaching_audit.mjs), never the shared `prompt` slot every session overwrites; without one it reads the shared slot and
+ *  the caller says so (`session_checked:false`). */
+export const readHisPrompt = (opts = {}, path = AUDIT_LAST_PATH) => {
+  const last = auditLastOf(path);
+  if (!opts.sessionId) return hisPrompt(last, opts);
+  return hisPrompt({ prompt: ownRecordOf(last, opts.sessionId) }, opts);
+};
 const GUT_INLINE = /\bgut[\s-]*word\s*(?:is|=|:|-|—)\s*(pakka|shayad|pata\s*nahi|knew|shaky|guessed)\b/i;
 // after a sentence break: 9e29b88c t3 "gut word was in enlgish right? knew - sequence length will be 3"
 const GUT_AFTER_BREAK = /(?:[?.!]\s+)(pakka|shayad|pata\s*nahi|knew|shaky|guessed)\s*[—–\-:]\s*\S/i;
@@ -227,7 +280,9 @@ const SYSTEM_TALK = /(?:^|\s)\/(learn|forge)\b|\b(ruling|rules?|notes?|sessions?
 const CLOSING = /\b(done\s+for\s+today|full[\s-]*time|post[\s-]*match|aaj\s+ke\s+liye\s+bas|band\s+karo|let'?s\s+stop|stop\s+here)\b/i;
 // forks row 268 (branch A): the sharp check carries the trio too — his 5 Sep study shape ("the ONE sharp check —
 // gut pehle", forge REFERENCE step 3) and the bank door's GUT-WORD LAW, both later than the 30 Aug act
-export const GUT_BEARING_MOMENTS = Object.freeze(["pehle_guess", "jirah", "sharp_check"]);
+// unit mdayq (forks rows 1241 (1) / 1257): the day-close question at his day end carries the trio too — the bank door
+// reads his gut word off a reply to a gut-bearing moment only, so without it a day-close answer could never be banked
+export const GUT_BEARING_MOMENTS = Object.freeze(["pehle_guess", "jirah", "sharp_check", "day_close"]);
 export function classifyPrompt(text, { prevMoments = [] } = {}) {
   const raw = String(text || "");
   const t = raw.replace(/<\/?(command-message|command-name|command-args|pasted_content)[^>]*>/g, " ").replace(/\s+/g, " ").trim();
@@ -262,12 +317,15 @@ export function classifyPrompt(text, { prevMoments = [] } = {}) {
 // without ≥ 1 Hinglish bank and ≥ 1 --register interview since the axis opened.
 // A reply to a per-idea moment (pehle_guess · check_q · widget_gate) is re-welded, never banked (forge:R40 / R90):
 // db82184b t3 t4 t5 t11 are that class.
-export const BANKED_MOMENTS = Object.freeze(["jirah", "sharp_check"]);
+//   DAY CLOSE   — `moment day_close` (unit mdayq, forks rows 1241 (1) / 1257: the fourth banked moment, ONE pair per DAY
+//                 asked at `day.mjs end`, never per idea), and his message is an answer.
+export const BANKED_MOMENTS = Object.freeze(["jirah", "sharp_check", "day_close"]);
 export function bankDueAt({ cls = null, prevMoments = [] } = {}) {
   const prev = Array.isArray(prevMoments) ? prevMoments : [];
   const c = cls && typeof cls === "object" ? cls : {};
   if (prev.includes("jirah") && c.answer) return "answers the jirah your last turn declared";
   if (prev.includes("sharp_check") && c.answer) return "answers the sharp check your last turn declared";
+  if (prev.includes("day_close") && c.answer) return "answers the day-close question your last turn declared";
   return null;
 }
 
@@ -742,7 +800,16 @@ function cli() {
   const env = opt("--entrypoint") ? { ...process.env, CLAUDE_CODE_ENTRYPOINT: opt("--entrypoint") } : process.env;
   if (mode === "scope") { console.log(JSON.stringify(studyScope({ payload, sitting: readSitting(), env }))); return; }
   if (mode === "unbound") { const v = unboundVerdict({ payload, env }); console.log(JSON.stringify({ study: v.scope.study, scope_why: v.scope.why, printed: v.line, why: v.why })); return; }
-  console.log("study_scope: scope --session <id> | unbound --session <id> [--transcript p] [--prompt \"…\"] [--entrypoint e]   (read-only; the hook path is turn_hook's CALL shape)");
+  // unit mcov (forks row 1137 (5)): the leaf's OWN selftest verb — the same scopeSelfCheck() cases turn_hook runs, so the
+  // suite judges them under this leaf's name in every profile (turn_hook's selftest is LIVE in the hermetic one).
+  if (mode === "selftest") {
+    const r = scopeSelfCheck();
+    for (const c of r.cases) console.log(`  ${c.ok ? "ok  " : "FAIL"} ${c.name}${c.ok || !c.detail ? "" : `\n         ${c.detail}`}`);
+    console.log(`study_scope selftest: ${r.pass} passed, ${r.fail} failed`);
+    process.exitCode = r.fail ? 1 : 0;
+    return;
+  }
+  console.log("study_scope: scope --session <id> | unbound --session <id> [--transcript p] [--prompt \"…\"] [--entrypoint e] | selftest   (read-only; the hook path is turn_hook's CALL shape)");
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) cli();
 
@@ -829,6 +896,10 @@ export function scopeSelfCheck() {
     /sharp check/.test(B("shaya - word level tokenization - out of vocab issue", ["sharp_check"]) || "") && /sharp check/.test(B("no idea", ["sharp_check"]) || "")
     && /sharp check/.test(B("the vocab would be huge, so OOV", ["sharp_check"]) || "") && B("ok", ["sharp_check"]) === null
     && K("the vocab would be huge, so OOV", { prevMoments: ["sharp_check"] }).answer === true && GUT_BEARING_MOMENTS.includes("sharp_check"));
+  check("BANK · unit mdayq (row 1257): a reply to a declared day_close is due and is his answer (it carries the trio); a bare 'ok' to it is not; the per-idea moments stay out of the bank",
+    /day-close question/.test(B("shayad - wo X karta hai, Y nahi", ["day_close"]) || "") && K("shayad - wo X karta hai, Y nahi", { prevMoments: ["day_close"] }).answer === true
+    && K("wo X karta hai, Y nahi", { prevMoments: ["day_close"] }).answer === true && B("ok", ["day_close"]) === null && GUT_BEARING_MOMENTS.includes("day_close")
+    && BANKED_MOMENTS.includes("day_close") && !["check_q", "pehle_guess", "widget_gate"].some((k) => BANKED_MOMENTS.includes(k)));
   check("BANK · row 266 retires the ABSENCE reading: a gut-word to a question that declared NO moment is not due (that question is a quiz-dump red, R2 (c))",
     B("shaya - word level tokenization - out of vocab issue") === null && B("no idea") === null && B("the vocab would be huge, so OOV") === null);
   check("BANK · a reply to a PER-IDEA moment is never due, gut-word or not — db82184b t3 t4 t5 t11 (P0's unbanked pehle_guess replies) and a check_q 'haan'",
