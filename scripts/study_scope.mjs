@@ -280,7 +280,9 @@ const SYSTEM_TALK = /(?:^|\s)\/(learn|forge)\b|\b(ruling|rules?|notes?|sessions?
 const CLOSING = /\b(done\s+for\s+today|full[\s-]*time|post[\s-]*match|aaj\s+ke\s+liye\s+bas|band\s+karo|let'?s\s+stop|stop\s+here)\b/i;
 // forks row 268 (branch A): the sharp check carries the trio too — his 5 Sep study shape ("the ONE sharp check —
 // gut pehle", forge REFERENCE step 3) and the bank door's GUT-WORD LAW, both later than the 30 Aug act
-export const GUT_BEARING_MOMENTS = Object.freeze(["pehle_guess", "jirah", "sharp_check"]);
+// unit mdayq (forks rows 1241 (1) / 1257): the day-close question at his day end carries the trio too — the bank door
+// reads his gut word off a reply to a gut-bearing moment only, so without it a day-close answer could never be banked
+export const GUT_BEARING_MOMENTS = Object.freeze(["pehle_guess", "jirah", "sharp_check", "day_close"]);
 export function classifyPrompt(text, { prevMoments = [] } = {}) {
   const raw = String(text || "");
   const t = raw.replace(/<\/?(command-message|command-name|command-args|pasted_content)[^>]*>/g, " ").replace(/\s+/g, " ").trim();
@@ -315,12 +317,15 @@ export function classifyPrompt(text, { prevMoments = [] } = {}) {
 // without ≥ 1 Hinglish bank and ≥ 1 --register interview since the axis opened.
 // A reply to a per-idea moment (pehle_guess · check_q · widget_gate) is re-welded, never banked (forge:R40 / R90):
 // db82184b t3 t4 t5 t11 are that class.
-export const BANKED_MOMENTS = Object.freeze(["jirah", "sharp_check"]);
+//   DAY CLOSE   — `moment day_close` (unit mdayq, forks rows 1241 (1) / 1257: the fourth banked moment, ONE pair per DAY
+//                 asked at `day.mjs end`, never per idea), and his message is an answer.
+export const BANKED_MOMENTS = Object.freeze(["jirah", "sharp_check", "day_close"]);
 export function bankDueAt({ cls = null, prevMoments = [] } = {}) {
   const prev = Array.isArray(prevMoments) ? prevMoments : [];
   const c = cls && typeof cls === "object" ? cls : {};
   if (prev.includes("jirah") && c.answer) return "answers the jirah your last turn declared";
   if (prev.includes("sharp_check") && c.answer) return "answers the sharp check your last turn declared";
+  if (prev.includes("day_close") && c.answer) return "answers the day-close question your last turn declared";
   return null;
 }
 
@@ -891,6 +896,10 @@ export function scopeSelfCheck() {
     /sharp check/.test(B("shaya - word level tokenization - out of vocab issue", ["sharp_check"]) || "") && /sharp check/.test(B("no idea", ["sharp_check"]) || "")
     && /sharp check/.test(B("the vocab would be huge, so OOV", ["sharp_check"]) || "") && B("ok", ["sharp_check"]) === null
     && K("the vocab would be huge, so OOV", { prevMoments: ["sharp_check"] }).answer === true && GUT_BEARING_MOMENTS.includes("sharp_check"));
+  check("BANK · unit mdayq (row 1257): a reply to a declared day_close is due and is his answer (it carries the trio); a bare 'ok' to it is not; the per-idea moments stay out of the bank",
+    /day-close question/.test(B("shayad - wo X karta hai, Y nahi", ["day_close"]) || "") && K("shayad - wo X karta hai, Y nahi", { prevMoments: ["day_close"] }).answer === true
+    && K("wo X karta hai, Y nahi", { prevMoments: ["day_close"] }).answer === true && B("ok", ["day_close"]) === null && GUT_BEARING_MOMENTS.includes("day_close")
+    && BANKED_MOMENTS.includes("day_close") && !["check_q", "pehle_guess", "widget_gate"].some((k) => BANKED_MOMENTS.includes(k)));
   check("BANK · row 266 retires the ABSENCE reading: a gut-word to a question that declared NO moment is not due (that question is a quiz-dump red, R2 (c))",
     B("shaya - word level tokenization - out of vocab issue") === null && B("no idea") === null && B("the vocab would be huge, so OOV") === null);
   check("BANK · a reply to a PER-IDEA moment is never due, gut-word or not — db82184b t3 t4 t5 t11 (P0's unbanked pehle_guess replies) and a check_q 'haan'",
