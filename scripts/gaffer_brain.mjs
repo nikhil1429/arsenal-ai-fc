@@ -2150,8 +2150,8 @@ export function beforeFloor(it, floorMs) {
 // The CLI's result envelope carries `total_cost_usd`. It is carried onto the row UNCHANGED, under the CLI's own name: the number
 // exactly as the CLI printed it, and null when the result does not carry it — never 0, never computed from a typed price (a
 // measurement, needing no key). The first ordinary round then says what one judged capture costs (the field ÷ `items`).
-// ⚠ NAMED, NOT REPAIRED HERE: claudegen.mjs parseOut (its leaf) does not yet hand the envelope's field back on its result, so
-// until that one line lands (FORK mjset-cost in ci/mjset/PROOF.md) every live row reads null — honestly absent, never 0.
+// forks row 1279 (1): claudegen.mjs parseOut (its leaf) hands the envelope's field back on its result — ONE line there, null
+// when the envelope carries none — so a live row reads the CLI's own number.
 /** judgeLedgerRow — PURE: the judge's brain-ledger row for one call's result `r` (claudegen's shape). ledgerForensics is spread
  *  after it by the caller (the WIRE scan of claudegen.mjs pins that spread on every brain_ledger row builder). */
 export function judgeLedgerRow(r, { rides = false, head = "", items = null, ts = new Date().toISOString() } = {}) {
@@ -2184,14 +2184,38 @@ export async function gradeJudge(deps = {}) {
   const rows = deps.rows !== undefined ? deps.rows : readJournal(GRADE_QUEUE, 800);
   // unit mjset · F5 A — HIS FLOOR, read by its ONE reader (registry.mjs gameOnEpoch). A round over PLANTED rows reads no live
   // registry: its floor is planted with them (`deps.gameOnEpoch`, a reader; absent = no floor), so no fixture ever reads his state.
-  // An unreadable floor sets nothing aside and SAYS so on the receipt (`pre_cyborg.why`) — never a silent "no floor".
+  // An unreadable floor REFUSES the round (forks row 1279 (2), below) — never a silent "no floor".
+  // (unit mjset, forks row 1279 (2): the card door below is hoisted above the floor read, unchanged, so the floor's refusal can file its card)
+  // ONE spawn of the card owner (captains_call.mjs), two of its verbs: `file` mints, `retire` (mjd5) retires at source.
+  const cardsOwner = (argv) => {
+    try {
+      const out = execFileSync(process.execPath, [join(HERE, "captains_call.mjs"), ...argv], { encoding: "utf8", timeout: JUDGE_DISPATCH_MS, windowsHide: true });
+      return { ok: true, out: String(out || "") };
+    } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) }; }
+  };
+  const cardFile = deps.fileCard || ((line, key, why = null) => cardsOwner(["file", "--line", line, "--key", key, ...(why ? ["--why-code-cannot-decide", why] : [])]));
+  const cardRetire = deps.retireCard || ((key, why) => cardsOwner(["retire", "--key", key, "--why", why]));
   const floorRead = (() => {
     const reader = deps.gameOnEpoch !== undefined ? deps.gameOnEpoch : (deps.rows !== undefined ? null : gameOnEpoch);
     if (!reader) return { ms: null, why: "no floor planted with the planted rows", planted: true };
     try { const ms = reader(); return Number.isFinite(ms) ? { ms, why: null } : { ms: null, why: `the floor reader gave ${clip(String(ms), 40)}` }; }
-    catch (e) { return { ms: null, why: `the floor is unreadable (${clip((e && e.message) || e, 160)}) — nothing was set aside` }; }
+    catch (e) { return { ms: null, why: `the floor is unreadable (${clip((e && e.message) || e, 160)})` }; }
   })();
   const outstanding0 = outstandingGrades(rows);
+  // unit mjset · forks row 1279 (2) — THE STRICTER READING: an UNREADABLE floor REFUSES the round. Nothing is judged as his
+  // without the floor (canon 7744acf1; registry.mjs gameOnEpoch: an unreadable floor "may never silently pass as no floor"). The
+  // refusal is named on the receipt and the CLI line, every capture stays outstanding (no row is written), and ONE card is filed
+  // through the captain's-call door, one key per IST day. A round over PLANTED rows with no planted floor is the fixture seam
+  // (`planted`), not an unreadable floor, and is not refused.
+  if (floorRead.ms === null && !floorRead.planted && (outstanding0.length || inDoubtDispatches(rows).length)) {
+    const key = `judge:floor:${istDay(now)}`;
+    const line = "RED · judge ka GAME ON floor (registry game_on_epoch) padha nahi gaya — koi capture judge nahi hua, sab queue mein hain. Registry row theek hote hi agla round chalega.";
+    const card = deps.dry && !deps.fileCard ? { filed: false, dry: true, key }
+      : (() => { const c = cardFile(line, key, "nothing is judged as his without the floor (canon 7744acf1); the registry row is his act, code cannot invent it (forks row 1279 (2))"); return { filed: !!c.ok, key, out: c.ok ? clip(String(c.out || "").trim(), 200) : null, error: c.ok ? null : c.error }; })();
+    return { ok: false, reason: "judge-floor-unreadable", red: "RED · THE FLOOR IS UNREADABLE", card, graded: 0, calls: 0, outstanding: outstanding0.length, ...stamp,
+      pre_cyborg: { floor: null, set_aside: 0, rows: [], why: floorRead.why, planted: false },
+      say: `gaffer_brain: RED · THE FLOOR IS UNREADABLE — ${floorRead.why}. The round was REFUSED before any call: nothing was judged, ${outstanding0.length} capture(s) stay outstanding, ${card.dry ? "DRY RUN — no card filed" : card.filed ? `ONE card at his anchor (${key})` : `⚠ the card could NOT be filed (${card.error})`} (forks row 1279 (2)).` };
+  }
   const before = outstanding0.filter((it) => beforeFloor(it, floorRead.ms));
   const setAside = [];
   for (const it of before) {
@@ -2289,15 +2313,6 @@ export async function gradeJudge(deps = {}) {
     try { return await Promise.race([Promise.resolve().then(() => second(item, bound)), late]); }
     finally { timer.clear(h); ctrl.abort(); }
   };
-  // ONE spawn of the card owner (captains_call.mjs), two of its verbs: `file` mints, `retire` (mjd5) retires at source.
-  const cardsOwner = (argv) => {
-    try {
-      const out = execFileSync(process.execPath, [join(HERE, "captains_call.mjs"), ...argv], { encoding: "utf8", timeout: JUDGE_DISPATCH_MS, windowsHide: true });
-      return { ok: true, out: String(out || "") };
-    } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) }; }
-  };
-  const cardFile = deps.fileCard || ((line, key, why = null) => cardsOwner(["file", "--line", line, "--key", key, ...(why ? ["--why-code-cannot-decide", why] : [])]));
-  const cardRetire = deps.retireCard || ((key, why) => cardsOwner(["retire", "--key", key, "--why", why]));
   // THREE NAMED SPAWNS, NOT ONE DYNAMIC ONE. `execFileSync(…, [join(HERE, cmd.organ)])`
   // is one line and it is an Unknown to the static analyser — the organ→organ edge
   // simply vanishes from the graph, and the per-organ sink ratchet charges for it.
@@ -3864,6 +3879,11 @@ function selftest2(stub, S) {
             assert("mjset F5 A · a capture before his floor (by its instant, not its day) is set aside by ONE pre_cyborg row, kept, never handed to the judge; the one after it is judged",
               fl.pre_cyborg.set_aside === 1 && pq.filter((x) => x.kind === PRE_CYBORG_KIND && x.of === "pre1").length === 1 && seen.length === 1 && !seen[0].includes("id pre1") && seen[0].includes("id post1")
               && outstandingGrades([pre, post, ...pq]).length === 0 && beforeFloor(pre, EPOCH) && !beforeFloor(post, EPOCH));
+            const fc = [], fg = [];
+            const nofloor = await gradeJudge({ rows: [pre, post], gameOnEpoch: () => { throw new Error("planted: no live mechanisms row"); }, judgeHistory: [], generate: async () => { fg.push(1); return { ok: true, text: "{}" }; },
+              fileCard: (line, key) => { fc.push(key); return { ok: true, out: "captains_call: filed c9" }; }, appendRow: () => { throw new Error("must not write"); }, now: T0, clock: () => 0 });
+            assert("mjset row 1279 (2) · an UNREADABLE floor REFUSES the round by name: no call, no row, every capture outstanding, ONE card keyed by the day",
+              nofloor.ok === false && nofloor.reason === "judge-floor-unreadable" && /FLOOR IS UNREADABLE/.test(nofloor.say) && fg.length === 0 && fc.length === 1 && fc[0] === `judge:floor:${istDay(T0)}` && nofloor.outstanding === 2);
             assert("mjset row 1260 (2) · the CLI's cost field rides the judge ledger row UNCHANGED, and is null when absent — never 0",
               judgeLedgerRow({ ok: true, total_cost_usd: 0.4321 }).total_cost_usd === 0.4321 && judgeLedgerRow({ ok: true }).total_cost_usd === null
               && judgeLedgerRow({ ok: false }).total_cost_usd !== 0);

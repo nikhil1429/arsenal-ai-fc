@@ -55,7 +55,11 @@
 //       regression check, GREEN on both); the CLI head line says it. Base: no reason on the receipt.
 //   W13 THE COST FIELD (row 1260 (2)) (a) judgeLedgerRow carries the CLI's `total_cost_usd` unchanged, null when absent, never 0;
 //       (b) the organ's own default judge, through the planted `claude` (its envelope carries total_cost_usd), appends a ledger
-//       row that HAS the field and never reads 0. Base: no field.
+//       row that HAS the field and never reads 0. Base: no field. (forks row 1279 (1)) the same live path reads the envelope's
+//       0.4321 unchanged, and null when the planted envelope carries none — never 0.
+//   W14 THE FLOOR REFUSES (forks row 1279 (2)) the registry's game_on_epoch planted unreadable → the round is REFUSED by name
+//       (`judge-floor-unreadable`, the say line), no judge call, no row written (every capture outstanding), ONE card keyed
+//       judge:floor:<IST day>. Base: the round judges without the floor.
 // ============================================================================
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, cpSync, existsSync, symlinkSync, writeFileSync, readFileSync, rmSync, chmodSync } from "node:fs";
@@ -66,7 +70,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
 const MODE = process.argv[2];
-const IDS = ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8", "W9", "W11", "W12", "W13"];
+const IDS = ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8", "W9", "W11", "W12", "W13", "W14"];
 
 if (MODE === "plants") {
   const TREE = resolve(arg("--tree") || join(HERE, "..", "..", ".."));
@@ -84,7 +88,8 @@ if (MODE === "plants") {
     'let input = ""; process.stdin.setEncoding("utf8"); process.stdin.on("data", (d) => { input += d; });',
     'process.stdin.on("end", () => {',
     '  if (process.env.MJSET_SHIM_MARK) appendFileSync(process.env.MJSET_SHIM_MARK, `called ${input.length}\\n`);',
-    '  process.stdout.write(JSON.stringify({ type: "result", subtype: "success", is_error: false, result: JSON.stringify({ grades: [] }), total_cost_usd: 0.4321,',
+    '  const cost = process.env.MJSET_SHIM_NOCOST ? {} : { total_cost_usd: 0.4321 };',
+    '  process.stdout.write(JSON.stringify({ type: "result", subtype: "success", is_error: false, result: JSON.stringify({ grades: [] }), ...cost,',
     '    usage: { input_tokens: 1, output_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } }));',
     '});',
   ].join("\n"));
@@ -274,16 +279,30 @@ await run("W13", async () => {
   const pure = typeof GB.judgeLedgerRow === "function"
     ? (() => { const a = GB.judgeLedgerRow({ ok: true, total_cost_usd: 0.4321 }), b = GB.judgeLedgerRow({ ok: true }); return a.total_cost_usd === 0.4321 && Object.prototype.hasOwnProperty.call(b, "total_cost_usd") && b.total_cost_usd === null; })()
     : false;
-  process.env.MJSET_SHIM_MARK = markFile("W13");
-  const r = await GB.gradeJudge({ now: NOW, clock: () => 0, rows: [C1], judgeHistory: [], headRides: false, dispatch: () => ({ ok: true }), appendRow: queueOf().appendRow,
-    verify: async () => ({ ran: false, why: "planted: no external check", checks: {}, calls: 0 }) });
-  delete process.env.MJSET_SHIM_MARK;
   const led = join(COPY, "dressing-room", "state", "brain_ledger.jsonl");
-  const rows = existsSync(led) ? readFileSync(led, "utf8").split(/\r?\n/).filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter((x) => x && x.job === JOB) : [];
-  const last = rows[rows.length - 1];
-  const has = !!last && Object.prototype.hasOwnProperty.call(last, "total_cost_usd");
-  const e2e = has && last.total_cost_usd !== 0 && (last.total_cost_usd === null || last.total_cost_usd === 0.4321);
-  return [pure && e2e && marked("W13") === 1, `judgeLedgerRow carries it unchanged and null when absent ${pure} · the live-path row (planted claude, its envelope carries 0.4321; reached ${marked("W13")}×) total_cost_usd ${has ? JSON.stringify(last.total_cost_usd) : "ABSENT"}${has && last.total_cost_usd === null ? " (claudegen.mjs parseOut does not hand the field back yet: FORK mjset-cost)" : ""} · round ok ${r.ok}`];
+  const lastRow = () => { const rows = existsSync(led) ? readFileSync(led, "utf8").split(/\r?\n/).filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter((x) => x && x.job === JOB) : []; return rows[rows.length - 1]; };
+  const round = async (noCost) => {
+    process.env.MJSET_SHIM_MARK = markFile("W13");
+    if (noCost) process.env.MJSET_SHIM_NOCOST = "1"; else delete process.env.MJSET_SHIM_NOCOST;
+    await GB.gradeJudge({ now: NOW, clock: () => 0, rows: [C1], judgeHistory: [], headRides: false, gameOnEpoch: () => Date.parse("2026-08-30T02:00:00.000Z"), dispatch: () => ({ ok: true }), appendRow: queueOf().appendRow,
+      verify: async () => ({ ran: false, why: "planted: no external check", checks: {}, calls: 0 }) });
+    delete process.env.MJSET_SHIM_MARK; delete process.env.MJSET_SHIM_NOCOST;
+    const r = lastRow();
+    return r && Object.prototype.hasOwnProperty.call(r, "total_cost_usd") ? r.total_cost_usd : "ABSENT";
+  };
+  const withCost = await round(false), noCost = await round(true);
+  const ok = pure && withCost === 0.4321 && noCost === null && marked("W13") === 2;
+  return [ok, `judgeLedgerRow carries it unchanged and null when absent ${pure} · the live path through the planted claude (reached ${marked("W13")}×): envelope with 0.4321 → row ${JSON.stringify(withCost)} · envelope with none → row ${JSON.stringify(noCost)} (null, never 0)`];
+});
+await run("W14", async () => {
+  const bad = join(MARKS, "registry-unreadable.json");
+  writeFileSync(bad, JSON.stringify({ version: 1, tables: { mechanisms: [{ subject: "game_on_epoch", subjects: ["not an instant"] }] } }));
+  const calls = [], cards = [], wrote = [];
+  const r = await GB.gradeJudge(base({ rows: [C1, C2], gameOnEpoch: () => REG.gameOnEpoch(bad), judgeHistory: [], generate: judge(calls, [C1, C2], (ids) => gradesFor(ids, [C1, C2])),
+    fileCard: (line, key) => { cards.push(key); return { ok: true, out: "captains_call: filed c9" }; }, appendRow: (f, row) => { wrote.push(row.kind); return { ok: true }; } }));
+  const ok = r.ok === false && r.reason === "judge-floor-unreadable" && /FLOOR IS UNREADABLE/.test(String(r.say || "")) && calls.length === 0 && wrote.length === 0
+    && cards.length === 1 && cards[0] === `judge:floor:${IST_DAY}` && GB.outstandingGrades([C1, C2]).length === 2;
+  return [ok, `an unreadable game_on_epoch: reason ${r.reason || "-"} · ${calls.length} judge call(s) · ${wrote.length} row(s) written ${JSON.stringify(wrote)} · cards ${JSON.stringify(cards)} · the CLI line names it ${/FLOOR IS UNREADABLE/.test(String(r.say || ""))}`];
 });
 
 console.log(`plants: ${out.length} clause(s) · ${out.filter((x) => x.ok).length} GREEN`);

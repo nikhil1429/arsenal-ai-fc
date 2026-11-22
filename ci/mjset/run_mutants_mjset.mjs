@@ -44,6 +44,9 @@ const MUTANTS = [
   ["W11", "M11 the morning try replaces the evening try", PM, "  lines.splice(last + 1, 0, ...add);", "  lines.splice(ji + 1, last - ji, ...add.slice(-1));"],
   ["W12", "M12 the settled_nothing field dropped", GB, "    ...(nothingWhy ? { settled_nothing: nothingWhy } : {}),", "    ...({}),"],
   ["W13", "M13 an absent cost reads 0", GB, " ? o.total_cost_usd : null,", " ? o.total_cost_usd : 0,"],
+  ["W13", "M13b claudegen drops the envelope's cost again", "scripts/claudegen.mjs", "return typeof c === \"number\" && Number.isFinite(c) ? c : null;", "return null;"],
+  ["W13", "M13c claudegen reads an absent cost as 0", "scripts/claudegen.mjs", "return typeof c === \"number\" && Number.isFinite(c) ? c : null;", "return typeof c === \"number\" ? c : 0;"],
+  ["W14", "M14 the unreadable floor's refusal removed", GB, "  if (floorRead.ms === null && !floorRead.planted && (outstanding0.length || inDoubtDispatches(rows).length)) {", "  if (false) {"],
 ];
 const copyOf = (into) => {
   for (const p of ["scripts", "package.json"]) if (existsSync(join(ORG, p))) cpSync(join(ORG, p), join(into, p), { recursive: true });

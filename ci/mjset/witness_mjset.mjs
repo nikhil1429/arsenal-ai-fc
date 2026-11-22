@@ -12,9 +12,9 @@
 // is read from this file's own repository when it is there (a seat run from a checkout), else from --org.
 //   W1 SELF-BLOCK OPENS · W2 ONE-CAPTURE FLOOR · W3 A GUARD NOT A GATE · W4 NO LOOP · W5 THE ONE CARD · W6 RETRY AT THE NEXT
 //   CARRIER · W7 PRE-CYBORG FATE · W8 HEAD-OF-LINE · W9 DRY TOUCHES NOTHING · W11 THE JUDGE LINE KEPT PER CARRIER · W12 SETTLED
-//   NOTHING BY NAME · W13 THE COST FIELD — the clause witness's own, one line each (its header names each plant)
+//   NOTHING BY NAME · W13 THE COST FIELD · W14 THE FLOOR REFUSES — the clause witness's own, one line each (its header names each plant)
 //   BOUND     only the named files differ between --base-org and --org (scripts/gaffer_brain.mjs · scripts/postmatch.mjs ·
-//             ci/witness/mjset/ · ci/mjset/), by text, CRLF folded
+//             scripts/claudegen.mjs (forks row 1279 (1), its ONE line) · ci/witness/mjset/ · ci/mjset/), by text, CRLF folded
 //   LAST      no node process naming this run's temp dir survives
 // THE PORT CLASS (row 1053): no port is bound, no service is named, nothing is POSTed, nothing restarts, no model is
 // called (the clause witness puts a planted `claude` first on its PATH, and no judge round runs through the CLI door that
@@ -34,14 +34,14 @@ const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.a
 const ORG = resolve(arg("--org") || "."), BASE = arg("--base-org") ? resolve(arg("--base-org")) : null;
 const ONLY = arg("--only") ? arg("--only").split(",").map((s) => s.trim()).filter(Boolean) : null;
 const UNIT = "MJSET", HERE = dirname(fileURLToPath(import.meta.url));
-const NAMED = (f) => ["scripts/gaffer_brain.mjs", "scripts/postmatch.mjs"].includes(f) || /^ci\/(witness\/mjset|mjset)\//.test(f);
+const NAMED = (f) => ["scripts/gaffer_brain.mjs", "scripts/postmatch.mjs", "scripts/claudegen.mjs"].includes(f) || /^ci\/(witness\/mjset|mjset)\//.test(f);
 const TMP = mkdtempSync(join(tmpdir(), "mjset-witness-"));
 const results = [];
 const record = (id, ok, why) => { if (ONLY && !ONLY.includes(id) && id !== "LAST") return; results.push({ id, ok }); console.log(`  ${ok ? "GREEN" : "RED  "} ${id}${why ? ` · ${why}` : ""}`); };
 
 const CW = [join(HERE, "..", "witness", "mjset", "witness_mjset.mjs"), join(ORG, "ci", "witness", "mjset", "witness_mjset.mjs")].find((p) => existsSync(p)) || null;
 console.log(`witness mjset · org ${ORG}${BASE ? ` · base ${BASE}` : ""} · clause witness ${CW || "ABSENT"}`);
-const IDS = ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8", "W9", "W11", "W12", "W13"];
+const IDS = ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8", "W9", "W11", "W12", "W13", "W14"];
 const want = IDS.filter((id) => !ONLY || ONLY.includes(id));
 const runOn = (tree) => {
   const r = spawnSync(process.execPath, [CW, "plants", "--tree", tree, "--tmp", TMP, ...(ONLY ? ["--only", want.join(",")] : [])], { cwd: TMP, encoding: "utf8", windowsHide: true });
@@ -90,5 +90,5 @@ try { rmSync(TMP, { recursive: true, force: true }); } catch { /* a survivor hol
 }
 const red = results.filter((r) => !r.ok).map((r) => r.id);
 if (red.length) { console.log(`RED ${UNIT} · ${red.join(", ")}`); process.exit(1); }
-console.log(`GREEN ${UNIT} the judge round always tries one capture (a floor never a fast observation, the guard once per round, a slow ok rate still RED), a declined capture goes behind the rest, a dry round calls nothing, the captures before his floor are set aside by a code row, every round that settles nothing says why, the day record keeps every judge try per carrier, and the CLI's cost field rides the judge ledger row · ${results.length} clause(s)`);
+console.log(`GREEN ${UNIT} the judge round always tries one capture (a floor never a fast observation, the guard once per round, a slow ok rate still RED), a declined capture goes behind the rest, a dry round calls nothing, the captures before his floor are set aside by a code row, every round that settles nothing says why, the day record keeps every judge try per carrier, the CLI's cost field rides the judge ledger row (null when the envelope has none), and an unreadable floor refuses the round · ${results.length} clause(s)`);
 process.exit(0);
