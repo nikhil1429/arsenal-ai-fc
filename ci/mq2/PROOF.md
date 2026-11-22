@@ -307,3 +307,79 @@ organism_test: 121 passed, 6 failed · ruled 0 · UNRULED 6 · LIVE 0 (hermetic:
   last legs read are those of 159e430 (§10), all four success.
 
 CHECKPOINT · 2026-11-22 · MERGED main 84cbc03 at 7cc2b3f · checkJs 296 = baseline (gates GREEN) · witness RED MQ2 · A9 (F9) · mutants 8 of 8, control RED (A9) · WITNESSES member 121 passed, 6 failed (5 shallow-clone BASE, 1 mday timing, none mq2) · pushed once [skip ci] · resume from: the F9 ruling
+
+## 12 · F9 RULED (row 1305): THE LOCK, built on main 84cbc03 (2026-11-22)
+
+**The rulings, verbatim (row 1305 (1)–(3), by the runner's resend):** (1) F9 (a): an exclusive lock file beside the
+config, taken before the read and held to the rename, released by unlink. The lock holds the writer's pid; a lock whose
+pid is not alive is taken over once; a live one REFUSES by name, never waits without a bound and never writes through;
+the caller reports the refusal as a refusal. Row 1175 (3) is amended to this: the compare stays inside the lock. (2)
+The witness adds: the lock-dropped mutant red at A9; a planted dead-pid lock is taken over; a planted live-pid lock
+refuses and the file is byte-unchanged; the lock file is never left behind on any exit path the witness can plant,
+and is not a tracked or published path. A9 green on repeated passes with A1 to A8 unchanged decides it. (3) F10 a,
+the extra movement named in the landing. F11 a as a later one-line unit, named in the runner's lane file. F12 a. F13 b.
+(The first copy of the order arrived with the rulings text empty; the resend above is what was built.)
+
+- **Base:** main is still **84cbc03** (`git fetch origin main` → 84cbc03126eddb85c7d5cf54b51610068800315c), and the
+  branch already carries it (merge 7cc2b3f, §11). So `ci/mq2/BASE` stays **84cbc03126eddb85c7d5cf54b51610068800315c**.
+- **(1) in `scripts/thalamus.mjs`:** `acquireConfigLock` / `releaseConfigLock` around the whole of `writeConfigLane`,
+  with `try/finally`, so every return, refusal or throw after the take releases the lock.
+  - **Take:** `<config>.lock` is created exclusively (`writeFileSync(lock, pid, { flag: "wx" })`) BEFORE the read.
+  - **Release:** unlink, and only when the lock still holds this pid.
+  - **Live holder:** refused by name (`THE LOCK: … held by live pid N`), with no wait and no retry. The stale guard
+    stays inside the lock.
+  - **Dead holder:** a lock whose pid is not alive (`process.kill(pid, 0)` → ESRCH, the same call on win32; EPERM
+    reads as alive) is taken over ONCE.
+  - **Same process:** a nested door call inside an edit (same pid) proceeds without re-taking the lock. The stale
+    guard then catches that write, which keeps A5 unchanged.
+  - **Not tracked, not published:** the lock path is under the existing `.gitignore:541` `dressing-room/state/*.lock`.
+    No file beyond the named ones was touched.
+  - **Named residuals:** a pid the OS has reused reads as alive, so a stale lock then refuses until that process exits.
+    An EMPTY lock (a writer between create and its pid write) is read as held, never as stale.
+- **Graph movement at the re-freeze (F10 a):** the IR gains `dressing-room/state/thalamus_config.json.lock`, written
+  and read by thalamus.mjs only (Q2 0 · Q3 0 · Q4 0 · Q6 0). The unresolved sinks per organ do not rise
+  (thalamus 10 → 10).
+- **Selftest (F8 b):** two lock asserts were added. No lock is left after every door call above it, and a live-pid lock
+  refuses with the file byte-unchanged and the holder's lock left in place.
+  `node scripts/thalamus.mjs selftest` → `ALL CHECKS PASSED` (exit 0).
+- **Gates:** `node scripts/gates.mjs` →
+  `other checkJs diagnostics 296 (baseline 296, may only fall)` · `gates: GREEN — nothing rose, …`.
+- **(2) in the witness, A9:**
+  - The forced overlap is now deterministic: the holder writes, and the partner is refused BY THE LOCK.
+  - (iii) a dead-pid lock (the pid of a node child that has exited) is taken over and the write lands. A live-pid lock
+    (the witness's own pid) refuses, the file is byte-unchanged and the lock is untouched.
+  - (iv) no `.lock` is left in any planted dir of the tree, across every clause's refusal and write paths.
+  - (v) the lock path is `git check-ignore`d and untracked in the tree under judgement.
+- **The witness, repeated** (`node ci/mq2/witness/witness_mq2.mjs --org . --base-org <84cbc03 tree>`, 6 passes,
+  2026-11-22):
+
+```
+pass 1..6 · exit 0 · A8 base vs build GREEN — law pack rose: none · unresolved sinks 2128 → 2124 · A9 build GREEN
+GREEN MQ2 thalamus is the sole writer of thalamus_config.json through three lane doors · 11 clause(s)    (each of the 6)
+A9 (pass 1): free race tiers+wake: wrote wake, no key lost · tiers+adjudicator: wrote tiers, no key lost · wake+adjudicator: wrote adjudicator, no key lost · forced overlap: holder wrote, partner refused by THE LOCK · dead-pid lock taken over true · live-pid lock refused, file unchanged true · locks left none · lock path ignored true untracked true
+base both ways (--org <84cbc03 tree> --base-org <84cbc03 tree>): RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9
+```
+
+- **The mutants** (`node ci/mq2/run_mutants_mq2.mjs --org . --base-org <84cbc03 tree>`), with M9 the lock dropped:
+
+```
+control: GREEN MQ2 thalamus is the sole writer of thalamus_config.json through three lane doors · 11 clause(s)
+M9 (the lock dropped (row 1305 (2))) → A9 RED — killed · witness: RED MQ2 · A9
+run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN
+```
+
+- **The WITNESSES member**
+  (`ORGANISM_TEST_PROFILE=hermetic GITHUB_ACTIONS=true GITHUB_WORKSPACE=$PWD node scripts/organism_test.mjs witnesses`):
+
+```
+WITNESSES · 63 unit(s) judged in 1530.8 s
+organism_test: 122 passed, 5 failed · ruled 0 · UNRULED 5 · LIVE 0 (hermetic: named, not run)
+```
+  All five FAILs are `mr3`, `mrf`, `mrj`, `mrt`, `mrv` · "its BASE is in the clone". This container's clone is shallow
+  and lacks those BASE commits, and the neutral machine fetches full history. mday is GREEN this run. mq2 is not a
+  member, because its witness is at `ci/mq2/witness/witness_mq2.mjs` (§11).
+- **Windows:** the lock path is `path + ".lock"` (node:path, no separator typed), and liveness is
+  `process.kill(pid, 0)`. The witness plants with node and git only. Not yet run on win32: the architect's laptop
+  re-run is its first.
+
+CHECKPOINT · 2026-11-22 · tip = this commit ([skip ci]) · BASE 84cbc03126eddb85c7d5cf54b51610068800315c · witness build GREEN MQ2 · 11 clause(s) on 6 of 6 passes (A9 GREEN each, A1–A8 unchanged) · base RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9 · mutants 9 of 9, control GREEN · WITNESSES 122 passed, 5 failed (all 5 shallow-clone BASE) · resume from: the architect's Windows re-run

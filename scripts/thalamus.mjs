@@ -2198,6 +2198,13 @@ async function selftest() {
     const oS = JSON.parse(bytes());
     assert("mq2 STALE GUARD: a lane write that lands between another writer's read and its rename makes the first one REFUSE, and the second one's key survives",
       inner && inner.ok && inner.wrote && stale.ok === false && /STALE GUARD/.test(stale.why) && oS.deep.est_tokens_per_wake === 11 && oS.tiers.tau0 === 0.3);   // no tmp is left: held by the witness (A5), not here — a new fs site would raise xray's budget
+    const lockGone = () => { try { readConfigBytes(tcfg + ".lock"); return false; } catch { return true; } };
+    assert("mq2 THE LOCK (row 1305 (1)): every door call above released its lock — no thalamus_config.json.lock is left behind",
+      lockGone());
+    writeAtomic(tcfg + ".lock", String(process.ppid));   // a LIVE pid that is not this process
+    const heldBytes = bytes(), rLive = applyTiers((c) => { c.tiers.tau0 = 0.9; return c; }, { path: tcfg });
+    assert("mq2 THE LOCK: a lock held by a live pid REFUSES by name, never waits, never writes through — the file byte-unchanged and the holder's lock left in place",
+      rLive.ok === false && /THE LOCK/.test(rLive.why) && /live pid/.test(rLive.why) && bytes() === heldBytes && !lockGone());
     wipe(tdir);
   }
   if (ADJ_ENV) { if (adjEnvSaved === undefined) delete process.env[ADJ_ENV]; else process.env[ADJ_ENV] = adjEnvSaved; }   // unit 818: his env, exactly as found
@@ -2912,9 +2919,11 @@ function statusReport() {
 //     null/undefined for "nothing to write" (the caller keeps its own reason);
 //   · THE LANE FENCE: every key outside the lane — its value AND its order — must be byte-identical after
 //     the edit, or the write is refused by name and nothing moves;
-//   · THE STALE GUARD: just before the write the bytes are read AGAIN, and if they moved since the first read
-//     the write is refused (no retry, no lock). The window left between that compare and the rename is one tmp
-//     write wide (writeAtomic: tmp + rename), and it is named, not hidden (MQ2_SPEC.md §6 F3 (a));
+//   · THE LOCK (row 1305 (1), F9 a): `<config>.lock` is taken BEFORE the read and held to the rename; a live
+//     holder REFUSES by name, a dead one is taken over once (see THE LOCK below);
+//   · THE STALE GUARD, inside the lock: just before the write the bytes are read AGAIN, and if they moved since
+//     the first read the write is refused (no retry). Under the lock it can only catch a write by the same process
+//     (a door called inside an edit);
 //   · it returns { ok, wrote, why } and throws on nothing it can refuse.
 // ---------------------------------------------------------------------------
 const CONFIG_LANES = Object.freeze({
@@ -2934,31 +2943,62 @@ function outsideLane(o, lane) {
   }
   return JSON.stringify(rest);
 }
+// THE LOCK (forks row 1305 (1), F9 a — amending row 1175 (3)): an exclusive file `<config>.lock` beside the config,
+// taken BEFORE the read and held to the rename, released by unlink. It holds the writer's pid. A lock whose pid is
+// not alive is taken over ONCE; a live one REFUSES by name — no wait, no retry, never a write through. A nested door
+// call inside an edit (same process, same pid) proceeds without taking it again: the stale guard inside the lock
+// still catches that write. Liveness is process.kill(pid, 0), which works the same on win32. The lock file is
+// gitignored (`.gitignore` dressing-room/state/*.lock). Named residuals: a pid the OS has reused reads as alive (a
+// stale lock then refuses until that process exits), and an EMPTY lock (a writer between create and its pid write)
+// is read as held, never as stale.
+const pidAlive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return !!e && /** @type {any} */ (e).code === "EPERM"; } };
+function acquireConfigLock(lock) {
+  const mine = String(process.pid);
+  const take = () => { try { writeFileSync(lock, mine, { flag: "wx" }); return true; } catch (e) { if (e && /** @type {any} */ (e).code === "EEXIST") return false; throw e; } };
+  if (take()) return { ok: true, own: true, why: "" };
+  let held = "";
+  try { held = readConfigBytes(lock).toString("utf8").trim(); } catch (e) { swallow("acquireConfigLock: the lock went between create and read", e); held = ""; }
+  if (held === mine) return { ok: true, own: false, why: "" };
+  const pid = Number(held);
+  if (held === "" || (Number.isInteger(pid) && pid > 0 && pidAlive(pid))) return { ok: false, own: false, why: `THE LOCK: ${basename(lock)} is held by ${held ? `live pid ${held}` : "a writer mid-create"}` };
+  rmSync(lock, { force: true });   // stale: its pid is gone (or its bytes are not a pid) — taken over ONCE
+  if (take()) return { ok: true, own: true, why: "" };
+  return { ok: false, own: false, why: `THE LOCK: another writer took the stale ${basename(lock)} first` };
+}
+function releaseConfigLock(lock) {
+  try { if (readConfigBytes(lock).toString("utf8") === String(process.pid)) rmSync(lock, { force: true }); } catch (e) { swallow("releaseConfigLock: the lock is already gone", e); }
+}
 function writeConfigLane(lane, edit, opts = {}) {
   const path = opts.path || CONFIG;
   const refuse = (why) => ({ ok: false, wrote: false, why: `${why} — lane ${lane.name}; nothing written` });
   if (typeof edit !== "function") return refuse("no edit function handed in");
   if (typeof path !== "string" || basename(path) !== basename(CONFIG)) return refuse(`the path must name a ${basename(CONFIG)} (got ${String(path)})`);
-  let buf;
-  try { buf = readConfigBytes(path); } catch (e) { return refuse(`cannot read ${path} (${(e && e.code) || e})`); }
-  const text = buf.toString("utf8");
-  let o;
-  try { o = JSON.parse(text); } catch (e) { return refuse(`the file is unparsable JSON (${String((e && e.message) || e).slice(0, 160)})`); }
-  if (!isPlainObject(o)) return refuse("the file is not a JSON object");
-  const fence = outsideLane(o, lane);
-  const next = edit(JSON.parse(text), text, buf);
-  if (next === null || next === undefined) return { ok: true, wrote: false, why: "the edit asked for no write" };
-  if (!isPlainObject(next)) return refuse("the edit returned something that is not a JSON object");
-  if (outsideLane(next, lane) !== fence) return refuse("THE LANE FENCE: the edit changed a key outside its own lane");
-  const out = JSON.stringify(next, null, 1);
-  if (out === text) return { ok: true, wrote: false, why: "nothing to change" };
+  const lock = path + ".lock";
+  let lk;
+  try { lk = acquireConfigLock(lock); } catch (e) { return refuse(`THE LOCK: cannot take ${basename(lock)} (${(e && /** @type {any} */ (e).code) || e})`); }
+  if (!lk.ok) return refuse(lk.why);
   try {
-    if (!readConfigBytes(path).equals(buf)) return refuse("THE STALE GUARD: the file moved between this writer's read and its rename");
-    writeAtomic(path, out);   // the organ's own tmp + rename — no new fs site (xray's unresolved budget only falls)
-  } catch (e) {
-    return { ok: false, wrote: false, failed: true, why: `WRITE FAILED — ${(e && e.message) || e} (tmp + rename: the file is as it was) — lane ${lane.name}` };
-  }
-  return { ok: true, wrote: true, why: "written" };
+    let buf;
+    try { buf = readConfigBytes(path); } catch (e) { return refuse(`cannot read ${path} (${(e && e.code) || e})`); }
+    const text = buf.toString("utf8");
+    let o;
+    try { o = JSON.parse(text); } catch (e) { return refuse(`the file is unparsable JSON (${String((e && e.message) || e).slice(0, 160)})`); }
+    if (!isPlainObject(o)) return refuse("the file is not a JSON object");
+    const fence = outsideLane(o, lane);
+    const next = edit(JSON.parse(text), text, buf);
+    if (next === null || next === undefined) return { ok: true, wrote: false, why: "the edit asked for no write" };
+    if (!isPlainObject(next)) return refuse("the edit returned something that is not a JSON object");
+    if (outsideLane(next, lane) !== fence) return refuse("THE LANE FENCE: the edit changed a key outside its own lane");
+    const out = JSON.stringify(next, null, 1);
+    if (out === text) return { ok: true, wrote: false, why: "nothing to change" };
+    try {
+      if (!readConfigBytes(path).equals(buf)) return refuse("THE STALE GUARD: the file moved between this writer's read and its rename");
+      writeAtomic(path, out);   // the organ's own tmp + rename — no new fs site (xray's unresolved budget only falls)
+    } catch (e) {
+      return { ok: false, wrote: false, failed: true, why: `WRITE FAILED — ${(e && e.message) || e} (tmp + rename: the file is as it was) — lane ${lane.name}` };
+    }
+    return { ok: true, wrote: true, why: "written" };
+  } finally { if (lk.own) releaseConfigLock(lock); }
 }
 // The three doors, one per lane, no lane argument (row 834 (3) read strictly — F2 B).
 export function applyTiers(edit, opts) { return writeConfigLane(CONFIG_LANES.tiers, edit, opts); }

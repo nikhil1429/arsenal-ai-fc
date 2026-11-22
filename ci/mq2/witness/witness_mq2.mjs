@@ -23,7 +23,12 @@
 //                      a free race behind one start flag for EVERY pair of the three doors, and a forced overlap across
 //                      two processes — every write a process reports done is on disk, every planted key survives, a
 //                      loser refuses out loud. A free race is not deterministic: one pass can land GREEN by luck, never
-//                      RED by luck (a lost key is a lost key)
+//                      RED by luck (a lost key is a lost key). Under THE LOCK (row 1305 (1)) the forced overlap is
+//                      deterministic: the holder holds the lock from its read to its rename, so the partner REFUSES by
+//                      name and the holder's write lands. And (row 1305 (2)): a planted DEAD-pid lock is taken over and
+//                      the write lands · a planted LIVE-pid lock refuses and the file is byte-unchanged · no lock file
+//                      is left behind in any planted dir, on any exit path above · the lock path is gitignored and
+//                      untracked in the build tree
 //   BOUND              only scripts/thalamus.mjs, scripts/gate_tune.mjs, scripts/watchman.mjs and ci/mq2/** differ
 //                      between the trees' git indexes (dressing-room/state/ is data, never compared and never read)
 //   LAST               no node process this witness started survives (each child's pid is probed, cross-platform)
@@ -108,6 +113,9 @@ if (process.argv[2] === "--child") {
     const r = m.refitWakeEconomy((o) => { o.deep.est_tokens_per_wake = 5; o._wake_economy_refit = { fit: 5 }; return o; }, { path: a.path });
     writeFileSync(a.done, "1");
     say({ r }); process.exit(0);
+  }
+  if (mode === "lock-plant") {   // one tiers write against whatever lock the parent planted
+    say({ r: m.applyTiers((o) => { o.tiers.tau0 = 0.3; o._gate_tune_receipt = { id: "lock-plant" }; return o; }, { path: a.path }) }); process.exit(0);
   }
   say({ unknown: mode }); process.exit(1);
 }
@@ -227,7 +235,7 @@ const spawnKid = (tree, mode, a, env) => {
   k.done = new Promise((res) => k.on("exit", (code) => { const l = out.split(/\r?\n/).filter(Boolean); let j = {}; try { j = JSON.parse(l[l.length - 1] || "{}"); } catch { j = {}; } res({ code, ...j }); }));
   return k;
 };
-C.A9 = async (R) => {
+C.A9 = async (R, T) => {
   // (i) THE FREE RACE, every pair of the three doors: both children ready, ONE start flag, one write each.
   //     Held iff every write a child reports done is on disk, every planted key survives, a loser refuses out loud.
   const names = Object.keys(RACE), pairs = names.flatMap((x, i) => names.slice(i + 1).map((y) => [x, y]));
@@ -241,7 +249,7 @@ C.A9 = async (R) => {
     if (res.some((r) => r.missing)) return { green: false, line: `no such export(s): ${res.find((r) => r.missing).missing.join(", ")} — nothing to race but whole-file writers` };
     const o = JSON.parse(text(p));
     const lost = pair.filter((lane, i) => res[i].r && res[i].r.wrote && !RACE[lane].on(o));
-    const loud = res.every((r) => r.code === 0 && r.r && (r.r.wrote || (r.r.ok === false && /STALE GUARD/.test(r.r.why))));
+    const loud = res.every((r) => r.code === 0 && r.r && (r.r.wrote || (r.r.ok === false && /STALE GUARD|THE LOCK/.test(r.r.why))));
     free.push({ pair: pair.join("+"), ok: lost.length === 0 && loud && outside(o, RACE_TOP, RACE_NESTED) === plantOut, wrote: pair.filter((_, i) => res[i].r && res[i].r.wrote), lost });
   }
   // (ii) THE FORCED OVERLAP across two processes: the holder reads, the partner writes, the holder renames last
@@ -251,10 +259,27 @@ C.A9 = async (R) => {
   writeFileSync(f("holder.pid"), String(h.pid)); writeFileSync(f("partner.pid"), String(w.pid));
   const [rh, rp] = await Promise.all([h.done, w.done]);
   const o2 = JSON.parse(text(p2));
-  const forced = !!(rh.r && rh.r.ok === false && /STALE GUARD/.test(rh.r.why) && rp.r && rp.r.wrote && RACE.wake.on(o2) && !RACE.tiers.on(o2)
+  // under the lock: the holder (lock taken before its read, held to its rename) writes; the partner REFUSES by name
+  const forced = !!(rh.r && rh.r.wrote && rp.r && rp.r.ok === false && /THE LOCK/.test(rp.r.why) && RACE.tiers.on(o2) && !RACE.wake.on(o2)
     && outside(o2, RACE_TOP, RACE_NESTED) === plantOut && readdirSync(d2).filter((x) => x.endsWith(".tmp")).length === 0);
-  return { green: free.every((x) => x.ok) && forced,
-    line: `free race ${free.map((x) => `${x.pair}: wrote ${x.wrote.join("+") || "none"}${x.lost.length ? `, LOST ${x.lost.join("+")}` : ", no key lost"}`).join(" · ")} · forced overlap: holder ${rh.r && rh.r.ok === false ? "refused out loud" : "WROTE"}, partner's key kept ${RACE.wake.on(o2)}` };
+  // (iii) THE PLANTED LOCKS (row 1305 (2)): a dead pid's lock is taken over; a live pid's lock refuses, file byte-unchanged
+  const d3 = R.dir(), p3 = plantCfg(d3), lock3 = p3 + ".lock";
+  const gone = spawnSync(process.execPath, ["-e", ""], { windowsHide: true });   // a pid that has exited: dead by construction
+  writeFileSync(lock3, String(gone.pid));
+  const rd = child(R.tree, "lock-plant", { path: p3 }, R.env);
+  const dead = !!(rd.r && rd.r.wrote && JSON.parse(text(p3)).tiers.tau0 === 0.3 && !existsSync(lock3));
+  const d4 = R.dir(), p4 = plantCfg(d4), lock4 = p4 + ".lock", held4 = text(p4);
+  writeFileSync(lock4, String(process.pid));   // this witness: alive for as long as the child runs
+  const rl = child(R.tree, "lock-plant", { path: p4 }, R.env);
+  const live = !!(rl.r && rl.r.ok === false && /THE LOCK/.test(rl.r.why) && text(p4) === held4 && existsSync(lock4) && text(lock4) === String(process.pid));
+  rmSync(lock4, { force: true });   // the witness's own plant, removed by the witness
+  // (iv) no lock is left behind in ANY planted dir of this tree (every clause's refusal and write paths above)
+  const left = readdirSync(R.tree).filter((x) => /^p\d+$/.test(x)).flatMap((x) => readdirSync(join(R.tree, x)).filter((y) => y.endsWith(".lock")).map((y) => `${x}/${y}`));
+  // (v) the lock path is gitignored and untracked in the tree under judgement
+  const ign = spawnSync("git", ["-C", T, "check-ignore", "-q", "dressing-room/state/thalamus_config.json.lock"], { windowsHide: true }).status === 0;
+  const trk = String(spawnSync("git", ["-C", T, "ls-files", "--", "dressing-room/state/thalamus_config.json.lock"], { encoding: "utf8", windowsHide: true }).stdout || "").trim() !== "";
+  return { green: free.every((x) => x.ok) && forced && dead && live && left.length === 0 && ign && !trk,
+    line: `free race ${free.map((x) => `${x.pair}: wrote ${x.wrote.join("+") || "none"}${x.lost.length ? `, LOST ${x.lost.join("+")}` : ", no key lost"}`).join(" · ")} · forced overlap: holder ${rh.r && rh.r.wrote ? "wrote" : "REFUSED"}, partner ${rp.r && rp.r.ok === false && /THE LOCK/.test(rp.r.why) ? "refused by THE LOCK" : "NOT refused by the lock"} · dead-pid lock taken over ${dead} · live-pid lock refused, file unchanged ${live} · locks left ${left.length ? left.join(",") : "none"} · lock path ignored ${ign} untracked ${!trk}` };
 };
 
 function bound() {

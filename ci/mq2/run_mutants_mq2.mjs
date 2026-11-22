@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ci/mq2/run_mutants_mq2.mjs — unit mq2 MUTANTS (forks row 1175 (6); ci/mq2/MQ2_SPEC.md §5 A, M1-M8). HEADER = CONTRACT.
+// ci/mq2/run_mutants_mq2.mjs — unit mq2 MUTANTS (forks row 1175 (6); ci/mq2/MQ2_SPEC.md §5 A, M1-M8; row 1305 (2), M9). HEADER = CONTRACT.
 //
 //   node ci/mq2/run_mutants_mq2.mjs --org <build tree> --base-org <base tree> [--only <Mk>]
 //
@@ -40,6 +40,7 @@ const MUTANTS = [
     [TH, "//        One more file is written, and only as an APPENDER on the", "//        ONE file outside that five is written, and only as an APPENDER on the"],
     [TH, "export function setAdjudicatorRole(edit, opts) { return writeConfigLane(CONFIG_LANES.adjudicator, edit, opts); }\n",
       "export function setAdjudicatorRole(edit, opts) { return writeConfigLane(CONFIG_LANES.adjudicator, edit, opts); }\nexport function mq2Mutant() { writeFileSync(join(STATE_DIR, \"xray_graph.json\"), \"\"); }\n"]] },
+  { id: "M9", clause: "A9", why: "the lock dropped (row 1305 (2))", edits: [[TH, "  try { lk = acquireConfigLock(lock); } catch (e) { return refuse(`THE LOCK: cannot take ${basename(lock)} (${(e && /** @type {any} */ (e).code) || e})`); }\n", "  lk = { ok: true, own: false, why: \"\" };\n"]] },
 ];
 
 const ROOT = mkdtempSync(join(tmpdir(), "mq2-mutants-"));
