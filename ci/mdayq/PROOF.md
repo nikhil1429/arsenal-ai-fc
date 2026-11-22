@@ -13,6 +13,17 @@ no merge, nothing moved on main. No live model call anywhere (every model spawn 
 - The spec (`ci/mdayq/MDAYQ_SPEC.md` on `claude/mdayq-spec` @ `d9ee129`, read whole) cites lines at its own base `7bf008b`.
   Re-measured at the cut by `grep -n` before any edit (§6).
 
+- **RE-CUT, 22 Nov 2026 (row 1279 (5) / row 1284 (2)):** mbank LANDED on main `d585648e3438147d97140248c69f900af7327d58`, merged
+  here as `77c587f` (a merge commit; `core.autocrlf false`, `core.eol lf`); `ci/mdayq/BASE` = d585648. CONFLICTS, each named:
+  `scripts/forge_session.mjs` lockGate's negative-space line (kept the build's `r.moment !== DAY_CLOSE`; main's side was the
+  cut's line unchanged) · `ci/mbank/LEDGER.jsonl`, `ci/mbank/PROOF.md`, `scripts/organism_test.mjs` (main's landed side:
+  the build carries no edit of them). AUTO-MERGED: `.claude/skills/forge/SKILL.md`, `.claude/skills/learn/SKILL.md`,
+  `scripts/day.mjs`, `scripts/forge_session.mjs`, `scripts/gaffer_brain.mjs`, `scripts/notes_compiler.mjs`,
+  `scripts/study_scope.mjs`, `scripts/teaching_gate.mjs`. Re-run against d585648 on LF worktrees: the unit witness
+  `GREEN MDAYQ … · 17 clause(s)` (BOUND green, 13 file(s) differ) · base leg `RED MDAYQ · W1, W2, W3, W4, W5, W5L, W7, W8,
+  W9, W10, W14, W15, W16, W17` · `run_mutants: 15 of 15 … · control GREEN` · `gates.mjs report` other checkJs diagnostics
+  296 (baseline 296) on both, lint frozen counts equal, `gates: GREEN`.
+
 ## 2 · WHAT IS BUILT (the ruling, row 1257)
 
 | fork | ruled | built at |
