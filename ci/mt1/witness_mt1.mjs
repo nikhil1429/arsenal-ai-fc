@@ -49,7 +49,7 @@ const RAN = "      const ran = now() - t0, d = decide(";
 function plantKeeper(src) {
   const s = String(src).replace(/\r\n/g, "\n");
   if (s.split(SPAWN).length !== 2 || s.split(RAN).length !== 2) return null;
-  const body = s.replace(SPAWN, "      if (spawns > 0) await sleep(__mt1Ran, () => stopping);   // PLANTED: a respawn slower than one first-boot sample\n" + SPAWN)
+  const body = s.replace(SPAWN, "      if (spawns > 0) { await sleep(__mt1Ran, () => stopping); if (stopping) continue; }   // PLANTED: a respawn slower than one first-boot sample; a stop during it stops, as at the loop head\n" + SPAWN)
       .replace(RAN, "      const ran = (__mt1Ran = now() - t0), d = decide(");
   // after the shebang line, if there is one (a line before `#!` is a syntax error)
   const nl = body.startsWith("#!") ? body.indexOf("\n") + 1 : 0;
