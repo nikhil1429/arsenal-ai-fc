@@ -120,17 +120,19 @@ and none is built. The runner repeats the count at each day close until mcrk2 la
 2. **`crackRow` keeps its `auditLast` argument** and gains `prompt` (the door's result, what the verb passes) and `sessionId`;
    the spec's signature took `prompt` only. mbank's B12 and the selftest call the pure function with a record object; the same
    door (`hisPrompt` with since, sessionId, fresh) is applied inside.
-3. **The env-absent refusal (spec §11.2, clause G12c) is NOT built — FORK mcrk2-F12.** With no `CLAUDE_CODE_SESSION_ID` the
+3. **The env-absent refusal (spec §11.2, clause G12c) is NOT built — FORK mcrk2-F12** (ruled by row 1281 (2): no refusal,
+   the organism's gap instead; §10). With no `CLAUDE_CODE_SESSION_ID` the
    verb passes `sessionId: null`, and mbank's `readHisPrompt` then reads the shared slot with `since` and `fresh` and no session
    check (mbank's own contract). Refusing there would turn the landed mcrk witness and every neutral-machine leg red (the
    neutral machine has no session id). The ruling's F2 C names "the calling session id", and with none there is nothing to
    compare. The architect may rule it stricter.
-4. **No seed row for `crack-gap` in `teaching_contract.mjs`** (never edited by this brief) — FORK mcrk2-F13. The id is
+4. ~~**No seed row for `crack-gap` in `teaching_contract.mjs`** (never edited by this brief)~~ — FORK mcrk2-F13, **ruled by row
+   1281 (3): the seed row is built (§10); the rest of this item is the record of 21 Nov.** The id is
    declared in `teaching_audit.mjs SEED_GAP`, the file's own declared-gap list, whose ratchet goes red the day the owner seeds
    it. Until then `autohit crack-gap` exits 1 on his laptop and the drift is counted in the audit lane's own log row
    (`teaching_audit.jsonl` drifts + staged). Spec G7's "the contract CLI lists crack-gap" leg is replaced by the SEED_GAP leg.
-5. **The pacer `status` suffix (spec §6, G10's status leg) is not built**: the brief names `forge_session.mjs` for crackRow
-   and the verb print line. G10 holds readCracks and the print line instead.
+5. ~~**The pacer `status` suffix (spec §6, G10's status leg) is not built**: the brief names `forge_session.mjs` for crackRow
+   and the verb print line. G10 holds readCracks and the print line instead.~~ **Built by row 1281 (6)** (§10).
 6. **FORK mcrk2-F6w — one edit in `witness_crack.mjs` beyond K3.** Its `ENV` now deletes `CLAUDE_CODE_SESSION_ID`. Without it,
    on any seat or on his laptop (where Claude Code sets the variable) K1, K2, K3b, K4 and K7 go RED: the verb, now reading
    through the calling session's own record, rightly refuses a plant whose prompt record was written by `sess-witness`.
@@ -155,14 +157,38 @@ and none is built. The runner repeats the count at each day close until mcrk2 la
 - How often moments are logged with `axis: null` (F4-m reach): over `forge_sessions.jsonl`, `moments_log[].axis === null`.
 - That `node scripts/teaching_audit.mjs report` names `crack-gap` UNWIRED until the contract's owner seeds it (FORK mcrk2-F13).
 
-## 10. FORKS (one line each)
+## 10. FORKS — RULED by forks row 1281 (22 Nov 2026 IST, through runner M); the old text struck in place
 
-- **mcrk2-F6w** — `witness_crack.mjs`'s ENV drops `CLAUDE_CODE_SESSION_ID` (beyond F6 A's K3): forced, or the landed member reds wherever the variable is set.
-- **mcrk2-F12** — no refusal when the calling session id is absent (spec §11.2's G12c not built): the shared slot with since + fresh, as mbank's reader does.
-- **mcrk2-F13** — `crack-gap` has no seed row in `teaching_contract.mjs` (not this unit's file); declared in SEED_GAP; owed to the contract's owner.
-- **mcrk2-F14** — mbank's mutant M17 anchor is replaced by ruling (F2 C); whoever re-cuts mbank or lands second re-anchors it (class of row 1253).
-- **mcrk2-F15** — the gates' +1 checkJs diagnostic at this tip is mbank's `scripts/organism_test.mjs` LANE_ENV line (9074365), not an mcrk2 byte; for mbank's re-cut.
-- **mcrk2-F16** — `ci/mcrk2/MERGED.json`, a file beyond the brief's list, on the ruled class of row 1200 (2), so BOUND can judge a build with main merged in.
+- **mcrk2-F6w** — ~~`witness_crack.mjs`'s ENV drops `CLAUDE_CODE_SESSION_ID` (beyond F6 A's K3): forced, or the landed member reds wherever the variable is set.~~
+  **RULED (1): accepted — a witness plants its own session and names it.** The mcrk2 clause witness now does the same: every
+  pacer call runs as `sess-witness` with that session's own prompt record, unless a clause names another (G4 (e), G6, G7, G12)
+  or none (G13).
+- **mcrk2-F12** — ~~no refusal when the calling session id is absent (spec §11.2's G12c not built): the shared slot with since + fresh, as mbank's reader does.~~
+  **RULED (2): no refusal; his words are kept. BUILT:** a crack written with no calling session id carries gap
+  `session-unchecked`, `gap_owner: "organism"` (joined `+` with a teacher gap: `teacher+organism`); `teaching_gate` counts
+  `C.crack-unchecked` (count mouth, never a block, never the teacher's `C.crack-gap`); `teaching_audit`'s teacher drift counts
+  only a teacher part. The pacer writes `calling_session_id_present` (a boolean only, never the id) at `start`, and at `resume`
+  only when the session has none: once per forge session. Clause **G13**, mutant **M13** (a second, **M13b**, holds the
+  boolean). **OWED:** the first Desktop sitting after landing is the measurement (read the boolean of that session); absent
+  there returns as a fork.
+- **mcrk2-F13** — ~~`crack-gap` has no seed row in `teaching_contract.mjs` (not this unit's file); declared in SEED_GAP; owed to the contract's owner.~~
+  **RULED (3): mcrk2 gains `scripts/teaching_contract.mjs` for the ONE seed row. BUILT:** `r("crack-gap", …)` beside
+  `uncaptured-rep`, and `crack-gap` left `teaching_audit.mjs SEED_GAP` in the same commit (3147a60); the contract selftest's
+  seed-size pins move with the one row (the seed carries one more rule; the audit-id list names crack-gap). The spec's contract
+  CLI leg returns in **G7** (`list` names it, `autohit crack-gap` exits 0 on an empty planted state); mutant **M7b** drops the
+  seed row. The bound now names `scripts/teaching_contract.mjs`.
+- **mcrk2-F14** — ~~mbank's mutant M17 anchor is replaced by ruling (F2 C); whoever re-cuts mbank or lands second re-anchors it (class of row 1253).~~
+  **RULED (4): mcrk2 lands second, so it re-anchors mbank's M17 at its re-cut and gains `ci/mbank/run_mutants_mbank.mjs` for
+  that anchor only (the class of row 1253). NOT DONE NOW — done at the re-cut (ruling (7)).**
+- **mcrk2-F15** — ~~the gates' +1 checkJs diagnostic at this tip is mbank's `scripts/organism_test.mjs` LANE_ENV line (9074365), not an mcrk2 byte; for mbank's re-cut.~~
+  **RULED (5): moot after the merge of a main carrying mbank.** Until then the gates report on this branch keeps reading that one
+  mbank diagnostic (§14); this unit's five organs carry none.
+- **mcrk2-F16** — ~~`ci/mcrk2/MERGED.json`, a file beyond the brief's list, on the ruled class of row 1200 (2), so BOUND can judge a build with main merged in.~~
+  **RULED (5): accepted, the class of row 1200 (2).**
+- **Spec §6 status suffix** (§8 item 5 above: ~~not built~~) — **RULED (6): built.** The close report's crack line, the pacer's
+  one crack count, now names the gaps beside it: `(k with a named gap — the teacher's miss, or the organism's when the session
+  id was unreadable; his words written all the same)`, only when k > 0. **G10** holds it; mutant **M10c**.
+- **RULED (7):** re-cut above mbank after mjset and mdayq, by row 1279 (5). Main is NOT merged until the runner sends its sha.
 
 ## 6b. The neutral machine's `witnesses` member, emulated (21 Nov 2026)
 
@@ -228,9 +254,26 @@ gives to mbank's commit 9074365 (forks row 1265, mbank-10 a), inside the provisi
 named files, so it is named and not edited; no baseline is raised and nothing is ignored. This unit's four organs add 0
 diagnostics (tsc main a0645d2 → tip differ by that one mbank line only) and no lint count rises.
 
+## 14. ROW 1281 BUILT (22 Nov 2026), on 8ec60e5's line (provisional mbank f635d68 + main a0645d2; main NOT re-merged)
+
+```
+node ci/mcrk2/witness_mcrk2.mjs --org <archive tip> --base-org <archive f635d68>    GREEN MCRK2 … · 15 clause(s)   (BOUND · 52 file(s) differ · the merge's bytes (MERGED.json a0645d2) 37 · outside the named files 0)
+node ci/mcrk2/witness_mcrk2.mjs --org <archive f635d68> --base-org <same>          RED MCRK2 · G2, G3, G3b, G4, G5, G6, G7, G8, G9, G10, G13, G12, MCRK CARRY
+node ci/mcrk2/run_mutants_mcrk2.mjs                                                 run_mutants: 24 of 24 mutant(s) RED by the clause that names them · control GREEN
+node scripts/forge_session.mjs selftest      forge_session selftest: 246 passed, 0 failed
+node scripts/notes_compiler.mjs selftest     notes_compiler selftest: 51 passed, 0 failed
+node scripts/teaching_gate.mjs selftest      teaching_gate selftest: 133 passed, 0 failed
+node scripts/teaching_audit.mjs selftest     ALL CHECKS PASSED (154 passed, 0 failed)
+node scripts/teaching_contract.mjs selftest  cut: teaching_contract selftest: 118 passed, 0 failed · tip: teaching_contract selftest: 118 passed, 0 failed
+node ci/witness/mcrk/witness_crack.mjs plants   PLANTS mcrk · 11 of 11 plant(s) as expected
+node scripts/models.mjs check                exit 0
+node scripts/gates.mjs report                gates: 1 RED — a gate may only get stricter (§10-D rule 6)   (297 vs 296: mbank's organism_test.mjs line, as at 4b17f89; this unit's five organs 0 diagnostics; lint at its frozen counts)
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all   organism_test: 168 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 125 (hermetic: named, not run) — the one red is GATES (the mbank line), as at 4b17f89
+```
+
 ## 11. CHECKPOINT
 
-CHECKPOINT · MERGED main a0645d2 at 2026-11-21T19:30Z · witness GREEN at the merge, RED at base, 21 of 21 mutants RED,
-control GREEN · gates 1 RED, mbank's bytes (FORK mcrk2-F15) · resume from: read the neutral machine's split legs on this tip;
-then any message (a re-cut mbank tip or a new main → merge it, regenerate MERGED.json from git merge-tree, re-run the unit
-witness and mutants, name it here; a ruling on FORKS mcrk2-F6w / F12 / F13 / F14 / F15)
+CHECKPOINT · ROW 1281 BUILT at 2026-11-22 (IST) · (2) G13/M13, (3) seed row + G7 CLI leg/M7b, (6) close suffix G10/M10c · witness
+GREEN both ways, 24 of 24 mutants RED, control GREEN · resume from: the runner's main sha (after mbank lands and mjset + mdayq
+re-cut) → re-cut above it by row 1279 (5), re-anchor mbank's M17 there (row 1281 (4)), regenerate MERGED.json, re-run witness
+and mutants, name it here

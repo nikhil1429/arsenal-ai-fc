@@ -54,3 +54,9 @@
 {"ts":"2026-11-21T18:59:22.260Z","act":"measure","cmd":"node ci/mcrk2/run_mutants_mcrk2.mjs","last_line":"run_mutants: 21 of 21 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-21T18:59:22.260Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 168 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 125 (hermetic: named, not run) — GATES"}
 {"ts":"2026-11-21T18:59:22.260Z","act":"measure","cmd":"node scripts/gates.mjs report (tip; and tree 4e81424 = merge(f635d68, a0645d2) without mcrk2)","last_line":"gates: 1 RED — a gate may only get stricter (§10-D rule 6) · 297 vs 296 at both: mbank 9074365 organism_test.mjs"}
+{"ts":"2026-11-22T04:46:33.074Z","act":"build","cmd":"forks row 1281 (2)/(3)/(6): forge_session, teaching_gate, teaching_audit, notes_compiler, teaching_contract (3147a60)","last_line":"five selftests green"}
+{"ts":"2026-11-22T04:46:33.074Z","act":"measure","cmd":"node ci/mcrk2/witness_mcrk2.mjs --org <archive tip> --base-org <archive f635d68>","last_line":"GREEN MCRK2 … · 15 clause(s)"}
+{"ts":"2026-11-22T04:46:33.074Z","act":"measure","cmd":"node ci/mcrk2/witness_mcrk2.mjs --org <archive f635d68> --base-org <same>","last_line":"RED MCRK2 · G2, G3, G3b, G4, G5, G6, G7, G8, G9, G10, G13, G12, MCRK CARRY"}
+{"ts":"2026-11-22T04:46:33.074Z","act":"measure","cmd":"node ci/mcrk2/run_mutants_mcrk2.mjs","last_line":"run_mutants: 24 of 24 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-22T04:46:33.074Z","act":"measure","cmd":"node scripts/gates.mjs report","last_line":"gates: 1 RED — a gate may only get stricter (§10-D rule 6) (297: the mbank line; mcrk2 0)"}
+{"ts":"2026-11-22T04:46:33.074Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 168 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 125 (hermetic: named, not run) — GATES"}
