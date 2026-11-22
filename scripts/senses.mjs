@@ -57,14 +57,20 @@ export function istStamp(iso) {
 // THE PREDICATES — one per sensor; each owner's record shape is its writer's (named in the header above).
 // A predicate returns {dead:false} or {dead:true, since, since_kind, evidence}. "since" when the owner
 // carries the first dead pass (dead_since), "as of" when it stamps only the pass that saw it dead.
-/** @typedef {{dead:boolean, since?:string|null, since_kind?:string, evidence?:string|null}} Verdict */
+/** @typedef {{dead:boolean, since?:string|null, since_kind?:string, evidence?:string|null, amber?:{state:string, since:string|null}}} Verdict */
 /** @type {Record<string, (o:any) => Verdict>} */
 export const DEAD = Object.freeze({
   presence: (o) => {
+    // unit mpres2 (F11 A / F12 A): BUSY — the port is held and its launcher runs, no answer in time — is an AMBER,
+    // never a wound, however long it lasts (no count, no age turns it dead)
+    if (o.busy === true) return { dead: false, amber: { state: "busy", since: o.busy_since || o.at || null } };
     if (o.alive !== false) return { dead: false };
     const r = o.repair || null;
-    // F9 B: a FAILED ask reads red by name; the other outcomes are said, never hidden
-    const evidence = !r ? null : r.result === "failed" ? `repair FAILED (${clip(r.why, 24)})` : r.result === "asked" ? "launcher asked" : r.result === "asking" ? "launcher asked, no answer recorded" : r.result === "none" ? "no repair door" : null;
+    // F9 B: a FAILED ask reads red by name; the other outcomes are said, never hidden. mpres2: the server that
+    // answered without its window watcher is its own red (never a relaunch), and dead beside a running launcher
+    // is its own red (beside-running), distinct from a failed ask and from no door
+    const evidence = o.dead_reason === "no-window-bucket" ? "watcher absent" : o.dead_reason === "bad-json" && !r ? "server answered, not JSON"
+      : !r ? null : r.result === "beside-running" ? "dead beside a running launcher" : r.result === "failed" ? `repair FAILED (${clip(r.why, 24)})` : r.result === "asked" ? "launcher asked" : r.result === "asking" ? "launcher asked, no answer recorded" : r.result === "none" ? "no repair door" : null;
     return { dead: true, since: o.dead_since || o.at, since_kind: "since", evidence };
   },
   touchline: (o) => {
@@ -105,13 +111,17 @@ export function senseTable(path = REGISTRY_PATH) {
   return { known: true, why: null, rows };
 }
 
-/** senseFacts — the fold. {known, why, wounds:[{sensor,input,since,since_ist,since_kind,evidence,file}], unknown:[subject], healthy:[subject]}
+/** senseFacts — the fold. {known, why, wounds:[{sensor,input,since,since_ist,since_kind,evidence,file}], unknown:[subject], healthy:[subject],
+ *  amber:[{sensor,input,state,since,since_ist,file}]}
  *  The LINE is state.mjs's (stateFrom renders it, one renderer); this organ hands it the IST stamp ready-made.
+ *  unit mpres2 (F11 A): an amber is neither a pass nor a red, so it rides the line's STATED-UNKNOWN tail as
+ *  `<sensor> <state> since <IST>` (e.g. `senses ? presence busy since 21 Nov 14:05 IST`) — state.mjs renders it
+ *  unchanged, and `amber` carries the same fact structured.
  * @param {{stateDir?:string, registryPath?:string, table?:any}} [o] */
 export function senseFacts({ stateDir = STATE_DIR, registryPath = REGISTRY_PATH, table = null } = {}) {
   const t = table || senseTable(registryPath);
-  if (!t.known) return { known: false, why: t.why, wounds: [], unknown: [], healthy: [] };
-  /** @type {any[]} */ const wounds = [];
+  if (!t.known) return { known: false, why: t.why, wounds: [], unknown: [], healthy: [], amber: [] };
+  /** @type {any[]} */ const wounds = [], amber = [];
   /** @type {string[]} */ const unknown = [], healthy = [];
   for (const r of t.rows) {
     const pred = DEAD[r.subject];
@@ -121,9 +131,13 @@ export function senseFacts({ stateDir = STATE_DIR, registryPath = REGISTRY_PATH,
     let v;
     try { v = pred(o); } catch { unknown.push(r.subject); continue; }
     if (v.dead) wounds.push({ sensor: r.subject, input: r.input, since: v.since || null, since_ist: istStamp(v.since), since_kind: v.since_kind || "as of", evidence: v.evidence || null, file: r.file });
+    else if (v.amber) {
+      const a = { sensor: r.subject, input: r.input, state: v.amber.state, since: v.amber.since || null, since_ist: istStamp(v.amber.since), file: r.file };
+      amber.push(a); unknown.push(`${a.sensor} ${a.state} since ${a.since_ist}`);
+    }
     else healthy.push(r.subject);
   }
-  return { known: true, why: null, wounds, unknown, healthy };
+  return { known: true, why: null, wounds, unknown, healthy, amber };
 }
 
 // THE SEED the lander runs (F3 B) — printed by `status` when the row is absent, and written verbatim in
@@ -169,6 +183,17 @@ function selftest() {
       f.wounds.length === 1 && f.wounds[0].sensor === "presence" && f.wounds[0].since === "2026-11-17T05:28:00.000Z" && /repair FAILED \(ENOENT\)/.test(f.wounds[0].evidence));
     assert("W4 — the wound carries its IST stamp ready for the line: 17 Nov 10:58 IST, kind `since`",
       f.wounds[0].since_ist === "17 Nov 10:58 IST" && f.wounds[0].since_kind === "since" && f.wounds[0].input === "activitywatch");
+    // unit mpres2 — the three new readings of the presence snapshot
+    plant("presence_input.json", { at: "2026-11-21T08:36:00.000Z", input: "activitywatch", alive: false, dead_since: "2026-11-21T08:30:00.000Z", dead_reason: "refused", repair: { span: "2026-11-21T08:30:00.000Z", result: "beside-running", why: "aw-qt.exe running, input dead" } });
+    assert("mpres2 §11 — dead beside a running launcher is a wound with its OWN evidence (not FAILED, not no door)",
+      (() => { const w = facts().wounds; return w.length === 1 && w[0].evidence === "dead beside a running launcher"; })());
+    plant("presence_input.json", { at: "2026-11-21T08:36:00.000Z", input: "activitywatch", alive: false, dead_since: "2026-11-21T08:30:00.000Z", dead_reason: "no-window-bucket" });
+    assert("mpres2 §12.2 — the server answered with no window watcher: a wound named `watcher absent`",
+      (() => { const w = facts().wounds; return w.length === 1 && w[0].evidence === "watcher absent"; })());
+    plant("presence_input.json", { at: "2026-11-21T08:40:00.000Z", input: "activitywatch", alive: false, busy: true, busy_since: "2026-11-21T08:35:00.000Z", dead_since: null, dead_reason: "abort" });
+    f = facts();
+    assert("mpres2 F11 A — BUSY is an amber, never a wound: `presence busy since 21 Nov 14:05 IST` rides the stated-unknown tail",
+      f.wounds.length === 0 && f.amber.length === 1 && f.amber[0].state === "busy" && f.unknown.includes("presence busy since 21 Nov 14:05 IST"));
     plant("presence_input.json", { at: "x", input: "activitywatch", alive: true, dead_since: null });
     // healthy everywhere ⇒ zero characters (W5)
     plant("pitch_read.json", { tunnel: { state: "clear" }, input: { activitywatch: true } });
@@ -234,9 +259,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       console.log(`senses: ? — ${s.why}`);
       console.log(`  the lander seeds it: node scripts/registry.mjs set --table mechanisms --json '${JSON.stringify(SEED_ROW)}'`);
     } else {
-      console.log(`senses: ${s.wounds.length} dead · ${s.unknown.length} unknown · ${s.healthy.length} healthy`);
+      console.log(`senses: ${s.wounds.length} dead · ${s.amber.length} amber · ${s.unknown.length - s.amber.length} unknown · ${s.healthy.length} healthy`);
       for (const w of s.wounds) console.log(`  ✗ ${w.sensor}: ${w.input} dead ${w.since_kind} ${istStamp(w.since)}${w.evidence ? ` · ${w.evidence}` : ""} (${w.file})`);
-      for (const u of s.unknown) console.log(`  ? ${u}: no readable record`);
+      for (const a of s.amber) console.log(`  ~ ${a.sensor}: ${a.input} ${a.state} since ${a.since_ist} (${a.file})`);
+      for (const u of s.unknown) if (!s.amber.some((a) => u === `${a.sensor} ${a.state} since ${a.since_ist}`)) console.log(`  ? ${u}: no readable record`);
     }
   } else { console.error(`senses: unknown mode "${mode}" — status | json | selftest`); process.exit(1); }
 }
