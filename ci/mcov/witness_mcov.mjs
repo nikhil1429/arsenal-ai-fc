@@ -17,7 +17,8 @@
 //                   and never judges it as a hermetic member.
 //   C4 VERB       · `node scripts/study_scope.mjs selftest` exits 0 and its last line is
 //                   `study_scope selftest: <n> passed, 0 failed` with n > 0 (its own cases, not the usage line).
-//   C5 ONE RECORD · (forks row 1143 (1)) each of the four is named by EXACTLY ONE package.json suite string, and the suite
+//   C5 ONE RECORD · (forks row 1143 (1)) each of the four is named by EXACTLY ONE ~~package.json suite string~~ record — RE-CUT by
+//                   unit mhot (row 1309 (1)): the tree's member roll where it holds suite/members, else the string — and the suite
 //                   file (scripts/organism_test.mjs) lists no member names: no array literal in it (parsed with acorn)
 //                   holds two or more string elements that are, exactly, names of package.json suite members. A spawn
 //                   argv naming one organ is not a list; a second list of member names beside the one record is.
@@ -28,8 +29,9 @@
 //   C7 HANG-NAMED · (row 1151 (1) (a)) a planted suite member that never exits is red, and its red is NAMED: the member's
 //                   FAIL detail and the roll-up both say `killed by the suite bound (<bound> ms)` with a bound above the
 //                   helper's default — never a bare non-zero exit.
-//   ONE planted tree per org carries every clause (row 1182 (2)): two plant files under scripts/ and two members appended
-//   to that tree's organism:selftest string (both carry a selftest verb and sit in one string, so C1 and C5 are unmoved by
+//   ONE planted tree per org carries every clause (row 1182 (2)): two plant files under scripts/ and two members ~~appended
+//   to that tree's organism:selftest string~~ joined by the tree's own door (RE-CUT by unit mhot, row 1309 (1): a member file
+//   each where the tree holds suite/members, else appended to that tree's organism:selftest string) (both carry a selftest verb and sit in one string, so C1 and C5 are unmoved by
 //   them). Its `suites` run is handed ORGANISM_TEST_MEMBER_BOUND_MS = twice the helper default: a door the build's suite file
 //   honours only to LOWER the member bound, so the hang is killed at that bound and the neutral job never spends the whole
 //   long bound on a plant; the base's suite file has no door and kills both plants at its default. The two trees' suites
@@ -88,6 +90,13 @@ function plantBoundMembers(dir) {
   if (!Number.isFinite(def)) return def;
   writeFileSync(join(dir, "scripts", "mcov_slow.mjs"), `// planted by ci/mcov/witness_mcov.mjs: sleeps the run helper's default bound, then exits 0\nif (process.argv[2] === "selftest") setTimeout(() => { console.log("mcov_slow selftest: slept the helper default, exit 0"); }, ${def});\n`);
   writeFileSync(join(dir, "scripts", "mcov_hang.mjs"), "// planted by ci/mcov/witness_mcov.mjs: never exits; only the suite runner's bound ends it\nif (process.argv[2] === \"selftest\") setInterval(() => {}, 1 << 30);\n");
+  // RE-CUT by unit mhot (forks row 1309 (1), MHOT-M2 = A, row 1204 (1)'s shape), an ADDED edit: ~~the two are appended to the
+  // organism:selftest string~~ → they join by THE TREE'S OWN DOOR. Where the tree holds suite/members (the member roll, unit mhot),
+  // each gets its member file; where it does not, the old string append below, unchanged. Never both, never a bare OR.
+  if (existsSync(join(dir, "suite", "members"))) {
+    for (const o of ["mcov_slow", "mcov_hang"]) writeFileSync(join(dir, "suite", "members", `${o}.json`), JSON.stringify({ suite: "organism:selftest", argv: ["selftest"], live: null }) + "\n");
+    return def;
+  }
   const pj = join(dir, "package.json");
   writeFileSync(pj, readFileSync(pj, "utf8").replace(/("organism:selftest": "[^"]*)"/, (_, s) => `${s} && node scripts/mcov_slow.mjs selftest && node scripts/mcov_hang.mjs selftest"`));
   return def;
@@ -134,11 +143,21 @@ export async function judgeAll(dir) {
 function oneRecord(dir) {
   const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
   const members = new Set(), times = new Map(FOUR.map((f) => [f, 0]));
-  for (const n of SUITE_NAMES) {
+  // RE-CUT by unit mhot (row 1309 (1)), an ADDED edit: ~~each of the four in EXACTLY ONE package.json suite string~~ → in exactly
+  // one record of the tree's own shape. Where the tree holds suite/members, the record is the tree's roll (`organism_test.mjs
+  // roll --json`): each of the four counted over its member files, its name case-folded (a second file for one organ is two
+  // records — Windows folds case); a roll that cannot be read is a red. Where it does not, the strings below, unchanged.
+  const rolled = existsSync(join(dir, "suite", "members"));
+  if (rolled) {
+    const r = node(dir, [join("scripts", "organism_test.mjs"), "roll", "--json"]);
+    let roll = null; try { roll = JSON.parse(r.out.split(NL).filter(Boolean).pop() || ""); } catch { roll = null; }
+    if (!roll || !Array.isArray(roll.members)) return { green: false, why: `the tree's member roll is unreadable (roll --json exit ${r.code})` };
+    for (const m of roll.members) { members.add(m.organ); const f = String(m.organ).toLowerCase(); if (times.has(f)) times.set(f, times.get(f) + 1); }
+  } else for (const n of SUITE_NAMES) {
     const named = new Set([...String(pkg.scripts?.[n] || "").matchAll(/scripts\/([A-Za-z0-9_\-]+)\.mjs/g)].map((m) => m[1]));
     for (const m of named) { members.add(m); if (times.has(m)) times.set(m, times.get(m) + 1); }
   }
-  const notOnce = FOUR.filter((f) => times.get(f) !== 1).map((f) => `${f} in ${times.get(f)} suite string(s)`);
+  const notOnce = FOUR.filter((f) => times.get(f) !== 1).map((f) => `${f} in ${times.get(f)} ${rolled ? "member file(s)" : "suite string(s)"}`);
   const lists = [];
   // acorn from the PLANTED tree's node_modules: the member runs this file from a copy of ci/mcov/, beside no node_modules
   let parse, simple;
@@ -150,7 +169,7 @@ function oneRecord(dir) {
     if (names.length >= 2) lists.push(`organism_test.mjs:${n.loc.start.line} [${names.join(", ")}]`);
   } });
   const why = [...notOnce, ...lists.map((l) => `member list ${l}`)];
-  return { green: why.length === 0, why: why.length ? why.join(" · ") : "one record: package.json only, no member list in the suite file" };
+  return { green: why.length === 0, why: why.length ? why.join(" · ") : `one record: ${rolled ? "the member roll (suite/members) only" : "package.json only"}, no member list in the suite file` };
 }
 
 /** every live process whose command line names `root` (never through a shell) @returns {string[]} */

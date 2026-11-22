@@ -42,7 +42,9 @@
 //         LIST_SUPERSEDED_BY_CARDS is false and `parked.mjs close-list` names this session's park with its reason (a);
 //         a copy with the switch planted ON prints ONE line, no list, no words (b)
 //   SKILL the [PARK] skeleton line (teaching_bar.mjs) and both skill lines (forge, learn SKILL.md) name the park tail
-//   COVER package.json wires `node scripts/parked.mjs selftest` into exactly one suite, and it exits 0 on the copy
+//   COVER ~~package.json wires `node scripts/parked.mjs selftest` into exactly one suite~~ the selftest is in exactly one record —
+//         RE-CUT by unit mhot (row 1309 (1)): the tree's member roll where it holds suite/members, else the package.json string —
+//         and it exits 0 on the copy
 //   BOUND only the named files differ from --base-org (ci/mprk/** is this unit's own output)
 //   LAST  no node process naming TMP survives
 // LAST LINE: GREEN MPRK <what> · <n> clause(s) (exit 0) or RED MPRK · <clauses> (exit 1)
@@ -296,10 +298,17 @@ if (want("SKILL")) {
 if (want("COVER")) {
   let pk = null; try { pk = JSON.parse(RD(join(ORG, "package.json")) || "null"); } catch { pk = null; }
   const suites = pk ? Object.entries(pk.scripts || {}).filter(([k]) => /:selftest$/.test(k) && /&&/.test(String(pk.scripts[k]))) : [];
-  const n = suites.reduce((a, [, v]) => a + String(v).split("&&").map((s) => s.trim()).filter((s) => s === "node scripts/parked.mjs selftest").length, 0);
+  // RE-CUT by unit mhot (forks row 1309 (1), MHOT-M2 = A, row 1204 (1)'s shape), an ADDED edit: ~~package.json wires the selftest
+  // into exactly one suite string~~ → into exactly one record of the tree's own shape. Where the tree holds suite/members, the
+  // tree's roll (`organism_test.mjs roll --json`) names parked with argv ["selftest"] exactly once (an unreadable roll counts 0,
+  // a red); where it does not, the strings below, unchanged. Never a bare OR.
+  const rolled = existsSync(join(ORG, "suite", "members"));
+  const rollN = () => { const r = spawnSync(process.execPath, [join(ORG, "scripts", "organism_test.mjs"), "roll", "--json"], { cwd: ORG, encoding: "utf8", windowsHide: true, maxBuffer: 1 << 26 });
+    try { const j = JSON.parse(String(r.stdout || "")); return r.status === 0 && Array.isArray(j.members) ? j.members.filter((m) => m && m.organ === "parked" && JSON.stringify(m.argv) === '["selftest"]').length : 0; } catch { return 0; } };
+  const n = rolled ? rollN() : suites.reduce((a, [, v]) => a + String(v).split("&&").map((s) => s.trim()).filter((s) => s === "node scripts/parked.mjs selftest").length, 0);
   let st = { code: null, out: "" };
   if (existsSync(join(ORG, "scripts", "parked.mjs"))) { const T = copyTree(ORG, "org-cover"); st = node(T, null, new Date().toISOString(), [sc(T, "parked.mjs"), "selftest"]); }
-  clause("COVER", n === 1 && st.code === 0, `suite entries naming \`node scripts/parked.mjs selftest\`: ${n} (must be 1) · its selftest exit ${st.code} "${lines(st.out).pop() || ""}"`);
+  clause("COVER", n === 1 && st.code === 0, `${rolled ? "member-roll entries naming parked with its selftest argv" : "suite entries naming `node scripts/parked.mjs selftest`"}: ${n} (must be 1) · its selftest exit ${st.code} "${lines(st.out).pop() || ""}"`);
 }
 
 // ── BOUND ──

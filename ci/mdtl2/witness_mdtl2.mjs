@@ -136,7 +136,14 @@ function plantRepo(tree, into, { members, files = {}, pkgPrefix = "", untracked 
   mkdirSync(into, { recursive: true });
   for (const p of ["scripts", ".github", "package.json"]) if (existsSync(join(tree, p))) cpSync(join(tree, p), join(into, p), { recursive: true, filter: (s) => !/[\\/]node_modules([\\/]|$)/.test(s) });
   const pkg = JSON.parse(readFileSync(join(into, "package.json"), "utf8"));
-  for (const n of ["organism:selftest", "squad:selftest", "audit:selftest"]) pkg.scripts[n] = n === "organism:selftest" ? members.map((m) => `node scripts/${m}.mjs selftest`).join(" && ") : "";
+  // RE-CUT by unit mhot (forks row 1309 (1), MHOT-M2 = A, row 1204 (1)'s shape), an ADDED edit: ~~the suites set to <members> in
+  // the package.json strings~~ → the members planted by THE TREE'S OWN DOOR. Where <tree> holds suite/members (the member roll,
+  // unit mhot), the planted repo gets suite/members with exactly one member file per planted member (organism:selftest, argv
+  // ["selftest"]), and the tree's own chain strings stand; where it does not, the strings as before. Never both.
+  if (existsSync(join(tree, "suite", "members"))) {
+    mkdirSync(join(into, "suite", "members"), { recursive: true });
+    for (const m of members) writeFileSync(join(into, "suite", "members", `${m}.json`), JSON.stringify({ suite: "organism:selftest", argv: ["selftest"], live: null }) + "\n");
+  } else for (const n of ["organism:selftest", "squad:selftest", "audit:selftest"]) pkg.scripts[n] = n === "organism:selftest" ? members.map((m) => `node scripts/${m}.mjs selftest`).join(" && ") : "";
   writeFileSync(join(into, "package.json"), pkgPrefix + JSON.stringify(pkg, null, 2));
   for (const [p, t] of Object.entries(files)) { mkdirSync(join(into, p, ".."), { recursive: true }); writeFileSync(join(into, p), t); }
   const e = [git(into, ["init", "-q"]), git(into, ["add", "-A"]), git(into, ["commit", "-q", "-m", "planted"])].find((r) => r.status !== 0);
