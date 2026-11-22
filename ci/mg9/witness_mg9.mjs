@@ -8,11 +8,13 @@
 // FUTURE (`later(20)`, `later(40)`) and lets compileDay read its OWN clock, so a machine that reaches the compile in under
 // 20 ms drops them (scripts/exchanges.mjs drops a record after `now`): G9 (ii) NOT PLACED, G8's diff lost. The repair hands
 // the compile a clock no earlier than the last planted record. Only the witness changes; no product byte.
-//   FAST     the FAST MACHINE, made deterministic: a temp copy of --org whose scripts/notes_compiler.mjs DEFAULT clock
-//            (`now = () => new Date()` in compileDay's signature) lags the real time by one second — what a compile reached
-//            "too soon" looks like to a future-stamped record. --org's own ci/witness/mcrk2/witness_crack_gap.mjs runs
-//            `plants --only G8,G9` over that copy: both must read GREEN. The old wait reads RED there (it trusts the
-//            default clock); the repaired one hands its own. The copy is under os.tmpdir(); no repository file is edited.
+//   FAST     the FAST MACHINE, made deterministic, on a temp copy of --org (no repository file is edited): (1) its
+//            scripts/notes_compiler.mjs DEFAULT clock (`now = () => new Date()` in compileDay's signature) lags the real time
+//            by one second, and (2) its copy of ci/witness/mcrk2/witness_crack_gap.mjs plants the future records a hundred
+//            times further ahead (`later(10|20|40)` → `later(1000|2000|4000)`), so the compile is always reached before them,
+//            as on a machine faster than any real one. That copy runs `plants --only G8,G9`: both must read GREEN. Only a
+//            witness that hands the compile a clock no earlier than the last record it planted survives both; the old wait
+//            reads RED.
 //   REAL     the same two clauses over --org unchanged: GREEN (the repair breaks nothing on a real clock); at the base it
 //            is folded into FAST's line, as a guard, never alone (a clause green at the base proves nothing)
 //   STRUCK   --org's witness keeps the old wait's text, struck in place (`~~const compile = (N, p, arc, D) => …~~`), beside
@@ -64,12 +66,17 @@ if (want("FAST")) {
   if (NM) symlinkSync(NM, join(fast, "node_modules"), process.platform === "win32" ? "junction" : "dir");
   const nc = join(fast, "scripts", "notes_compiler.mjs"), src = text(nc) || "";
   const ANCHOR = "correctionsPath = null, capsulesDir = null, now = () => new Date(), guard";
-  const planted = src.split(ANCHOR).length - 1 === 1;
-  if (planted) writeFileSync(nc, src.replace(ANCHOR, "correctionsPath = null, capsulesDir = null, now = () => new Date(Date.now() - 1000), guard"));
+  const wf = CW(fast), ws = text(wf) || "";
+  const LITS = [["later(10)", "later(1000)"], ["later(20)", "later(2000)"], ["later(40)", "later(4000)"]];
+  const planted = src.split(ANCHOR).length - 1 === 1 && LITS.every(([a]) => ws.includes(a));
+  if (planted) {
+    writeFileSync(nc, src.replace(ANCHOR, "correctionsPath = null, capsulesDir = null, now = () => new Date(Date.now() - 1000), guard"));
+    writeFileSync(wf, LITS.reduce((t, [a, b]) => t.split(a).join(b), ws));
+  }
   const f = planted ? clauses(fast) : null, real = clauses(ORG);
   record("FAST", planted && green(f) && green(real),
-    !planted ? "the compile's default-clock anchor is not in --org's notes_compiler.mjs exactly once: the fast machine cannot be planted"
-      : `fast machine (the compile's default clock a second behind): ${f.g8.slice(0, 60)} · ${f.g9.slice(0, 140)} · real clock (guard): G8 ${/GREEN/.test(real.g8) ? "GREEN" : "RED"} G9 ${/GREEN/.test(real.g9) ? "GREEN" : "RED"}`);
+    !planted ? "the compile's default-clock anchor (once in notes_compiler.mjs) or the witness's future offsets later(10|20|40) are not in --org: the fast machine cannot be planted"
+      : `fast machine (the compile's default clock a second behind, the records 100× further ahead): ${f.g8.slice(0, 60)} · ${f.g9.slice(0, 140)} · real clock (guard): G8 ${/GREEN/.test(real.g8) ? "GREEN" : "RED"} G9 ${/GREEN/.test(real.g9) ? "GREEN" : "RED"}`);
 }
 if (want("STRUCK")) {
   const w = text(CW(ORG)) || "";
