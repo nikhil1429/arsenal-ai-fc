@@ -204,6 +204,32 @@ mclk, mdet, mdtl2), so files beyond its named list differ; the same line at the 
   - members, 22 Nov 2026: `gaffer_brain selftest: 206 passed, 0 failed` · postmatch and claudegen `ALL CHECKS PASSED` · `node scripts/models.mjs check` exit 0
   - hermetic suite, 22 Nov 2026 (a local clone at 700c2a3): `organism_test: 171 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125`
 
+## 11 · FORKS ROW 1292 — THE LANDED mtail WITNESS, T4 (land/mjset 83d5710 RED on both neutral legs, runs 137116638892 / 137116638954, 22 Nov 2026)
+
+- **(1) The measurement**, 22 Nov 2026: `ci/mtail/witness_mtail.mjs` on the tip (`ci/mtail/sides.mjs --ref 6afe819`) against its BASE
+  `d0c8c9606863c8ce3160be93025fdb4a9c088fe2` (fetched by sha), T4 alone (a scratch copy with T1-T3 and BOUND cut out, never committed):
+  - part 1, one definition: `true` (`gaffer_brain.mjs (exported)`) · part 2, postmatch imports it: `true` · part 3, the named
+    captures: `true` (exactly `t4-early, t4-mid, t4-dayonly`; the exported function reads `function`) · part 4, the record
+    byte-equal to BASE's: `false`.
+  - the line diff of the two close records (BASE → tip), the whole of it:
+    `12a13 > JUDGE TRY · morning · 2099-04-11T02:00:03.270Z · JUDGE: NOT DUE · gaffer_brain: not due (day.close) — the witness's planted fake judge child ran its full time`
+    — ONE added line, the kept try of row 1245 (1). No other line differs.
+- **(2) Branch (a).** T4 is re-cut IN PLACE in `ci/mtail/witness_mtail.mjs` (old header text struck, row 1292 cited): the definition, the
+  import and the named captures stay exact; the record is compared byte-equal with every line beginning `JUDGE TRY · ` set aside BY
+  NAME on both sides (the clause line says how many). Mutant `ci/mjset/run_mutant_mtail_t4.mjs` — an UNRULED record line changed
+  (the machine record's RESULT line), 22 Nov 2026: `run_mutant_mtail_t4: 1 of 1 mutant(s) RED by T4 · control GREEN`.
+  - the landed mtail witness at the tip (76e9f63) against d0c8c96, 22 Nov 2026: `ok T1 F-B` · `ok T2 F-C` · `ok T3 AUTH` · `ok T4 F1`
+    (1 ruled line set aside) · `RED BOUND` (332 tracked files differ from d0c8c96 — main has moved since mtail's base; not mjset's,
+    and the WITNESSES member reads mtail GREEN at head against its BASE) · `ok LAST`; last line `RED MTAIL · BOUND`.
+  - mjset's own unit witness bound names `ci/mtail/witness_mtail.mjs` (row 1292 (2) (a) grants it): head against d585648, 22 Nov
+    2026, `GREEN MJSET … · 15 clause(s)` (BOUND: 11 file(s) differ, every one named) · `run_mutants: 16 of 16 mutant(s) RED by the
+    clause that names them · control GREEN`.
+- **(3) The WITNESSES member over the tree** (row 1292 (3)), 22 Nov 2026: a full clone of the repo (core.autocrlf=false, core.eol=lf,
+  every unit's BASE present) at 76e9f63, `GITHUB_ACTIONS=true GITHUB_WORKSPACE=<clone> ORGANISM_TEST_PROFILE=hermetic node
+  scripts/organism_test.mjs witnesses` → `organism_test: 125 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0` — 59 landed units'
+  witnesses, each GREEN at head against its own BASE (mtail and mjset among them). Unsharded, the whole list in one run.
+- Seat commits from row 1289 (2) on carry `[skip ci]`.
+
 ## CHECKPOINT
 
-CHECKPOINT · 2026-11-22 · mbank LANDED: main d585648 merged (700c2a3), BASE = d585648, witness GREEN against it (RED on it), 16 of 16 mutants, gates GREEN at 296, the suite green · resume from: the architect's own legs on this tip; then mdayq, mcrk2 in his study order (row 1279 (5)). Earlier: row 1279 (1)-(3) built on 1d8af54 · main a0645d2 merged (1d8af54) · 2026-11-21 F1 C · F2 B · F3 A · F4 A · F5 A · F6 A · row 1245 (1) (2) (3) · row 1260 (2).
+CHECKPOINT · 2026-11-22 · forks row 1292: branch (a) · T4 GREEN (re-cut in place, the JUDGE TRY lines set aside by name; MT4 RED by it) · WITNESSES member 125 passed, 0 failed (59 units) · resume from: the runner's land tip of this seat sha. Earlier: mbank landed, main d585648 merged (700c2a3), BASE = d585648 · row 1279 (1)-(3) built · 2026-11-21 F1 C · F2 B · F3 A · F4 A · F5 A · F6 A · row 1245 (1) (2) (3) · row 1260 (2).
