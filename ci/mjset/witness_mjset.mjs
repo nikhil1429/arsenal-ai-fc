@@ -14,7 +14,8 @@
 //   CARRIER · W7 PRE-CYBORG FATE · W8 HEAD-OF-LINE · W9 DRY TOUCHES NOTHING · W11 THE JUDGE LINE KEPT PER CARRIER · W12 SETTLED
 //   NOTHING BY NAME · W13 THE COST FIELD · W14 THE FLOOR REFUSES — the clause witness's own, one line each (its header names each plant)
 //   BOUND     only the named files differ between --base-org and --org (scripts/gaffer_brain.mjs · scripts/postmatch.mjs ·
-//             scripts/claudegen.mjs (forks row 1279 (1), its ONE line) · ci/witness/mjset/ · ci/mjset/), by text, CRLF folded
+//             scripts/claudegen.mjs (forks row 1279 (1), its ONE line) · ci/mtail/witness_mtail.mjs (forks row 1292 (2) (a), T4
+//             re-cut in place) · ci/witness/mjset/ · ci/mjset/), by text, CRLF folded
 //   LAST      no node process naming this run's temp dir survives
 // THE PORT CLASS (row 1053): no port is bound, no service is named, nothing is POSTed, nothing restarts, no model is
 // called (the clause witness puts a planted `claude` first on its PATH, and no judge round runs through the CLI door that
@@ -34,7 +35,7 @@ const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.a
 const ORG = resolve(arg("--org") || "."), BASE = arg("--base-org") ? resolve(arg("--base-org")) : null;
 const ONLY = arg("--only") ? arg("--only").split(",").map((s) => s.trim()).filter(Boolean) : null;
 const UNIT = "MJSET", HERE = dirname(fileURLToPath(import.meta.url));
-const NAMED = (f) => ["scripts/gaffer_brain.mjs", "scripts/postmatch.mjs", "scripts/claudegen.mjs"].includes(f) || /^ci\/(witness\/mjset|mjset)\//.test(f);
+const NAMED = (f) => ["scripts/gaffer_brain.mjs", "scripts/postmatch.mjs", "scripts/claudegen.mjs", "ci/mtail/witness_mtail.mjs"].includes(f) || /^ci\/(witness\/mjset|mjset)\//.test(f);
 const TMP = mkdtempSync(join(tmpdir(), "mjset-witness-"));
 const results = [];
 const record = (id, ok, why) => { if (ONLY && !ONLY.includes(id) && id !== "LAST") return; results.push({ id, ok }); console.log(`  ${ok ? "GREEN" : "RED  "} ${id}${why ? ` · ${why}` : ""}`); };
