@@ -24,7 +24,9 @@
 //   COPY       tempCopy copies scripts/ and only registry.json of the state dir, under os.tmpdir(); cleanup removes it.
 //   LEAF       own_source.mjs imports node: builtins only (postmatch's CHILD_TIMEOUT_MS would close a cycle through the
 //              organs that will import it — measured in PROOF.md).
-//   ONLY-NAMED the judged tree differs from the base ONLY in scripts/own_source.mjs (added), package.json (one line: the
+//   ONLY-NAMED BOUND  (a BOUND-class clause, row 1311 (1): it compares a whole-tree path list base vs head, so its id carries
+//              BOUND and the neutral WITNESSES member drops it; it is judged at adoption against the unit's parent, and its
+//              mutant stays) the judged tree differs from the base ONLY in scripts/own_source.mjs (added), package.json (one line: the
 //              suite line with `&& node scripts/own_source.mjs selftest` appended), ci/mpinr/ and the effort receipt.
 //   LAST       no node process naming this witness's temp root survives. The detector is planted both ways first: a
 //              planted sleeper under the root is SEEN, then killed. A survivor is reported RED, then killed.
@@ -204,7 +206,7 @@ probe("COPY");
     clause("LEAF", specs.length > 0 && foreign.length === 0, `${specs.length} import(s): ${[...new Set(specs)].join(", ")}${foreign.length ? ` — NOT a builtin: ${foreign.join(", ")}` : ""}`);
   }
 }
-// ONLY-NAMED
+// ONLY-NAMED BOUND
 {
   try {
     // THE TWO TREES ARE COMPARED AS DIRECTORIES, never through git: the neutral machine's member (unit ms1) hands this witness
@@ -237,9 +239,9 @@ probe("COPY");
       const a = was[diffAt[0]], b = now[diffAt[0]], tail = " && node scripts/own_source.mjs selftest";
       return a.endsWith('",') && b === a.slice(0, -2) + tail + '",';
     })();
-    clause("ONLY-NAMED", added && oneLine && beyond.length === 0,
+    clause("ONLY-NAMED BOUND", added && oneLine && beyond.length === 0,
       `base ${base.slice(0, 7)} · own_source.mjs added ${added} · package.json one suite line ${oneLine} · ${changed.length} path(s) differ${beyond.length ? ` — BEYOND THE NAMED: ${beyond.join(", ")}` : ""}`);
-  } catch (e) { clause("ONLY-NAMED", false, "the trees did not read: " + String(e.message).split("\n")[0]); }
+  } catch (e) { clause("ONLY-NAMED BOUND", false, "the trees did not read: " + String(e.message).split("\n")[0]); }
 }
 // LAST
 {

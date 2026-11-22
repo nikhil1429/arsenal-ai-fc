@@ -39,7 +39,7 @@ const MUTANTS = [
   ["GUARD", MOD, 'throw new Error("own_source guard refused " + k);', "return undefined;"],
   ["COPY", MOD, "for (const f of state) {", 'for (const f of readdirSync(join(root, "dressing-room", "state"))) {'],
   ["LEAF", MOD, 'import { spawnSync } from "node:child_process";', 'import { spawnSync } from "node:child_process";\nimport { CHILD_TIMEOUT_MS } from "./postmatch.mjs";'],
-  ["ONLY-NAMED", "scripts/models.mjs", "#!/usr/bin/env node\n", "#!/usr/bin/env node\n// a byte outside the named files\n"],
+  ["ONLY-NAMED BOUND", "scripts/models.mjs", "#!/usr/bin/env node\n", "#!/usr/bin/env node\n// a byte outside the named files\n"],
   ["LAST", MOD, 'const box = mkdtempSync(join(tmpdir(), "own-source-selftest-"));',
     'const box = mkdtempSync(join(tmpdir(), "own-source-selftest-"));\n  spawnLeft(process.execPath, ["-e", "setTimeout(() => {}, " + childBoundMs() + ")", box], { detached: true, stdio: "ignore" }).unref();',
     ['import { spawnSync } from "node:child_process";', 'import { spawnSync, spawn as spawnLeft } from "node:child_process";']],
