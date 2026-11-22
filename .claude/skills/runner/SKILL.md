@@ -111,6 +111,7 @@ scope sentence cut from row 437.
 - **THE PAUSE** (row 136 (1)) — a code path, below.
 - **THE POOL IS HIS PANEL** — recorded whenever he posts one, never asked inside a window.
   **HIS PANEL IS THE FALLBACK CARD** (row 1062 F7 B / F8 C / F10 A): when the gate reads WAIT for want of a source, run `node scripts/usage_tap.mjs need` — ONE keyed card at his learn start; his SPOKEN two numbers become a reading only by the session running `usage_tap.mjs panel`. He types nothing.
+  **THE AWAY REPORT** (unit mguard, row 1176 G5 A / G6 A): on his first render after a closed AFK span his statusLine reads `back · away <span> · spent … · left …` (or `spend unread (<why>)`) and the tap records what it showed beside the reading in the campaign root; it READS and SHOWS only, never stops a launch. The day's judge, read-only: `node ci/witness/mguard/witness_guard.mjs --day <D>` with the root set (exit 0 holds · 1 red · 2 unread; a day with no away-span rows is UNREAD, row 1177 (3)).
 - **THE HEARTBEAT** (rows 628 (3) / 684 (4) / 693) — `node tools/roles.mjs heartbeat runner --me "<name>"` (lanes V and M add `--lane V` / `--lane M`) at every ledger row this session writes and every 20 min in a hold, so a STALE line means absent, not busy; the 20-min loop is a background shell that Claude Code can reap on low memory, and then a heartbeat by hand with each row is the ruled fallback.
 - **HIS WORD OUTRANKS EVERYTHING HERE**; a fork OUTSIDE the runner's class (below) is the architect's.
 

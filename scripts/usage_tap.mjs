@@ -7,10 +7,29 @@
 // reading file, so no cloud window waits on him typing two numbers (his words 240 and 245).
 //
 // THE CONTRACT (header = contract; every line below is a code path in this file):
-//   · SOLE WRITER of `usage_reading.json` — and of nothing else. It lives in the CAMPAIGN ROOT (row 1062 F1 A), outside
-//     this public repository: code public, data private. The write is atomic (tmp + rename) and the tmp sits beside it.
+//   · SOLE WRITER of `usage_reading.json` and `usage_readings.jsonl` — and of nothing else (unit mguard, row 1176 G1 A /
+//     G4 A). Both live in the CAMPAIGN ROOT (row 1062 F1 A), outside this public repository: code public, data private.
+//     The reading's write is atomic (tmp + rename) and the tmp sits beside it. THE WRITE LAW NAMES EXACTLY THREE WRITES:
+//     that tmp, that rename, and the history's one-line append.
+//   · THE READING HISTORY (row 1176 G1 A): statusline and panel also append the reading to `usage_readings.jsonl`, only
+//     when it differs from the history's last row in a pct or a reset (dedupe by value: no typed count, no typed
+//     interval) — or when the row records what the line SHOWED (below).
+//   · THE SPAN READER `spanSpend(readings, span, rule)` — PURE (row 1176 G2/G3): r0 = the last row at or before the span's
+//     start, r1 = the first at or after its end; each edge gap under the age bound from its law home, else UNREAD
+//     (unbracketed). A window whose reset falls inside [r0, r1], or whose reset is unknown, is UNREAD (rolled / reset
+//     unknown — G3 A: an unread is never a green). Else spent = r1 − r0 and left = 100 − r1, over the bracket — a COVER
+//     of the span, stated as such, never claimed to be the span exactly.
+//   · THE AWAY REPORT (row 1176 G5 A read and show only · G6 A · G7 A): on a render, the CLOSED away spans presence's
+//     latest focus row records (its read-only reader `awaySpans`, a bounded tail read) that end after the last span the
+//     history SHOWED become the line `back · away <span> · spent … · left …` (or `spend unread (<why>)`), and the
+//     appended row carries `shown: [{ span, read, why, five, week }]` — so what he saw is on disk. It never throttles,
+//     never stops a launch, never files a card. G6 B (the learn-start note) is the named fallback, not built here.
 //   · ENV DOOR `ARSENAL_CAMPAIGN_ROOT` — the one way the tap finds the campaign root. DEFAULT ABSENT. Absent (or not a
 //     directory) ⇒ every verb writes NOTHING and says so in its one line (row 1062 ADDED (ii)).
+//   · NO SILENT DROP (row 1176 (3)): with no root, a status-line reading is never dropped into nothing — the statusline
+//     line (and a stderr line) reads RED by the door's name and says the reading was DROPPED; `status`, `verdict` and
+//     `need` read RED by the same name. Fail open keeps its meaning (exit 0, one line, inside the bound); what it never
+//     does is fail open into a line that looks like a reading. A write that throws reads RED the same way.
 //   · THE AGE BOUND is NEVER typed here (row 1062 F4 A). Its law home is the campaign's `tools/model_law.mjs` under the
 //     root, read as TEXT for ONE contract line `POOL_READING_MAX_AGE_MIN` (= or :) <whole minutes>; never imported,
 //     never executed. No such line ⇒ every verdict is WAIT · rule unreadable (never a default number).
@@ -38,9 +57,10 @@
 //   node scripts/usage_tap.mjs selftest       hermetic: every plant under os.tmpdir()
 //
 // EXPORTS  readReading(path) — parse only, never throws · readRule(root) · verdict(reading, now, rule) — PURE ·
-//          parseStatusline(text, now) · readingPath(root)
+//          parseStatusline(text, now) · readingPath(root) · historyPath(root) · readHistory(path) ·
+//          spanSpend(readings, span, rule) — PURE · awayReport(history, reading, away, rule) — PURE
 
-import { readFileSync, writeFileSync, renameSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, renameSync, statSync, appendFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -48,6 +68,7 @@ import { spawnSync } from "node:child_process";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DOOR = "ARSENAL_CAMPAIGN_ROOT";
 const READING_NAME = "usage_reading.json";
+const HISTORY_NAME = "usage_readings.jsonl";
 // the law home is ONE path under the campaign root door (one path = one subject; unit mlaw, forks row 1146 (2) FK2 — the
 // segment pair it replaces was the law pack's jugad finding 93, ci/mlaw/MLAW_SPEC.md §1.3)
 const LAW_HOME = "tools/model_law.mjs";
@@ -69,6 +90,8 @@ export function campaignRoot(env = process.env) {
 }
 /** @param {string} root */
 export const readingPath = (root) => join(root, READING_NAME);
+/** the history's one home (row 1176 G1 A); every other reader derives it from here @param {string} root */
+export const historyPath = (root) => join(root, HISTORY_NAME);
 
 // ── reading ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 /** parse only — never throws; null when absent or unreadable @param {string} path */
@@ -82,6 +105,14 @@ export function readRule(root) {
   const m = LAW_LINE.exec(t);
   const n = m ? Number(m[1]) : NaN;
   return Number.isInteger(n) && n > 0 ? { maxAgeMin: n } : null;
+}
+
+/** the history, oldest first — parse only, never throws; a torn or foreign line is skipped @param {string} path */
+export function readHistory(path) {
+  let t; try { t = readFileSync(path, "utf8"); } catch { return []; }
+  const rows = [];
+  for (const l of t.split(/\r?\n/)) { if (!l.trim()) continue; try { const j = JSON.parse(l); if (j && typeof j === "object") rows.push(j); } catch { /* a torn line is not a row */ } }
+  return rows;
 }
 
 const pctOk = (p) => typeof p === "number" && Number.isFinite(p) && p >= 0 && p <= PCT_SCALE;
@@ -123,6 +154,96 @@ function writeReading(root, reading) {
   renameSync(tmp, path);
 }
 
+const winKey = (w) => w ? `${w.pct}@${w.resets_at ?? ""}` : "none";
+/** same pcts and same resets, both windows @param {object|null} a @param {object|null} b */
+const sameValue = (a, b) => !!a && !!b && winKey(a.five) === winKey(b.five) && winKey(a.week) === winKey(b.week);
+/** the history's one write: a single appended line @param {string} root @param {object} row */
+function appendHistory(root, row) {
+  appendFileSync(historyPath(root), JSON.stringify(row) + "\n");
+}
+
+// ── the span reader — PURE (row 1176 G2 A / G3 A) ────────────────────────────────────────────────────────────────
+const tOf = (r) => Date.parse(r && r.read_at);
+/**
+ * What the pool spent across one away span, from the reading history.
+ * @param {object[]} readings  @param {{start:string,end:string}} span  @param {{maxAgeMin:number}|null} rule
+ * @returns {{ read: boolean, why: string, bracket: string[]|null, five: object|null, week: object|null }}
+ */
+export function spanSpend(readings, span, rule) {
+  const U = (why, bracket = null, five = null, week = null) => ({ read: false, why, bracket, five, week });
+  if (!rule || !Number.isInteger(rule.maxAgeMin) || rule.maxAgeMin <= 0) return U("rule unreadable");
+  const s = Date.parse(span && span.start), e = Date.parse(span && span.end);
+  if (!Number.isFinite(s) || !Number.isFinite(e) || e < s) return U("span unreadable");
+  const rows = (Array.isArray(readings) ? readings : []).filter((r) => r && Number.isFinite(tOf(r))).sort((a, b) => tOf(a) - tOf(b));
+  let r0 = null;
+  for (const r of rows) if (tOf(r) <= s) r0 = r;
+  const r1 = rows.find((r) => tOf(r) >= e) || null;
+  const bound = rule.maxAgeMin * MS_PER_MIN;
+  if (!r0 || !r1) return U("unbracketed");
+  const bracket = [r0.read_at, r1.read_at];
+  if (s - tOf(r0) >= bound || tOf(r1) - e >= bound) return U("unbracketed", bracket);
+  const between = rows.filter((r) => tOf(r) >= tOf(r0) && tOf(r) <= tOf(r1));
+  const win = (k) => {
+    const a = r0[k], b = r1[k];
+    if (!a || !b || !pctOk(a.pct) || !pctOk(b.pct)) return { read: false, why: "half" };
+    for (const r of between) {
+      const rs = r[k] && r[k].resets_at;
+      if (rs == null) return { read: false, why: "reset unknown" };
+      const rt = Date.parse(rs);
+      if (!Number.isFinite(rt)) return { read: false, why: "reset unknown" };
+      if (rt > tOf(r0) && rt <= tOf(r1)) return { read: false, why: "rolled" };
+    }
+    if (b.pct < a.pct) return { read: false, why: "rolled" };
+    return { read: true, spent: b.pct - a.pct, left: PCT_SCALE - b.pct };
+  };
+  const five = win("five"), week = win("week");
+  const read = five.read && week.read;
+  return { read, why: read ? "read" : /** @type {string} */ ((five.read ? week : five).why), bracket, five, week };
+}
+
+/**
+ * The away report for one render — PURE. The closed spans that end after the last span the history showed (and after
+ * the history's first row: before it there is nothing to bracket), each read by spanSpend over the history plus this
+ * render's reading.
+ * @param {object[]} history  @param {object} reading  @param {{spans:{start:string,end:string}[]}|null} away  @param {{maxAgeMin:number}|null} rule
+ * @returns {object[]} the `shown` entries, oldest span first ([] when there is nothing new)
+ */
+export function awayReport(history, reading, away, rule) {
+  if (!away || !Array.isArray(away.spans) || !history.length) return [];
+  const shownEnds = history.flatMap((r) => Array.isArray(r.shown) ? r.shown.map((x) => Date.parse(x && x.span && x.span[1])) : []).filter(Number.isFinite);
+  const after = Math.max(tOf(history[0]), ...shownEnds);
+  const rows = [...history, reading];
+  return away.spans.filter((sp) => Date.parse(sp.end) > after).sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
+    .map((sp) => { const r = spanSpend(rows, sp, rule); return { span: [sp.start, sp.end], read: r.read, why: r.why, bracket: r.bracket, five: r.five, week: r.week }; });
+}
+const hm = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso));
+const signed = (n) => `${n < 0 ? "" : "+"}${Math.round(n)}%`;
+/** the line he sees for the newest shown span @param {object[]} shown */
+function awayLine(shown) {
+  const x = shown[shown.length - 1], more = shown.length > 1 ? ` (+${shown.length - 1} earlier span(s) recorded)` : "";
+  const sp = `${hm(x.span[0])}–${hm(x.span[1])} IST`;
+  if (!x.read) return `back · away ${sp} · spend unread (${x.why})${more}`;
+  return `back · away ${sp} · spent five-hour ${signed(x.five.spent)} weekly ${signed(x.week.spent)} · left five-hour ${Math.round(x.five.left)}% weekly ${Math.round(x.week.left)}%${more}`;
+}
+const PRESENCE_DOOR = "ARSENAL_PRESENCE_LOG";   // a READ door (default absent ⇒ presence's own ledger); a plant points it under tmp
+/** the presence reader, imported only on a render that has a root (read-only; absent or throwing ⇒ no report) */
+async function presenceAway() {
+  try {
+    const m = await import("./presence.mjs");
+    const file = process.env[PRESENCE_DOOR];
+    return typeof m.awaySpans === "function" ? m.awaySpans(file ? { file } : {}) : null;
+  } catch { return null; }
+}
+/** one render's history act: append when the value moved or when the line showed a span; returns the line's tail
+ *  @param {string} root @param {object} reading */
+async function recordRender(root, reading) {
+  const history = readHistory(historyPath(root));
+  const shown = awayReport(history, reading, await presenceAway(), readRule(root));
+  if (shown.length) { appendHistory(root, { ...reading, shown }); return awayLine(shown); }
+  if (!sameValue(history[history.length - 1] || null, reading)) appendHistory(root, reading);
+  return "read now";
+}
+
 // ── the verdict — PURE, computed at read time, never stored ───────────────────────────────────────────────────────
 /**
  * @param {object|null} reading  @param {Date} now  @param {{maxAgeMin:number}|null} rule
@@ -149,9 +270,12 @@ export function verdict(reading, now, rule) {
   return { ...base, go: true, age_min, why: "fresh and whole" };
 }
 
-const line = (v) => `${v.go ? "GO" : "WAIT"} · ${v.why} · five-hour ${v.five ?? "?"}% · weekly ${v.week ?? "?"}% · age ${v.age_min ?? "?"} min · source ${v.source ?? "none"}`;
+const line = (v) => `${v.go ? "GO" : v.red ? "RED" : "WAIT"} · ${v.why} · five-hour ${v.five ?? "?"}% · weekly ${v.week ?? "?"}% · age ${v.age_min ?? "?"} min · source ${v.source ?? "none"}`;
 const istDay = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 export const CARD_LINE = "Pool ka panel: five-hour aur weekly kitna percent dikh raha hai? Bas do number bol do.";
+/** row 1176 (3): the no-root line names the door and the reading it drops — RED, never a reading-shaped line @param {string} shown */
+const noRootRed = (shown) => `RED · usage tap · no campaign root (${ROOT_DOOR} unset) — this reading (${shown}) is DROPPED, nothing written`;
+const NO_ROOT_WHY = `no campaign root (${ROOT_DOOR} unset) — every status-line reading is DROPPED until the door is set`;
 const CARD_WHY = "his plan's usage meter is on his screen only, and no statusLine reading reached the campaign root inside the age bound";
 
 // ── verbs ───────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -166,18 +290,19 @@ function statusline() {
     Math.max(0, RULED_STATUSLINE_BOUND_S * MS_PER_S - bootMs - bootMs)).unref();
   process.stdin.on("data", (c) => chunks.push(c));
   process.stdin.on("error", () => finish("usage tap · stdin unreadable — nothing written"));
-  process.stdin.on("end", () => {
+  process.stdin.on("end", async () => {
     try {
       const { reading, why } = parseStatusline(Buffer.concat(chunks).toString("utf8"), new Date());
       if (!reading) { process.stderr.write(`usage tap: ${why} — nothing written\n`); return finish(`usage tap · ${why} — nothing written`); }
       const shown = `five-hour ${reading.five ? Math.round(reading.five.pct) + "%" : "?"} · weekly ${reading.week ? Math.round(reading.week.pct) + "%" : "?"}`;
       const root = campaignRoot();
-      if (!root) return finish(`${shown} · no campaign root (${ROOT_DOOR} unset) — nothing written`);
+      if (!root) { process.stderr.write(`usage tap: ${noRootRed(shown)}\n`); return finish(noRootRed(shown)); }
       writeReading(root, reading);
-      finish(`${shown} · read now`);
+      finish(`${shown} · ${await recordRender(root, reading)}`);
     } catch (e) {
-      process.stderr.write(`usage tap: ${String(e && e.message || e).split("\n")[0]}\n`);
-      finish("usage tap · failed open — nothing written");
+      const why = String(e && e.message || e).split("\n")[0];
+      process.stderr.write(`usage tap: ${why}\n`);
+      finish(`RED · usage tap · the write failed (${why}) — this reading is DROPPED, failed open`);
     }
   });
   process.stdin.resume();
@@ -193,19 +318,22 @@ function panel() {
   if (fr === undefined || wr === undefined) { console.error("usage tap: a reset time is not a date — nothing written"); process.exit(EXIT_REFUSED); }
   const root = campaignRoot();
   if (!root) { console.log(`usage tap · no campaign root (${ROOT_DOOR} unset) — nothing written`); process.exit(EXIT_REFUSED); }
-  writeReading(root, { v: 1, source: "his-panel", read_at: new Date().toISOString(), five: { pct: five, resets_at: fr }, week: { pct: week, resets_at: wr }, cli_version: null, session_id: null });
+  const reading = { v: 1, source: "his-panel", read_at: new Date().toISOString(), five: { pct: five, resets_at: fr }, week: { pct: week, resets_at: wr }, cli_version: null, session_id: null };
+  writeReading(root, reading);
+  const history = readHistory(historyPath(root));
+  if (!sameValue(history[history.length - 1] || null, reading)) appendHistory(root, reading);
   console.log(`usage tap · his panel recorded — five-hour ${five}% · weekly ${week}%`);
 }
 
 function judge() {
   const root = campaignRoot();
-  if (!root) return { root, v: { go: false, no_source: false, why: `no campaign root (${ROOT_DOOR} unset)`, age_min: null, five: null, week: null, source: null } };
+  if (!root) return { root, v: { go: false, red: true, no_source: false, why: NO_ROOT_WHY, age_min: null, five: null, week: null, source: null } };
   return { root, v: verdict(readReading(readingPath(root)), new Date(), readRule(root)) };
 }
 
 function need() {
   const { root, v } = judge();
-  if (!root) { console.log(`usage tap · need: ${v.why} — nothing filed`); return; }
+  if (!root) { console.log(`usage tap · need: RED · ${v.why} — nothing filed`); return; }
   if (v.go || !v.no_source) { console.log(`usage tap · need: ${v.go ? "GO" : `WAIT for a reason his panel cannot change (${v.why})`} — nothing filed`); return; }
   const r = spawnSync(process.execPath, [CALL, "file", "--line", CARD_LINE, "--key", `usage:panel:${istDay(new Date())}`, "--why-code-cannot-decide", CARD_WHY], { encoding: "utf8", env: process.env });
   console.log(`usage tap · need: WAIT · ${v.why} → ${String(r.stdout || r.stderr || "").trim().split("\n")[0] || `captains_call exit ${r.status}`}`);
@@ -263,7 +391,27 @@ async function selftest() {
     const lits = [...code.matchAll(/(?<![\w.$])\d+(?:\.\d+)?(?![\w.])/g)].map((m) => Number(m[0]));
     t("W2.8 no typed age, percent line or duration — every numeric literal is a unit, an exit code or the ruled bound", lits.every((x) => [0, 1, 2, 3, 60, 100, 1000].includes(x)));
     const writes = [...code.matchAll(/\b(writeFileSync|renameSync|appendFileSync|createWriteStream|unlinkSync|rmSync|mkdirSync)\(([^,)]*)/g)].map((m) => `${m[1]}(${m[2].trim()}`);
-    t("W3.1 the only writes are the reading's tmp and its rename", writes.length === 2 && writes.every((w) => /^(writeFileSync\(tmp|renameSync\(tmp)$/.test(w)));
+    // row 1176 G4 A (ruled stricter): the write law names EXACTLY THREE writes — the reading's tmp, its rename, the history's append
+    t("W3.1 (G4 A) exactly three writes: the reading's tmp, its rename, and the history's one append", writes.length === 3 && writes.filter((w) => w === "writeFileSync(tmp").length === 1 && writes.filter((w) => w === "renameSync(tmp").length === 1 && writes.filter((w) => w === "appendFileSync(historyPath(root").length === 1);
+    t("W3.3 (G4 A) the history's name has ONE home in code, and nothing else names it", (code.match(/usage_readings/g) || []).length === 1);
+    // P3 — spanSpend, PURE (row 1176 G2 A / G3 A)
+    const R = (m, f, w, fr = 300, wr = 9000) => ({ v: 1, source: "statusline", read_at: at(m).toISOString(), five: { pct: f, resets_at: at(fr).toISOString() }, week: { pct: w, resets_at: at(wr).toISOString() } });
+    const span = { start: at(10).toISOString(), end: at(70).toISOString() };
+    const hist = [R(-100, 20, 50), R(5, 40, 60), R(40, 43, 60), R(75, 45, 61)];
+    const ss = spanSpend(hist, span, rule);
+    t("G2 a bracketed span → read, spent = r1 − r0 (the span's edges, not the day's), left = 100 − r1, the bracket named", ss.read && ss.five.spent === 5 && ss.week.spent === 1 && ss.five.left === 55 && ss.week.left === 39 && ss.bracket[0] === at(5).toISOString() && ss.bracket[1] === at(75).toISOString());
+    t("G2 an edge row older than the age bound → UNREAD (unbracketed)", spanSpend([R(-400, 40, 60, 900), R(75, 45, 61, 900)], { start: at(-50).toISOString(), end: at(70).toISOString() }, rule).why === "unbracketed");
+    t("G2 no row after the span → UNREAD (unbracketed), never a zero", spanSpend(hist.slice(0, 3), { start: at(10).toISOString(), end: at(80).toISOString() }, rule).read === false);
+    t("G3 A a reset inside the bracket → that window UNREAD (rolled)", spanSpend([R(5, 40, 60, 30), R(75, 3, 61, 330)], span, rule).why === "rolled");
+    t("G3 A a reset unknown (a panel row) → UNREAD (reset unknown), never counted", spanSpend([{ ...R(5, 40, 60), five: { pct: 40, resets_at: null } }, R(75, 45, 61)], span, rule).why === "reset unknown");
+    t("G2 no rule → UNREAD (rule unreadable), never a default bound", spanSpend(hist, span, null).why === "rule unreadable");
+    // P4 — awayReport, PURE
+    const aw = { spans: [{ start: span.start, end: span.end }] };
+    const rep1 = awayReport(hist.slice(0, 3), R(75, 45, 61), aw, rule);
+    t("G4 a closed span not yet shown → one shown entry with spanSpend's figures", rep1.length === 1 && rep1[0].read && rep1[0].five.spent === 5 && rep1[0].span[1] === span.end);
+    t("G4 a span already shown → nothing new", awayReport([...hist.slice(0, 3), { ...R(75, 45, 61), shown: rep1 }], R(80, 46, 61), aw, rule).length === 0);
+    t("G4 an empty history → nothing to bracket, no report", awayReport([], R(75, 45, 61), aw, rule).length === 0);
+    t("G4 no away record (null) → no report", awayReport(hist, R(80, 45, 61), null, rule).length === 0);
     t("W3.2 a reading holds no go / verdict / status / launch key", !Object.keys(p.reading).some((k) => /^(go|verdict|status|launch)$/.test(k)));
     t("W4.6 the card line names no command, path or flag", !/node |--|\.mjs|\//.test(CARD_LINE));
     // the CLI legs, hermetic: root and card state under tmp
@@ -282,11 +430,22 @@ async function selftest() {
     const noRoot = { ...env }; delete noRoot.ARSENAL_CAMPAIGN_ROOT;
     const nr = cli(["statusline"], block({ five_hour: { used_percentage: 1 }, seven_day: { used_percentage: 2 } }), noRoot);
     t("ADDED (ii) root absent → nothing written, and it says so, exit 0", nr.status === 0 && /no campaign root/.test(nr.stdout));
+    t("R1176.3 root absent → the statusline line reads RED by the door's name and says the reading is DROPPED (stdout and stderr)", /^RED · .*ARSENAL_CAMPAIGN_ROOT unset.*DROPPED/.test(nr.stdout) && /five-hour 1%/.test(nr.stdout) && /ARSENAL_CAMPAIGN_ROOT unset.*DROPPED/.test(nr.stderr));
+    const nst = cli(["status"], undefined, noRoot), nvd = cli(["verdict"], undefined, noRoot), nnd = cli(["need"], undefined, noRoot);
+    t("R1176.3 root absent → status, verdict and need read RED by the door's name; verdict still refuses by exit (3)", nst.stdout.split(/\r?\n/).filter(Boolean).every((l) => /^RED · .*ARSENAL_CAMPAIGN_ROOT unset/.test(l)) && /^RED · .*ARSENAL_CAMPAIGN_ROOT unset/.test(nvd.stdout) && nvd.status === 3 && /RED · .*ARSENAL_CAMPAIGN_ROOT unset/.test(nnd.stdout));
     t("W4.3 a fresh statusline reading → need files nothing", /nothing filed/.test(cli(["need"]).stdout) && !existsSync(join(tmp, "call", "captains_call.json")));
     rmSync(readingPath(root));
     const n1 = cli(["need"]), n2 = cli(["need"]);
     const cards = (readReading(join(tmp, "call", "captains_call.json"))?.cards || []).filter((c) => String(c.key).startsWith("usage:panel:"));
     t("W4.1 + W4.2 no reading → need twice → exactly ONE keyed card", n1.status === 0 && n2.status === 0 && cards.length === 1 && cards[0].line === CARD_LINE);
+    // P1 — the history: appended on a moved value, deduped on the same value (env: a presence door to an absent file)
+    const env2 = { ...env, ARSENAL_PRESENCE_LOG: join(tmp, "no-presence.jsonl") };
+    const hb = (f, w) => block({ five_hour: { used_percentage: f, resets_at: Math.floor(Date.now() / 1000) + 3600 }, seven_day: { used_percentage: w, resets_at: Math.floor(Date.now() / 1000) + 86400 } });
+    rmSync(historyPath(root), { force: true });
+    const fixed = hb(12, 34);
+    cli(["statusline"], fixed, env2); cli(["statusline"], fixed, env2); cli(["statusline"], hb(13, 34), env2);
+    const H = readHistory(historyPath(root));
+    t("G1 A the history appends a moved value and dedupes the same value (2 rows from 3 renders)", H.length === 2 && H[0].five.pct === 12 && H[1].five.pct === 13);
     const pn = cli(["panel", "--five", "40", "--week", "60"]);
     t("W4.5 panel → source his-panel, and the verdict reads it GO under the same age law", pn.status === 0 && readReading(readingPath(root))?.source === "his-panel" && cli(["verdict"]).status === 0);
   } finally { rmSync(tmp, { recursive: true, force: true }); }
@@ -305,7 +464,7 @@ if (isMain) {
   else if (mode === "status") {
     const { root, v } = judge();
     const r = root ? readReading(readingPath(root)) : null;
-    console.log(r ? `usage tap · reading ${r.source} at ${r.read_at}` : `usage tap · no reading${root ? "" : ` (${ROOT_DOOR} unset)`}`);
+    console.log(r ? `usage tap · reading ${r.source} at ${r.read_at}` : root ? "usage tap · no reading" : `RED · usage tap · no reading — ${NO_ROOT_WHY}`);
     console.log(line(v));
   }
   else if (mode === "selftest") selftest();
