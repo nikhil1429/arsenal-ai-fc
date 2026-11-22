@@ -499,3 +499,22 @@ RED MGAT · BOUND              # W1-W9 org GREEN (W9: checkJs 296 · frozen 296)
 The suite judges each witness's last line with BOUND dropped (`scripts/organism_test.mjs`, F1 A).
 
 CHECKPOINT · main a0645d2 merged · checkJs back to 296 at b626774 · gates GREEN · mbank GREEN (22 clauses) · mshard / mgat every clause green, BOUND only · NEXT: the four seats stacked on f635d68 rebase their stacks on this tip
+
+## 15 · THE mlv3 T1 FIFTY (forks row 1275, 22 Nov 2026)
+
+Main 0ee0516 (mpres2, mdayv) is merged into this branch as `5b4a321`, with no conflicted file. The tip is that merge and the
+base is 0ee0516. The mlv3 unit witness was run in this cloud seat, each run on an LF clone, against mlv3's own BASE
+40347a6 (as the suite runs it): twenty runs ALONE on the tip, twenty ALONE on the base, then ten on the tip with
+`ci/mbank/witness_mbank.mjs` running beside it. Each line of `ci/mbank/MLV3_50.txt` holds the run's first boot, the bound,
+T1's own why line and the witness's last line (`RED MLV3 · BOUND`, mlv3's seat-time file bound, which the suite drops).
+```
+tip alone        T1 red 0 / 20
+base alone       T1 red 0 / 20
+tip beside mbank T1 red 0 / 10      (the ten mbank runs beside it: GREEN MBANK, each)
+bound range      231 ms to 368 ms
+```
+**Branch (c) of row 1275: no red in fifty runs.** No repair is made. The fifty lines go back to the architect. The
+neutral machine's T1 red (node 24, run 137021937008; node 22 green, run 137021937242) is not reproduced here, alone or
+beside this unit's witness.
+
+CHECKPOINT · main 0ee0516 merged (5b4a321) · mlv3 T1: 0/20 tip alone · 0/20 base alone · 0/10 beside mbank → branch (c), no repair · ci/mbank/MLV3_50.txt committed · NEXT: the architect's ruling with the fifty lines

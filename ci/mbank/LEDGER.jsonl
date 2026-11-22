@@ -53,3 +53,4 @@
 {"ts":"2026-11-21T18:59Z","act":"witness-head","cmd":"node ci/mbank/witness_mbank.mjs --org <tip> --base-org <main a0645d2>","last_line":"GREEN MBANK … · 22 clause(s)"}
 {"ts":"2026-11-21T18:59Z","act":"mshard","cmd":"node ci/mshard/witness_mshard.mjs --org <tip> --base-org <5759cce>","last_line":"RED MSHARD · BOUND (every W-S clause ✓)"}
 {"ts":"2026-11-21T18:59Z","act":"mgat","cmd":"node ci/mgat/witness_mgat.mjs --org <tip> --base-org <5759cce>","last_line":"RED MGAT · BOUND (W1-W9 org GREEN)"}
+{"ts":"2026-11-22T01:11Z","act":"mlv3-fifty","cmd":"node ci/mlv3/witness_mlv3.mjs --org <tree> --base-org <40347a6> ×50 (20 tip alone · 20 base 0ee0516 alone · 10 tip beside the mbank witness)","last_line":"T1 red 0/20 · 0/20 · 0/10 → branch (c)"}
