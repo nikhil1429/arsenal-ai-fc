@@ -65,7 +65,9 @@ export async function plantEnv(d, extra = {}) {
   for (const k of INPUTS.home_doors) env[k] = home;
   env.APPDATA = join(home, "AppData", "Roaming"); env.LOCALAPPDATA = join(home, "AppData", "Local");
   mkdirSync(env.APPDATA, { recursive: true }); mkdirSync(env.LOCALAPPDATA, { recursive: true });
-  env.PATH = `${shimDir()}${process.platform === "win32" ? ";" : ":"}${process.env.PATH}`;
+  // one PATH key whatever its case (Windows spells it Path; a second "PATH" key beside it is a coin toss at spawn)
+  const pk = Object.keys(env).find((k) => k.toUpperCase() === "PATH") || "PATH";
+  env[pk] = `${shimDir()}${process.platform === "win32" ? ";" : ":"}${env[pk] || ""}`;
   Object.assign(env, INPUTS.env_set);
   const ports = {};
   for (const k of portDoors(d)) { env[k] = String(await freePort()); ports[k] = "os-picked"; }

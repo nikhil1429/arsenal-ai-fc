@@ -59,8 +59,9 @@ const boundOf = (d) => { const m = /const HEAVY_BOUND_MS = (\d+);/.exec(readFile
 /** run the laws mode, FULL profile, on a plant; returns its lines (the caller keeps off T only counts and hashes) */
 async function laws(d) {
   const { env, home } = await plantEnv(d); delete env.ORGANISM_TEST_PROFILE;
-  const r = spawnSync(process.execPath, [join("scripts", "organism_test.mjs"), "laws"], { cwd: d, env, encoding: "utf8", timeout: boundOf(d), maxBuffer: 1 << 28, windowsHide: true });
-  return { code: r.status, killed: r.status === null, L: ((r.stdout || "") + (r.stderr || "")).split(/\r?\n/) };
+  const t0 = Date.now(), bound = boundOf(d);
+  const r = spawnSync(process.execPath, [join("scripts", "organism_test.mjs"), "laws"], { cwd: d, env, encoding: "utf8", timeout: bound, maxBuffer: 1 << 28, windowsHide: true });
+  return { code: r.status, killed: r.status === null, ms: Date.now() - t0, bound, d, L: ((r.stdout || "") + (r.stderr || "")).split(/\r?\n/) };
 }
 const asserts = (L) => L.filter((l) => /^  (ok  |FAIL) |^  BLOCKED /.test(l));
 /** LIVE_ASSERTS keys off a tree's own source */
@@ -86,6 +87,18 @@ try {
   const keys = liveAssertKeys(ORG), toA = asserts(to.L), zoA = asserts(zo.L);
   const lawKeys = keys.filter((k) => named(toA, k));
   console.log(`runs · Z(org) exit ${zo.code} · ${zoA.length} assert line(s) · T(org) exit ${to.code} · ${toA.length} · T(base-org) exit ${tb.code} · ${asserts(tb.L).length} · Z(org)+defect exit ${zd.code} · ${asserts(zd.L).length} · ${lawKeys.length} LIVE laws key(s) judged on T(org)`);
+
+  // THE STOP LINE (runner M order, architect row 1300 (2)): every red of the four clauses names WHERE each run ended, so a
+  // red read on another machine explains itself — killed at the tree's bound (its ms against the bound), or threw (the
+  // MODE red's first detail line, the plant's temp path masked: organ code text, never a state byte), or ran to its end.
+  const stopOf = (x, tag) => {
+    const i = x.L.findIndex((l) => l.startsWith("  FAIL MODE laws · ran to its end"));
+    const before = asserts(x.L.slice(0, i < 0 ? x.L.length : i)).pop() || "(none)";
+    const why = x.killed ? `KILLED at the tree's bound (${x.ms} of ${x.bound} ms)` : i < 0 ? `ended (${x.ms} ms, exit ${x.code})`
+      : `THREW (${x.ms} ms): ${String(x.L.slice(i + 1).find((l) => l.trim()) || "(no detail)").trim().split(x.d).join("<plant>").split(TMP).join("<tmp>").slice(0, 240)}`;
+    return `${tag} ${why} · last assert line before: ${before.trim().replace(/ — not judged: .*$/, "").slice(0, 120)}`;
+  };
+  for (const [x, tag] of [[zo, "Z(org)"], [to, "T(org)"], [tb, "T(base-org)"], [zd, "Z(org)+defect"]]) console.log(`stop · ${stopOf(x, tag)}`);
 
   // ── REACH ───────────────────────────────────────────────────────────────────────────────────────────────────────────
   const threw = zo.L.some((l) => l.startsWith("  FAIL MODE laws · ran to its end"));
