@@ -79,8 +79,15 @@
 // IT NEVER BLOCKS. Fail-silent, no stdout on the hook path, no throw. A checker
 // that can break his session is a worse defect than the drift it catches.
 //
+// UNIT maud43 (forks rows 1282 / 1286): `rebuild-mismatch --from <ISO> --to <ISO> [--apply]` rebuilds, ONCE and by
+// APPENDED rows only, the confusion check of the Stop rows written `session-mismatch`, from each session's own transcript
+// (the section above rebuildMain). Dry run unless --apply; run on his tree by the runner's hand only.
+//
 // WRITES: teaching_audit.jsonl + teaching_audit_last.json (this organ is their
-// single writer). It never touches the contract file itself
+// single writer). Unit mbank (forks row 1246): teaching_audit_last.json also carries
+// `prompts_by_session` — the prompt record kept PER Claude session (the shared `prompt`
+// slot is overwritten by every session's UserPromptSubmit), so the bank door reads its
+// OWN session's prompt; the `prompt` slot stays exactly as before for its readers. It never touches the contract file itself
 // (teaching_contract.json belongs to teaching_contract.mjs) — auto-counting
 // and the checked_at heartbeat both go through teaching_contract.mjs's own CLI
 // (`autohit` / `checked`), exactly as the owners-only law requires.
@@ -145,9 +152,11 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
+import { randomUUID, createHash } from "node:crypto";   // unit mbank (row 1230): the prompt record's turn id is minted HERE, by its single writer · unit maud43: the rebuilt row's supersede key (sha256 of the old line)
 import { subjectsOf, coreAxes, REGISTRY_PATH } from "./registry.mjs";   // S10 #10 sources + #12 core axes — rows, never literals · row 583 (5): REGISTRY_PATH, for the selftest's proof that it reads its OWN registry
-import { SCOPE_GLOBAL, humanText, SLASH_NOISE, BANKED_MOMENTS } from "./study_scope.mjs";   // G0 (23 Sep 2026): the dispatcher's study-scope verdict, stamped on every row · L4 (6 Oct 2026): his last prompt bounds the turn (the reader the gate and the replay use) and the test moments are the landed test-moment case's own set
+import { SCOPE_GLOBAL, humanText, SLASH_NOISE, BANKED_MOMENTS, transcriptPathFor } from "./study_scope.mjs";   // G0 (23 Sep 2026): the dispatcher's study-scope verdict, stamped on every row · L4 (6 Oct 2026): his last prompt bounds the turn (the reader the gate and the replay use) and the test moments are the landed test-moment case's own set
 import { recordPicture, loadRegistry, pictureLines } from "./widget.mjs";   // L4 (fate 54): the registry's OWN writer — widget.mjs stays the sole writer of widgets.json (nobody's hook callee, so never a shim no-op)
+import { readCracks } from "./forge_session.mjs";   // unit mcrk2 — the crack rows' reader, read only (forge_session.mjs is their SOLE WRITER)
 import { HARNESS_WRAPPERS, HARNESS_MARKERS } from "./harness_text.mjs";   // row 858 (1)-(2), LENT by lane V: HARNESS_PROMPT's names, one home
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -190,6 +199,7 @@ export const CHECKED_RULES = [
   "uncaptured-rep",
   "act-mt2kgbt7", "act-mt2kgn09", "max-intensity-check",
   "act-mueywvag",
+  "crack-gap",
 ];
 
 // THE SEED GAP, DECLARED IN CODE RATHER THAN DISCOVERED LATER (7 Sep 2026).
@@ -210,6 +220,8 @@ export const CHECKED_RULES = [
 // (forks row 649 (0): this note sat between the waiver and the list and pushed the waiver out of lawpack's six-line window.)
 // law-waiver:jugad — a DECLARED GAP LIST, never a subject list: it names rule ids this
 // file emits that its OWNER has not yet seeded, and its whole purpose is to shrink to [].
+// unit mcrk2 (forks rows 1258 F1 A / 1281 (3)): `crack-gap` was declared here on 21 Nov and left it on 22 Nov, in the same
+// commit that seeded its row in teaching_contract.mjs (the ratchet below holds both directions).
 export const SEED_GAP = ["act-mueywvag"];
 
 // COVERAGE HONESTY, PER RULE (full-organism audit P1.1-P1.2, 7 Aug 2026). A rule
@@ -228,6 +240,7 @@ export const RULE_NOTES = {
   "his-word": "machine sees ONE fingerprint: an axis marked done with zero Jirah before it. Every other his-word violation is semantic and stays his.",
   "coverage": "machine sees ONE fingerprint: a CORE axis landing in axes_deferred. The half-answer/scope-cut class is semantic and stays his.",
   "uncaptured-rep": "machine sees ONE fingerprint, and it is a COUNT, not a judgement: a legal question-moment was declared to the pacer during this turn and reps_log.jsonl grew by zero rows in the same window. It cannot see whether the moment DESERVED a rep (a widget_gate he waved through is not a bankable answer), and it cannot see a rep banked late, in a later turn — that one closes itself the moment the row lands. WHAT IT CANNOT SEE AT ALL is the session that never declares a moment: an untracked teaching turn banks nothing and is measured as nothing. That slice stays his.",
+  "crack-gap": "machine sees ONE fingerprint, a join and not a judgement: a crack row (cracks.jsonl, forge_session.mjs its sole writer) written from THIS turn's own paired prompt (same Claude session id, the same prompt_at, or the same turn_id when both carry one) with a NAMED GAP — moment undeclared before his answer, or no axis ON. The gap is the TEACHER's miss, never his (row 1243 (2)): his words were written all the same. It cannot see a crack the teacher never ran, and it cannot see a moment declared to the wrong question.",
   "act-mueywvag": "machine sees the ORDER of ONE turn's blocks, read from transcript_path at Stop: a NEW IDEA (newIdeaOf — a check_q turn, or a turn whose last message opens a term by the asli-naam anchor with no test moment and no pehle_guess) whose show_widget does not come before the turn's LAST text block (none at all, or only after it) is one drift. It CANNOT see a new idea taught with neither a check_q nor a naming act, it cannot judge whether the picture SHOWED the idea (any show_widget counts), and a turn it could not read (no transcript_path, unreadable, no prompt in the tail) is never a drift — the row says null with a named picture_why, because 'I could not read it' is not 'he got no picture'. The picture at a TEST moment is the gate's red, not this drift.",
 };
 
@@ -1470,6 +1483,21 @@ export function turnPicture(hook = {}, turn = readTurn(hook && hook.transcript_p
  *  last text) — is ONE measured drift under his word #22's own contract row, act-mueywvag, auto-counted through the same
  *  autohit lane as every drift above. The NULL PATH is never a drift: "I could not read the turn" is not "he got no
  *  picture". Pure. */
+/** crackGapDrift — PURE (unit mcrk2). The one drift for this turn's crack rows written with a named gap, or null. The
+ *  join is the paired prompt: same session id AND (the same turn_id when both carry one, else the same prompt_at). The
+ *  evidence names the row ids, the gaps and the axes — never his words. */
+export function crackGapDrift({ rows = [], sessionId = null, promptAt = null, turnId = null } = {}) {
+  if (!sessionId || !promptAt) return null;
+  // forks row 1281 (2): the drift is the TEACHER's — a row whose only gap is the organism's (session-unchecked) is not counted here
+  const hit = (Array.isArray(rows) ? rows : []).filter((r) => r && r.kind === "crack" && typeof r.gap === "string" && r.gap && String(r.gap).split("+").some((g) => g !== "session-unchecked") && r.prompt_session_id === sessionId
+    && (turnId && typeof r.turn_id === "string" && r.turn_id ? r.turn_id === turnId : r.prompt_at === promptAt));
+  if (!hit.length) return null;
+  return {
+    rule: "crack-gap",
+    evidence: hit.map((r) => `crack ${r.id} written with ${r.gap} (axis ${r.axis}, ${r.concept}) — the teacher's miss, his words written all the same`).join(" · "),
+    excerpt: `gaps [${hit.map((r) => r.gap).join(",")}]`,
+  };
+}
 export function pictureDrift(pic) {
   if (!pic || pic.new_idea !== true || pic.picture_first !== false) return null;
   const via = String(pic.moment || "").split(",").includes("check_q") ? "check_q declared" : "a term opened by its asli naam";
@@ -1632,12 +1660,42 @@ const momentsTotal = (session) => (session && session.question_moments && typeof
 const momentsByKind = (session) => (session && session.question_moments && typeof session.question_moments === "object"
   ? { ...session.question_moments } : null);
 
+// unit mbank (rows 1246 / 1250) — the per-session map. When a new prompt is recorded, an entry its own Stop already
+// consumed loses its TEXT and is kept as a STUB (mbank-9, row 1250): the instant of that Stop and that Stop's moment
+// kinds, none of his words. A stub is dropped only when its session's transcript is gone (no count, no age). The writing
+// session's own entry is replaced, carrying its previous Stop forward (prev_stop_at / prev_stop_kinds). The Stop stamps
+// consumed_at, stop_at and stop_kinds on its OWN session's entry only.
+const mapOf = (m) => (m && typeof m === "object" && !Array.isArray(m) ? m : {});
+const stubOf = (v) => ({ stub: true, session_id: v.session_id || null, stop_at: v.stop_at || v.consumed_at || null,
+  stop_kinds: Array.isArray(v.stop_kinds) ? v.stop_kinds : null, transcript_path: typeof v.transcript_path === "string" ? v.transcript_path : null });
+// unit maud43: the ONE expression that names a session's transcript (its own record's path, else transcriptPathFor) — the
+// stub keeper below and the rebuild verb both read it here, never a second copy.
+const transcriptOf = (sid, v) => (v && typeof v === "object" && v.transcript_path) || transcriptPathFor(sid);
+const transcriptAlive = (sid, v) => { try { return existsSync(transcriptOf(sid, v)); } catch { return false; } };
+const keptPrompts = (m) => Object.fromEntries(Object.entries(mapOf(m)).flatMap(([k, v]) => {
+  if (!v || typeof v !== "object") return [];
+  if (!v.stub && !v.consumed_at) return [[k, v]];
+  const st = v.stub ? v : stubOf(v);
+  return transcriptAlive(k, st) ? [[k, st]] : [];
+}));
+const consumeOwn = (m, sid, now, closeByKind) => {
+  const o = { ...mapOf(m) };
+  const e = sid ? o[sid] : null;
+  if (e && typeof e === "object" && !e.stub && !e.consumed_at) {
+    const open = e.moments_by_kind && typeof e.moments_by_kind === "object" ? e.moments_by_kind : {};
+    const close = closeByKind && typeof closeByKind === "object" ? closeByKind : {};
+    o[sid] = { ...e, consumed_at: now, stop_at: now, stop_kinds: Object.keys(close).filter((k) => (Number(close[k]) || 0) > (Number(open[k]) || 0)) };
+  }
+  return o;
+};
 function promptHook(hook) {
   const { session } = readForgeSession();
   const last = readLast() || {};
-  writeLastReal({
-    ...last,
-    prompt: {
+  const sidP = typeof hook.session_id === "string" ? hook.session_id : null;
+  const prevOwn = sidP ? mapOf(last.prompts_by_session)[sidP] : null;   // his previous turn, carried forward as a Stop only
+  const prevStop = prevOwn && typeof prevOwn === "object" && (prevOwn.stub || prevOwn.consumed_at)
+    ? { prev_stop_at: prevOwn.stop_at || prevOwn.consumed_at || null, prev_stop_kinds: Array.isArray(prevOwn.stop_kinds) ? prevOwn.stop_kinds : null } : {};
+  const rec = {
       text: String(hook.prompt || ""),
       step: session && Number.isFinite(Number(session.step)) ? Number(session.step) : null,
       // LR-04 — the OPENING end of this turn's window, captured for the same reason
@@ -1648,7 +1706,16 @@ function promptHook(hook) {
       reps: repsCount(),
       session_id: typeof hook.session_id === "string" ? hook.session_id : null,
       at: new Date().toISOString(),
-    },
+      // unit mbank (forks row 1230): ONE turn identity both records carry — the bank row and the crack row copy it off
+      // this prompt through forge_session.mjs hisPrompt (the one door); nothing joins his words by time or by text.
+      turn_id: randomUUID(),
+      transcript_path: typeof hook.transcript_path === "string" ? hook.transcript_path : null,
+      ...prevStop,
+  };
+  writeLastReal({
+    ...last,
+    prompt: rec,
+    prompts_by_session: { ...keptPrompts(last.prompts_by_session), ...(sidP ? { [sidP]: rec } : {}) },
     checked_rules: CHECKED_RULES,
   });
 }
@@ -1664,8 +1731,15 @@ export function stopHook(hook, io) {
   // Pair this Stop with ITS OWN prompt — same Claude Code session, not yet
   // consumed. A different session's prompt (parallel-session interleave) is
   // discarded, never silently reused; the row says which happened.
-  const p = last.prompt || null;
+  // unit mbank (forks rows 1246 / 1248): THIS session's own record first (prompts_by_session[sid]), so a parallel
+  // session's prompt in the shared slot can no longer cost his turn its audit; the shared slot is the fallback only for a
+  // session that has no own entry (a record written before this unit). The shared slot is still consumed exactly as before.
+  const shared = last.prompt || null;
+  const ownRec0 = sid ? mapOf(last.prompts_by_session)[sid] : null;
+  const ownRec = ownRec0 && typeof ownRec0 === "object" && !ownRec0.stub && typeof ownRec0.text === "string" ? ownRec0 : null;   // a stub holds no prompt
+  const p = ownRec || shared;
   const paired = !!(p && sid && p.session_id === sid && !p.consumed_at);
+  const sharedPaired = !!(shared && sid && shared.session_id === sid && !shared.consumed_at);
   const userText = paired ? String(p.text || "") : "";
   const userTextSource = paired ? "fresh" : (p ? "session-mismatch (parallel session's prompt discarded)" : "missing (no prompt recorded)");
   const prevStep = paired && Number.isFinite(p.step) ? p.step
@@ -1730,6 +1804,14 @@ export function stopHook(hook, io) {
   // record counts it and the log row carries its evidence — the one list every drift already rides.
   const missDrift = res.audited ? pictureDrift(pic) : null;
   if (missDrift) res.drifts.push(missDrift);
+  // unit mcrk2 (forks rows 1243 (2) / 1258 F1 A): a crack row of THIS turn written with a named gap is counted as drift on
+  // this lane — the teacher's miss; read through the owner's reader, joined to the paired prompt (never his words)
+  if (res.audited && paired) {
+    let ckRows = [];
+    try { ckRows = typeof io.readCracks === "function" ? io.readCracks() : (readCracks(join(STATE_DIR, "cracks.jsonl")).rows || []); } catch { ckRows = []; }
+    const gapDrift = crackGapDrift({ rows: ckRows, sessionId: sid, promptAt: p.at, turnId: typeof p.turn_id === "string" ? p.turn_id : null });
+    if (gapDrift) res.drifts.push(gapDrift);
+  }
 
   const why = res.audited ? null : (readWhy || res.why);
 
@@ -1772,7 +1854,8 @@ export function stopHook(hook, io) {
   // audited/why on disk is what separates "correctly quiet" from "dead" — the
   // two states whose indistinguishability let the first death survive.
   io.writeLast({
-    prompt: p ? { ...p, consumed_at: paired ? now : (p.consumed_at || null) } : null,
+    prompt: shared ? { ...shared, consumed_at: sharedPaired ? now : (shared.consumed_at || null) } : null,
+    prompts_by_session: consumeOwn(last.prompts_by_session, sid, now, momentsByKind(session)),   // unit mbank (row 1246): this session's own turn ends
     stop: {
       at: now,
       session_id: sid,
@@ -1813,6 +1896,7 @@ export function stopHook(hook, io) {
   io.appendLog({
     ts: now,
     session_id: sid,
+    turn_id: paired && typeof p.turn_id === "string" ? p.turn_id : null,   // unit mbank: the paired prompt's turn, else null
     // A LEGACY verdict (an old-build sitting — study_scope's transition guard) is NOT a host match, so
     // its rows stay unstamped and R8 classifies them the P0 way, by surface.
     scope: scopeNow && scopeNow.study && !scopeNow.legacy ? "study" : null,
@@ -2140,9 +2224,25 @@ function selftest() {
       const emitted = ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage", "neev-pehle", "link-back", "terminology", "decided",
         "uncaptured-rep",   // W0-D · LR-04 — grown deliberately: this mirror is the ratchet, and it may only ever be widened alongside a real emitter
         "act-mt2kgbt7", "act-mt2kgn09", "max-intensity-check",   // 7 Sep 2026 — checks 12, 13 and 14, each with a real emitter above
-        "act-mueywvag"];   // 7 Oct 2026, forks row 583 (6) — widened alongside its real emitter, pictureDrift at Stop
+        "act-mueywvag",   // 7 Oct 2026, forks row 583 (6) — widened alongside its real emitter, pictureDrift at Stop
+        "crack-gap"];   // 21 Nov 2026, unit mcrk2 (forks row 1258 F1 A) — widened alongside its real emitter, crackGapDrift at Stop
       return emitted.every((r) => CHECKED_RULES.includes(r)) && CHECKED_RULES.every((r) => emitted.includes(r));
     })());
+  {
+    // unit mcrk2 (forks row 1258 F1 A) — the crack gap counts as drift, joined to the paired prompt, never his words
+    const ck = { kind: "crack", id: "ck-a1", gap: "moment-undeclared", axis: "d", concept: "tokenization", prompt_session_id: "s1", prompt_at: "2026-11-21T06:00:00.000Z", words: "his own words here" };
+    const g = crackGapDrift({ rows: [ck], sessionId: "s1", promptAt: ck.prompt_at });
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    assert("CRACK GAP (unit mcrk2) — a gap row of THIS turn's paired prompt is one drift `crack-gap` naming the row; another session, another prompt, no gap, or a different turn id → none; the evidence never carries his words",
+      g && g.rule === "crack-gap" && /ck-a1 written with moment-undeclared/.test(g.evidence) && !g.evidence.includes(ck.words) && !String(g.excerpt).includes(ck.words)
+      && crackGapDrift({ rows: [ck], sessionId: "s2", promptAt: ck.prompt_at }) === null
+      && crackGapDrift({ rows: [ck], sessionId: "s1", promptAt: "2026-11-21T06:01:00.000Z" }) === null
+      && crackGapDrift({ rows: [{ ...ck, gap: null }], sessionId: "s1", promptAt: ck.prompt_at }) === null
+      && crackGapDrift({ rows: [{ ...ck, turn_id: "t-9" }], sessionId: "s1", promptAt: ck.prompt_at, turnId: "t-1" }) === null
+      && crackGapDrift({ rows: [{ ...ck, gap: "session-unchecked", gap_owner: "organism" }], sessionId: "s1", promptAt: ck.prompt_at }) === null   // row 1281 (2): the organism's, not the teacher's
+      && !!crackGapDrift({ rows: [{ ...ck, gap: "moment-undeclared+session-unchecked", gap_owner: "teacher+organism" }], sessionId: "s1", promptAt: ck.prompt_at })
+      && /if \(gapDrift\) res\.drifts\.push\(gapDrift\);/.test(src) && src.indexOf("if (gapDrift) res.drifts.push(gapDrift);") < src.indexOf("for (const d of res.drifts) staged.push"));
+  }
   assert("W0-D · LR-04 — every CHECKED_RULE that is only PARTIALLY machine-visible carries its RULE_NOTES slice, so 'no drift caught' can never widen into 'taught correctly'",
     typeof RULE_NOTES["uncaptured-rep"] === "string" && RULE_NOTES["uncaptured-rep"].length > 80);
 
@@ -2517,6 +2617,14 @@ function selftest() {
       assert("END-TO-END — the prompt recorded at UserPromptSubmit is consumed by ITS OWN session's Stop with user_text_source 'fresh' (§5.3's wire, live)",
         p1.status === 0 && s2.status === 0 && rows2.length === 2 && rows2[1].user_text_source === "fresh"
         && lastJ2 && lastJ2.prompt && typeof lastJ2.prompt.consumed_at === "string");
+      assert("END-TO-END — unit mbank: the prompt record carries a minted turn_id (a UUID), the Stop keeps it on the consumed prompt, and the paired Stop row names the same turn",
+        !!(lastJ2 && lastJ2.prompt && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(String(lastJ2.prompt.turn_id || "")))
+        && rows2.length === 2 && rows2[1].turn_id === lastJ2.prompt.turn_id && rows2[0].turn_id === null);
+      assert("END-TO-END — unit mbank (row 1246): the prompt is also kept PER SESSION, and that session's own Stop consumes its own entry (same bytes, same turn)",
+        !!(lastJ2 && lastJ2.prompts_by_session && lastJ2.prompts_by_session["selftest-e2e"])
+        && lastJ2.prompts_by_session["selftest-e2e"].text === "yaar samajh nahi aa raha"
+        && lastJ2.prompts_by_session["selftest-e2e"].turn_id === lastJ2.prompt.turn_id
+        && typeof lastJ2.prompts_by_session["selftest-e2e"].consumed_at === "string");
     } finally {
       try { rmSync(tmp, { recursive: true, force: true }); } catch { /* a temp dir that outlives the test is litter, not a failure */ }
     }
@@ -2848,6 +2956,160 @@ function replayMain(file) {
   console.log(replaySamajh(raw).line);
 }
 
+// ===========================================================================
+// UNIT maud43 · THE ONE-TIME REBUILD OF THE SESSION-MISMATCH TURNS (forks rows 1250 (4) / 1282 / 1283 (2) / 1286;
+// spec ci/maud43/MAUD43_SPEC.md). A Stop row written `session-mismatch` lost the one check that reads his words
+// (confusion-is-literal): another session's prompt sat in the shared slot. His prompt is still in his session's own
+// transcript. This verb rebuilds that check from it, ONCE, as APPENDED rows (his law 9: the old row is never rewritten).
+//   THE JOIN (row 1282 (1)): the session id names ONE file (transcriptOf); inside it, the row's turn is the LAST human
+//     prompt (promptOfLine) stamped before the row's own ts. Time orders lines of that one file only: no other session's
+//     file is opened, no folder is scanned, no string of his is compared with anything.
+//   THE CROSS-CHECK: the row's own samajh_check.seen and new_idea, which this organ read from that same file at Stop time,
+//     must agree, or the row is UNPAIRABLE. new_idea is read as the Stop read it (row 1283 (2)): over the STOP-TIME VIEW
+//     (the turn's lines stamped at or before the row) with that view's last text block as last_assistant_message.
+//   A SHARED TURN (several rows reach one prompt) is rebuilt ONCE, its row naming every row it supersedes; its step,
+//     concept and assistantText come from the LAST superseded row (row 1286 (1): its Stop saw the whole turn).
+//   WHAT IS WRITTEN carries no ts / scope / drifts key, so teaching_contract windowDrift, watchman and study_scope's day
+//     reader never count it (maud43-3 (a)); a rebuilt drift never auto-counts (maud43-4 (a)): no contract call is made.
+//   REFUSED: a gone file is LOST, one row per old row, latched; an UNPAIRABLE row is counted and left for a later ruling;
+//     a row already superseded is never touched again (the once-latch over every supersedes id).
+//   THE DRY RUN is the default: counts only, nothing written, nothing of his printed. `--apply` writes.
+// The live rebuild is the RUNNER'S hand on his laptop, once (spec §7); every proof of it is planted (ci/maud43/).
+// ===========================================================================
+export const REBUILT_FROM = "transcript";
+/** The supersede key of an old row: sha256 of its exact line bytes (no newline). Pure. */
+export const rowIdOf = (line) => createHash("sha256").update(String(line), "utf8").digest("hex");
+const lineTs = (l) => { try { const o = JSON.parse(l); return o && typeof o.timestamp === "string" ? Date.parse(o.timestamp) : NaN; } catch { return NaN; } };
+const isMismatchRow = (r) => /^session-mismatch/.test(String((r && r.user_text_source) || ""));
+/** The row's turn inside ONE file's lines: the last human prompt stamped before rowTs, up to his next prompt. Pure. */
+export function turnAt(lines, rowTs) {
+  const L = Array.isArray(lines) ? lines : [];
+  let at = -1;
+  for (let i = 0; i < L.length; i++) {
+    if (promptOfLine(L[i]) === null) continue;
+    const t = lineTs(L[i]);
+    if (Number.isFinite(t) && t < rowTs) at = i;
+  }
+  if (at < 0) return null;
+  let end = L.length;
+  for (let i = at + 1; i < L.length; i++) if (promptOfLine(L[i]) !== null) { end = i; break; }
+  return { at, end };
+}
+/** The Stop-time view of a turn (row 1283 (2)): its lines stamped at or before rowTs (an unstamped line is kept), read by
+ *  turnOf, and the Stop's message rebuilt as that view's last text block. Pure. */
+export function stopView(lines, at, end, rowTs) {
+  const view = turnOf(lines.slice(at, end).filter((l) => { const t = lineTs(l); return !Number.isFinite(t) || t <= rowTs; }).join("\n"));
+  const fin = Array.isArray(view.blocks) ? [...view.blocks].reverse().find((b) => b.kind === "text") : null;
+  return { view, stopMsg: fin ? String(fin.text || "") : "" };
+}
+/** THE PLAN — pure over what it is handed: the log's text, the per-session record, the window, and a file reader
+ *  (sid, path) → { lines } | { lost: true } | { unreadable: true }. Writes nothing. */
+export function rebuildPlan({ logText = "", auditLast = null, from, to, readFile, now = new Date().toISOString() } = {}) {
+  const all = [];
+  String(logText || "").split("\n").forEach((line) => {
+    if (!line.trim()) return;
+    let r; try { r = JSON.parse(line); } catch { return; }
+    if (r && typeof r === "object") all.push({ line, r });
+  });
+  const done = new Set(all.filter((x) => x.r.rebuilt_from === REBUILT_FROM && Array.isArray(x.r.supersedes)).flatMap((x) => x.r.supersedes));
+  const own = all.filter((x) => !x.r.rebuilt_from && typeof x.r.ts === "string");   // the organ's own Stop rows, log order
+  const lo = Date.parse(String(from)), hi = Date.parse(String(to));
+  const cand = own.filter((x) => { const t = Date.parse(x.r.ts); return t >= lo && t < hi && isMismatchRow(x.r); });
+  const c = { candidates: cand.length, paired: 0, turns: 0, shared: 0, shared_rows: 0, lost: 0, unpairable: 0,
+    no_prompt: 0, cross_check: 0, unreadable: 0, already: 0, drifts: 0 };
+  const files = new Map(), groups = new Map(), out = [];
+  const records = mapOf(auditLast && auditLast.prompts_by_session);
+  const fileOf = (sid) => {
+    if (!files.has(sid)) {
+      let path = null;
+      try { path = transcriptOf(sid, records[sid]); } catch { path = null; }
+      files.set(sid, path ? readFile(sid, path) : { lost: true });
+    }
+    return files.get(sid);
+  };
+  for (const x of cand) {
+    const id = rowIdOf(x.line), sid = typeof x.r.session_id === "string" ? x.r.session_id : "";
+    if (done.has(id)) { c.already++; continue; }
+    const f = fileOf(sid);
+    if (f.lost) {
+      c.lost++;
+      out.push({ rebuilt_at: now, rebuilt_from: REBUILT_FROM, supersedes: [id], of_ts: [x.r.ts], session_id: sid || null, lost: true, why: "transcript gone" });
+      continue;
+    }
+    if (f.unreadable || !Array.isArray(f.lines)) { c.unpairable++; c.unreadable++; continue; }
+    const rt = Date.parse(x.r.ts);
+    const span = turnAt(f.lines, rt);
+    if (!span) { c.unpairable++; c.no_prompt++; continue; }
+    const turn = turnOf(f.lines.slice(span.at, span.end).join("\n"));
+    const { view, stopMsg } = stopView(f.lines, span.at, span.end, rt);
+    const oldSeen = x.r.samajh_check && typeof x.r.samajh_check === "object" ? x.r.samajh_check.seen : null;
+    const oldIdea = x.r.new_idea;
+    const seenNow = turn.blocks ? samajhOf(turn).seen : null;
+    const ideaNow = Array.isArray(view.blocks) ? pictureFacts(view.blocks, stopMsg).new_idea : null;
+    if ((oldSeen !== null && oldSeen !== undefined && oldSeen !== seenNow) || (oldIdea !== null && oldIdea !== undefined && oldIdea !== ideaNow)) {
+      c.unpairable++; c.cross_check++; continue;
+    }
+    c.paired++;
+    const key = `${sid}#${span.at}`;
+    if (!groups.has(key)) groups.set(key, { sid, turn, members: [] });
+    groups.get(key).members.push({ x, id, stopMsg });
+  }
+  for (const g of groups.values()) {
+    c.turns++;
+    if (g.members.length > 1) { c.shared++; c.shared_rows += g.members.length; }
+    const first = g.members[0], last = g.members[g.members.length - 1];
+    const sameSession = own.filter((y) => y.r.session_id === g.sid);
+    const prev = sameSession[sameSession.indexOf(first.x) - 1] || null;
+    const prevStep = prev && prev.r.measured && Number.isFinite(prev.r.measured.step) ? prev.r.measured.step : null;
+    const lr = last.x.r;
+    const step = lr.measured && Number.isFinite(lr.measured.step) ? lr.measured.step : (Number.isFinite(lr.step) ? lr.step : null);
+    const concept = typeof lr.concept === "string" ? lr.concept : null;
+    const res = auditTurn({ assistantText: last.stopMsg, userText: String(g.turn.prompt || ""), session: { concept, step }, prevStep });
+    const kept = (res.drifts || []).filter((d) => d.rule === "confusion-is-literal");
+    c.drifts += kept.length;
+    out.push({
+      rebuilt_at: now, rebuilt_from: REBUILT_FROM,
+      supersedes: g.members.map((m) => m.id), of_ts: g.members.map((m) => m.x.r.ts),
+      session_id: g.sid || null, concept, step,
+      // row 1286 (1) / (2): the two ruled choices, NAMED on the row itself
+      shared_turn_source: "the last superseded row (its Stop saw the whole turn)",
+      stop_message_source: "the stop-time view's last text block",
+      user_text_source: "rebuilt-from-transcript",
+      prev_step: prevStep, prev_step_source: prevStep === null ? null : "own-session previous row",
+      drifts_rebuilt: kept.map((d) => d.rule), evidence_rebuilt: kept.map((d) => d.evidence), excerpts_rebuilt: kept.map((d) => d.excerpt),
+      window: { moments: null, reps: null, moments_by_kind: null, why: "a prompt-time state snapshot is in no transcript" },
+      staged: [],
+    });
+  }
+  return { counts: c, rows: out };
+}
+const planLine = (from, to, c) => `rebuild-mismatch · window ${from}..${to} · candidates ${c.candidates} · paired ${c.paired} · turns ${c.turns} (shared ${c.shared}, rows ${c.shared_rows}) · lost ${c.lost} · unpairable ${c.unpairable} (no prompt ${c.no_prompt} · cross-check ${c.cross_check} · unreadable ${c.unreadable}) · already ${c.already} · drifts found ${c.drifts}`;
+const readTranscriptFile = (sid, path) => {
+  try { if (!existsSync(path)) return { lost: true }; } catch { return { lost: true }; }
+  try { return { lines: readFileSync(path, "utf8").split("\n") }; } catch { return { unreadable: true }; }
+};
+// THE VERB. ONE line on stdout, counts only — never a word of his, a concept, a path or a session id.
+function rebuildMain(argv) {
+  const arg = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : undefined; };
+  const from = arg("--from"), to = arg("--to"), apply = argv.includes("--apply");
+  if (!from || !to || !Number.isFinite(Date.parse(from)) || !Number.isFinite(Date.parse(to))) {
+    console.error("teaching_audit rebuild-mismatch: usage — rebuild-mismatch --from <ISO> --to <ISO> [--apply] (both bounds required; no default)");
+    process.exitCode = 2; return;
+  }
+  let logText = "";
+  try { logText = existsSync(LOG) ? readFileSync(LOG, "utf8") : ""; } catch { console.error("teaching_audit rebuild-mismatch: the audit log is unreadable"); process.exitCode = 2; return; }
+  const plan = rebuildPlan({ logText, auditLast: readLast(), from, to, readFile: readTranscriptFile });
+  if (!apply) { console.log(`${planLine(from, to, plan.counts)} · DRY RUN: nothing written`); return; }
+  for (const row of plan.rows) appendLogReal(row);
+  // written is MEASURED, not assumed: the rows whose ids the re-read log now latches (appendLogReal never throws)
+  let after = "";
+  try { after = readFileSync(LOG, "utf8"); } catch { after = ""; }
+  const latched = new Set(after.split("\n").flatMap((l) => { try { const r = JSON.parse(l); return r && r.rebuilt_from === REBUILT_FROM && Array.isArray(r.supersedes) ? r.supersedes : []; } catch { return []; } }));
+  const written = plan.rows.filter((r) => latched.has(r.supersedes[0])).length;
+  console.log(`${planLine(from, to, plan.counts)} · written ${written}`);
+  if (written !== plan.rows.length) process.exitCode = 1;
+}
+
 // IMPORT GUARD (7 Sep 2026). Until today this dispatch ran on IMPORT as well as
 // on spawn — `import("./teaching_audit.mjs")` from any other module printed the
 // usage banner (measured), and under a different argv would have run a COMMAND.
@@ -2872,5 +3134,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
   else if (cmd === "hook") await hookMain();
   else if (cmd === "replay") replayMain(process.argv[3]);
-  else console.log("teaching_audit: hook | report | probe [--clean|--text \"...\"] | seed-terms [--concept <c>] | replay <transcript.jsonl> | selftest");
+  else if (cmd === "rebuild-mismatch") rebuildMain(process.argv.slice(3));   // unit maud43: the one-time rebuild (dry run unless --apply)
+  else console.log("teaching_audit: hook | report | probe [--clean|--text \"...\"] | seed-terms [--concept <c>] | replay <transcript.jsonl> | rebuild-mismatch --from <ISO> --to <ISO> [--apply] | selftest");
 }

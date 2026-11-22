@@ -21,13 +21,24 @@
 //        the service's own launcher, recording the ask and its result (F9 B,
 //        bounded: never a loop, never a second launcher). senses.mjs reads the
 //        snapshot onto the one state line.
+//        unit mpres2 (forks row 1259, F7 A: ONE build, three classes):
+//        (1) a `none` record — no ask ran — is not carried, so the next dead pass
+//        asks the door again (F1 B); (2) the door never starts a launcher beside
+//        a running one: the pid of the door's own spawn first, else ONE listing
+//        by the launcher's leaf name (F10 C, the lister a seam) — dead beside a
+//        running launcher is its own named red, `beside-running`, re-read each
+//        pass (F8 B: a listing is not a launch); (3) the fetch keeps its reason
+//        (`dead_reason`, F9 A) and an abort beside a running launcher is BUSY,
+//        a named amber that neither opens nor resets a dead span and never turns
+//        dead by a typed stretch (F11 A / F12 A); the launcher is read only when
+//        nothing answered (F13 B) — a server that answered is never relaunched.
 //        Sole writer of presence_log.jsonl + presence_input.json (both gitignored). Zero LLM.
 // MODES: node scripts/presence.mjs sense [--demo] · calibrate · status · roll · selftest
 // ============================================================================
 
 import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync,
          statSync, openSync, closeSync, readSync, readdirSync, mkdtempSync, rmSync } from "node:fs";
-import { join, dirname, basename } from "node:path";
+import { join, dirname, basename, isAbsolute } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { currentTone } from "./tone.mjs";
@@ -588,7 +599,18 @@ function focusRead(events, now = new Date(), matcher = null, opts = FOCUS, afk =
 // 4s silent no-op. At /SC MINUTE /MO 10 that lets a second scheduled pass start
 // on top of the first, and two instances then append rows to presence_log.jsonl.
 // Both legs now carry their own controller and both timers clear in `finally`.
-async function fetchAwEvents(prefix, deps = {}) {
+// unit mpres2 (§11.3 / §12.2, F9 A): the null keeps its REASON, read from the error's own name / code —
+// abort (the port is held, no answer within the code's own bound) · refused (nothing bound the port) ·
+// error:<code> (another socket failure) · no-window-bucket (the server ANSWERED, no window watcher) ·
+// bad-json (the server answered, not JSON). fetchAwEvents stays the array-or-null every caller reads.
+function awReason(e) {
+  const name = e && e.name, code = (e && e.code) || (e && e.cause && e.cause.code) || null;
+  if (name === "AbortError" || name === "TimeoutError") return "abort";
+  if (code === "ECONNREFUSED") return "refused";
+  if (name === "SyntaxError") return "bad-json";
+  return code ? `error:${String(code)}` : "error";
+}
+async function fetchAwRead(prefix, deps = {}) {
   const fetchFn = deps.fetchFn || fetch;
   let t1 = null, t2 = null;
   try {
@@ -596,12 +618,13 @@ async function fetchAwEvents(prefix, deps = {}) {
     const buckets = await (await fetchFn(`${AW}/api/0/buckets`, { signal: c1.signal })).json();
     clearTimeout(t1); t1 = null;
     const b = Object.keys(buckets).find(k => k.startsWith(prefix));
-    if (!b) return null;
+    if (!b) return { events: null, reason: prefix === "aw-watcher-window" ? "no-window-bucket" : "no-bucket" };
     const c2 = new AbortController(); t2 = setTimeout(() => c2.abort(), 4000);
-    return await (await fetchFn(`${AW}/api/0/buckets/${encodeURIComponent(b)}/events?limit=200`, { signal: c2.signal })).json();
-  } catch { return null; }                          // AW down → silent no-op (never guess)
+    return { events: await (await fetchFn(`${AW}/api/0/buckets/${encodeURIComponent(b)}/events?limit=200`, { signal: c2.signal })).json(), reason: null };
+  } catch (e) { return { events: null, reason: awReason(e) }; }   // AW down → no telemetry, no guess — but the reason is kept
   finally { if (t1) clearTimeout(t1); if (t2) clearTimeout(t2); }
 }
+async function fetchAwEvents(prefix, deps = {}) { return (await fetchAwRead(prefix, deps)).events; }
 const fetchWindowEvents = (deps = {}) => fetchAwEvents("aw-watcher-window", deps);
 // the presence half of the truth: known-away spans, so rest is never an accusation
 const fetchAfkEvents = (deps = {}) => fetchAwEvents("aw-watcher-afk", deps);
@@ -690,15 +713,33 @@ function writeSnap(p, obj) {
   writeFileSync(tmp, JSON.stringify(obj, null, 1));
   renameSync(tmp, p);
 }
-/** inputSnapshot(prior, {alive, now}) — pure. dead_since carries forward over dead passes; a live pass
- *  resets it and stamps last_live_at. A repair record rides only inside the dead span it was made in. */
-function inputSnapshot(prior, { alive, now, input = "activitywatch" }) {
+// unit mpres2 — the records of an ask that did NOT run. Each is re-read on the next dead pass, never carried:
+// `none` (no eligible row, no launcher, the launcher unreadable — F1 B) and `beside-running` (a launcher was
+// running, so nothing was started — F8 B: a listing is not a launch; if it has died, the next pass asks once).
+// Every record of an ask that ran (`asking` · `asked` · `failed`) still closes the span's door.
+const REOPEN = Object.freeze(["none", "beside-running"]);
+/** inputSnapshot(prior, {alive, now, busy?, reason?}) — pure. dead_since carries forward over dead passes; a
+ *  live pass resets it and stamps last_live_at. A repair record rides only inside the dead span it was made in,
+ *  and only if an ask ran — a `none` / `beside-running` record is not carried, so the next dead pass asks the
+ *  door again (mpres2 F1 B, F8 B). A BUSY pass (an abort beside a running launcher, §12.2) neither opens nor
+ *  resets a dead span: it holds the open span's dead_since (null if none) and carries busy_since; busy ends only
+ *  when the input answers or refuses — no count and no age turns it dead (F12 A). `launched` (the pid of the
+ *  door's own spawn, F10 C) rides every snapshot, live or not, until a read finds it gone. */
+function inputSnapshot(prior, { alive, now, input = "activitywatch", busy = false, reason = null }) {
   const at = now.toISOString();
   const p = prior && typeof prior === "object" ? prior : null;
-  if (alive) return { at, input, alive: true, dead_since: null, last_live_at: at };
+  const launched = p && p.launched && typeof p.launched === "object" ? { launched: p.launched } : {};
+  if (alive) return { at, input, alive: true, dead_since: null, last_live_at: at, ...launched };
+  if (busy) {
+    const held = p && p.alive === false && p.dead_since ? p.dead_since : null;
+    const busy_since = p && p.busy === true && p.busy_since ? p.busy_since : at;
+    const b = { at, input, alive: false, busy: true, busy_since, dead_since: held, dead_reason: reason, last_live_at: (p && p.last_live_at) || null, ...launched };
+    if (held && p.repair && p.repair.span === held && !REOPEN.includes(p.repair.result)) b.repair = p.repair;
+    return b;
+  }
   const dead_since = p && p.alive === false && p.dead_since ? p.dead_since : at;
-  const out = { at, input, alive: false, dead_since, last_live_at: (p && p.last_live_at) || null };
-  if (p && p.alive === false && p.repair && p.repair.span === dead_since) out.repair = p.repair;
+  const out = { at, input, alive: false, dead_since, dead_reason: reason, last_live_at: (p && p.last_live_at) || null, ...launched };
+  if (p && p.alive === false && p.repair && p.repair.span === dead_since && !REOPEN.includes(p.repair.result)) out.repair = p.repair;
   return out;
 }
 // F9 B, BOUNDED. The service's OWN launcher, and only one: the env door ARSENAL_AW_LAUNCHER (a plant
@@ -725,20 +766,78 @@ async function spawnOnce(cmd, args = []) {
     try { c = spawn(cmd, args, { detached: true, stdio: "ignore", windowsHide: true }); }
     catch (e) { res({ ok: false, why: (e && e.code) || "spawn threw" }); return; }
     c.once("error", (e) => res({ ok: false, why: (e && e.code) || "spawn error" }));
-    c.once("spawn", () => { try { c.unref(); } catch { /* the child already gone: nothing to detach */ } res({ ok: true, why: "the launcher started" }); });
+    c.once("spawn", () => { try { c.unref(); } catch { /* the child already gone: nothing to detach */ } res({ ok: true, why: "the launcher started", pid: c.pid }); });
   });
 }
+// unit mpres2 (F10 C) — IS A LAUNCHER OF THIS SENSOR RUNNING? The pid of the door's OWN spawn first (the
+// snapshot's `launched`, checked alive); else ONE listing by the launcher's leaf name, because a launcher he or
+// the runner started by hand has no pid here and a pid alone would relaunch beside it. Both are SEAMS
+// (deps.pidAlive, deps.lister): a witness plants them and lists nothing real. An absolute launcher path that is
+// not on disk cannot be running from there and cannot be started (the OS refuses), so it is not listed.
+// {running: true|false|null}; null = the listing could not be read — the door then asks nothing (a `none`,
+// re-read next pass), because a launcher it cannot see may be running.
+const launcherLeaf = (cmd) => String(cmd || "").split(/[\\/]/).filter(Boolean).pop() || "";
+function pidAliveDefault(pid) {
+  try { process.kill(pid, 0); return true; }
+  catch (e) { return !!(e && e.code === "EPERM"); }   // EPERM: it exists, it is not ours to signal
+}
+async function listByLeaf(leaf) {
+  if (!/^[A-Za-z0-9._-]+$/.test(leaf)) return { running: null, why: "launcher leaf not listable" };
+  const { execFile } = await import("node:child_process");
+  const run = (cmd, args) => new Promise((res) => {
+    try { execFile(cmd, args, { windowsHide: true, encoding: "utf8" }, (e, out) => res(e ? { err: e } : { out: String(out || "") })); }
+    catch (e) { res({ err: e }); }
+  });
+  if (process.platform === "win32") {
+    const names = /\.exe$/i.test(leaf) ? [leaf] : [leaf, `${leaf}.exe`];
+    const r = await run("powershell.exe", ["-NoProfile", "-Command", `(Get-CimInstance Win32_Process -Filter "${names.map((n) => `Name='${n}'`).join(" OR ")}" | Measure-Object).Count`]);
+    if (r.err) return { running: null, why: `listing failed (${(r.err && r.err.code) || "error"})` };
+    const n = Number.parseInt(r.out.trim(), 10);
+    return Number.isFinite(n) ? { running: n > 0, count: n, why: `${n} ${leaf} listed` } : { running: null, why: "listing unreadable" };
+  }
+  const r = await run("ps", ["-eo", "args="]);
+  if (r.err) return { running: null, why: `listing failed (${(r.err && r.err.code) || "error"})` };
+  const n = r.out.split(/\r?\n/).filter((l) => launcherLeaf((l.trim().split(/\s+/)[0]) || "") === leaf).length;
+  return { running: n > 0, count: n, why: `${n} ${leaf} listed` };
+}
+async function launcherRunning(door, prior, deps = {}) {
+  const l = prior && prior.launched;
+  if (l && Number.isInteger(l.pid) && await (deps.pidAlive || pidAliveDefault)(l.pid)) return { running: true, via: "pid", leaf: l.leaf || null, why: `${l.leaf || "launcher"} pid running` };
+  if (!door || !door.launcher) return { running: false, via: "no-door", why: "no launcher named" };
+  const leaf = launcherLeaf(door.launcher);
+  if (isAbsolute(door.launcher) && !existsSync(door.launcher)) return { running: false, via: "not-on-disk", leaf, why: "launcher not on disk" };
+  const r = await (deps.lister || listByLeaf)(leaf);
+  const running = r && r.running === true ? true : r && r.running === false ? false : null;
+  return { running, via: "listing", leaf, why: (r && r.why) || (running === null ? "listing unreadable" : "listed") };
+}
+// nothing answered (abort, refused, another socket failure) ⇒ the launcher is read; the server answered
+// (no-window-bucket, bad-json) ⇒ a process holds the port by construction: never read, never relaunched (F13 B)
+const ANSWERED = Object.freeze(["no-window-bucket", "bad-json"]);
 async function recordDeadInput(deps, now, file) {
-  const snap = inputSnapshot(readSnap(file), { alive: false, now });
+  const reason = deps.deadReason || null;
+  const prior = readSnap(file);
+  const answered = ANSWERED.includes(reason);
+  const door = answered ? null : await launcherDoor(deps);
+  const seen = answered ? null : await launcherRunning(door, prior, deps);
+  const busy = reason === "abort" && !!seen && seen.running === true;
+  const snap = inputSnapshot(prior, { alive: false, now, busy, reason });
+  if (seen) {
+    snap.launcher = { at: now.toISOString(), running: seen.running, via: seen.via, why: seen.why };
+    if (seen.via !== "pid" && snap.launched) delete snap.launched;   // the door's own spawn is gone: its pid is forgotten
+  }
+  // busy, or the server answered: no ask in this pass (no relaunch beside a held port), nothing re-read
+  if (busy || answered) { writeSnap(file, snap); return snap; }
   if (!snap.repair) {
-    const door = await launcherDoor(deps);
     if (!door.launcher) snap.repair = { span: snap.dead_since, at: now.toISOString(), result: "none", why: door.why };
+    else if (seen.running === true) snap.repair = { span: snap.dead_since, at: now.toISOString(), result: "beside-running", why: `${seen.leaf || "launcher"} running, input dead` };
+    else if (seen.running === null) snap.repair = { span: snap.dead_since, at: now.toISOString(), result: "none", why: `launcher not readable (${seen.why})` };
     else {
       // the bound is WRITTEN before the ask, so a pass that dies mid-launch can never ask twice in one span
       snap.repair = { span: snap.dead_since, at: now.toISOString(), result: "asking", source: door.source };
       writeSnap(file, snap);
       const r = await (deps.launch || spawnOnce)(door.launcher, door.args);
       snap.repair = { ...snap.repair, result: r && r.ok ? "asked" : "failed", why: (r && r.why) || "no answer" };
+      if (r && r.ok && Number.isInteger(r.pid)) snap.launched = { pid: r.pid, leaf: launcherLeaf(door.launcher), at: now.toISOString() };
     }
   }
   writeSnap(file, snap);
@@ -748,15 +847,18 @@ async function recordDeadInput(deps, now, file) {
 async function sense(deps = {}) {
   const now = deps.now || new Date();
   const tone = deps.tone || currentTone();
-  const events = deps.events !== undefined ? deps.events : await fetchWindowEvents(deps);
+  const read = deps.events !== undefined ? { events: deps.events, reason: deps.deadReason || null } : await fetchAwRead("aw-watcher-window", deps);
+  const events = read.events;
   // unit mpres: the snapshot follows the FETCH — an injected-events caller (the selftest) stays off the
   // filesystem unless it names its own file; a live-fetched pass writes the organ's own snapshot.
   const inputFile = deps.inputFile !== undefined ? deps.inputFile : (deps.events !== undefined ? null : PINPUT);
   if (events === null) {
     const skipped = "ActivityWatch unreachable — no telemetry, no guess";
     if (!inputFile) return { ok: false, dead: true, skipped };
+    deps = { ...deps, deadReason: read.reason };
     const input = await recordDeadInput(deps, now, inputFile);
-    return { ok: false, dead: true, skipped, input };
+    const busy = !!(input && input.busy === true);
+    return { ok: false, dead: !busy, busy, skipped: busy ? "ActivityWatch busy — the port is held and its launcher runs, no answer in time; no telemetry, no guess" : skipped, input };
   }
   if (inputFile) writeSnap(inputFile, inputSnapshot(readSnap(inputFile), { alive: true, now }));
   const t = thrashTelemetry(events, now);
@@ -1183,6 +1285,60 @@ async function selftest() {
     } finally { try { rmSync(dir, { recursive: true, force: true }); } catch { /* a temp dir the OS reaps */ } }
   }
 
+  // unit mpres2 (forks row 1259, F3 A) — the organ proves its own three bounds. Every door is a seam: a dead
+  // fetchFn (nothing dialled), a temp snapshot, a launch seam that starts nothing, a planted lister and pid check
+  // (every launcher read in this block goes to the planted lister and pid check: no real process is listed).
+  {
+    const dir = mkdtempSync(join(tmpdir(), "presence-mpres2-"));
+    try {
+      const tone = { arousal: "open", effects: {} };
+      const refused = async () => { const e = new TypeError("fetch failed"); e.cause = { code: "ECONNREFUSED" }; throw e; };
+      const abort = async () => { throw new DOMException("This operation was aborted", "AbortError"); };
+      const at = (m) => new Date(Date.UTC(2026, 10, 20, 16, m, 0));
+      const leaf = "aw-qt-selftest";
+      const row = { subject: "activitywatch", artifact: "aw", verified_by: "next pass alive", report_anchor: "the state line", witness: "w", reversible: true, launcher: leaf };
+      const mk = (name) => {
+        const f = join(dir, name), asks = [], lists = [];
+        let running = false;
+        const lister = async (l) => { lists.push(l); return { running, why: `${running ? 1 : 0} ${l} listed` }; };
+        const launch = async () => { asks.push(1); return { ok: true, why: "the launcher started" }; };
+        const pass = (m, fetchFn, repairRow = row) => sense({ now: at(m), tone, fetchFn, inputFile: f, env: {}, repairRow, launch, lister, pidAlive: () => false });
+        return { f, asks, lists, pass, set: (v) => { running = v; } };
+      };
+      // class 1: a `none` record (no row yet) does not close the span's door
+      const a = mk("a.json");
+      await a.pass(20, refused, null);
+      const n1 = readSnap(a.f);
+      await a.pass(21, refused); await a.pass(22, refused);
+      const n3 = readSnap(a.f);
+      assert("mpres2 F1 B — a `none` record (no row yet) is NOT carried: the row seeded mid-span is asked ONCE, in the same span",
+        n1.repair.result === "none" && a.asks.length === 1 && n3.repair.result === "asked" && n3.repair.span === n3.dead_since && n3.dead_since === at(20).toISOString());
+      // class 2: never beside a running launcher; re-read each pass; asks once when it has died
+      const b = mk("b.json"); b.set(true);
+      await b.pass(20, refused); await b.pass(21, refused);
+      const r2 = readSnap(b.f);
+      assert("mpres2 §11 — dead beside a running launcher starts NOTHING and reads its own red, beside-running",
+        b.asks.length === 0 && r2.repair.result === "beside-running" && b.lists.length === 2 && b.lists[0] === leaf);
+      b.set(false); await b.pass(22, refused); await b.pass(23, refused);
+      assert("mpres2 F8 B — the launcher re-read each pass: once it has died the door asks ONCE, then the span is closed",
+        b.asks.length === 1 && readSnap(b.f).repair.result === "asked" && readSnap(b.f).dead_since === at(20).toISOString());
+      // class 3: busy is not dead
+      const c = mk("c.json"); c.set(true);
+      await c.pass(20, abort); await c.pass(21, abort);
+      const s2 = readSnap(c.f);
+      assert("mpres2 §12.2 — an abort beside a running launcher is BUSY: no dead span opened, nothing asked, busy_since the first",
+        c.asks.length === 0 && s2.busy === true && s2.dead_since === null && s2.busy_since === at(20).toISOString() && s2.dead_reason === "abort");
+      const d = mk("d.json");
+      const noWin = async () => ({ json: async () => ({ "aw-watcher-afk_pc": {} }) });
+      await d.pass(20, noWin);
+      assert("mpres2 F13 B — the server answered with no window watcher: dead `no-window-bucket`, the launcher NOT read, nothing asked",
+        d.asks.length === 0 && d.lists.length === 0 && readSnap(d.f).dead_reason === "no-window-bucket" && readSnap(d.f).alive === false);
+      assert("mpres2 F9 A — the reason is read from the error itself, never collapsed",
+        awReason(new DOMException("x", "AbortError")) === "abort" && awReason(Object.assign(new TypeError("f"), { cause: { code: "ECONNREFUSED" } })) === "refused"
+        && awReason(new SyntaxError("x")) === "bad-json" && awReason(Object.assign(new Error("x"), { code: "ENOTFOUND" })) === "error:ENOTFOUND");
+    } finally { try { rmSync(dir, { recursive: true, force: true }); } catch { /* a temp dir the OS reaps */ } }
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -1237,9 +1393,10 @@ async function main() {
     const r = await sense(demo ? { events: Array.from({ length: 48 }, (_, i) => ({ timestamp: new Date(t0 - 8 * 60000 + i * 10000).toISOString(), data: { app: i % 2 ? "chrome.exe" : "Code.exe", title: i % 2 ? "attention scaling doubt - search" : "drill.py - editor" } })) } : {});
     console.log(r.ok ? `presence: ${r.edge ? (r.posted ? "LEADING EDGE — afferent posted" : r.muted ? "leading edge, MUTED (conserve)" : "leading edge, thalamus asleep") : "calm"} (${r.telemetry.switches} switches / ${Math.round(r.telemetry.span_min)}min)` : `presence: ${r.skipped}`);
     // unit mpres F2 B: a dead input never exits 0 with a zero — the scheduler's LastTaskResult reads it too.
-    if (r.dead) {
+    if (r.dead || r.busy) {
       const i = r.input;
-      if (i) console.log(`presence: input DEAD since ${i.dead_since}${i.repair ? ` · repair ${i.repair.result}${i.repair.why ? ` (${i.repair.why})` : ""}` : ""} → ${PINPUT}`);
+      if (i && i.busy) console.log(`presence: input BUSY since ${i.busy_since} (not dead: no relaunch) → ${PINPUT}`);
+      else if (i) console.log(`presence: input DEAD since ${i.dead_since}${i.repair ? ` · repair ${i.repair.result}${i.repair.why ? ` (${i.repair.why})` : ""}` : ""} → ${PINPUT}`);
       process.exitCode = 1;
     }
     return;
@@ -1254,6 +1411,8 @@ export { thrashTelemetry, isLeadingEdge, sense, calibrate, calibrateLegacy, calm
          fetchAwEvents, fetchWindowEvents, fetchAfkEvents, FOCUS,
          // unit mpres — the dead-input snapshot and its one bounded ask
          inputSnapshot, launcherDoor, PINPUT,
+         // unit mpres2 — the reason, the launcher read, the reopen set
+         fetchAwRead, awReason, launcherRunning, launcherLeaf, listByLeaf, REOPEN,
          // #51 — the shared, archive-tolerant readers the other four call sites can import
          presenceTail, presenceTailReport, presenceDayReport, rollPresenceLog, rollDue, maybeRoll, archiveSiblings, archivePath,
          // #6 — the producer-side concept canon

@@ -1,0 +1,8 @@
+{"ts":"2026-11-22T01:46Z","act":"cut","cmd":"git checkout -b claude/mt1-build 0ee0516","last_line":"0ee0516"}
+{"ts":"2026-11-22T02:35Z","act":"order-40","cmd":"mlv0 then mlv3 ×40 (20 base, 20 repaired)","last_line":"T1 red 0/20 · 0/20 · ports [] at every mlv3 start"}
+{"ts":"2026-11-22T02:35Z","act":"merge-main","cmd":"git merge 96be529","last_line":"no conflicted file · BASE = 96be529"}
+{"ts":"2026-11-22T02:35Z","act":"witness-head","cmd":"node ci/mt1/witness_mt1.mjs --org <build> --base-org <96be529>","last_line":"GREEN MT1 … · 15 clause(s)"}
+{"ts":"2026-11-22T02:35Z","act":"witness-base","cmd":"node ci/mt1/witness_mt1.mjs --org <96be529> --base-org <96be529>","last_line":"RED MT1 · PLAIN-mlv1 … P-mlv3-T4"}
+{"ts":"2026-11-22T02:35Z","act":"mutants","cmd":"node ci/mt1/run_mutants_mt1.mjs --org <build> --base-org <96be529>","last_line":"run_mutants: 10 of 10 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-22T02:35Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 169 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-22T02:35Z","act":"gates","cmd":"node scripts/gates.mjs report (LF clone)","last_line":"gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides, and every schema'd state file matches"}

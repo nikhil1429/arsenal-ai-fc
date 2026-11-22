@@ -36,6 +36,13 @@
 //         (its RETIRING line), and the respawn is a BOOT that ends on an event. T2 claims ONCE (none lost, none twice, 0
 //         pending), not promptness; T1 still claims the prompt retire and its wait is unchanged.
 //   KEPT, none loosened (row 1135 (2)): every DEFERRED wait, every retire wait, the lane and drain waits, their bounds.
+// UNIT mt1 (forks row 1276, witness-only, re-cut in place, BASE kept). Every clause whose last wait was the SINGLE-SAMPLE
+// shape (the retire AND the respawned worker inside one first-boot sample + SLACK: ~~`waitFor(<a new worker>, BOUND)`~~)
+// takes T2's repair (rows 1135 / 1139, unit mrv): the RETIRE keeps its bound (a RETIRING line, or the keeper's clean-retire
+// `worker exit … respawn now` line, within BOOT + SLACK of the act that retires it), and the RESPAWNED worker is a BOOT that
+// ends on an event: it answers · a worker exit that is not a clean retire, or a second one · "keeper waiting" · the
+// keeper's exit. The clause prints `retire <ms> · respawn <ms>`, so a later red carries its own measurement. No claim about
+// the code is loosened: what each clause asserts is unchanged, and every DEFERRED / drain / lane wait keeps its bound.
 // UNIT mkp24 (forks row 1216 K-F2 C0, in place, BASE kept): a red clause also prints ONE machine line `CAUSE <ID> <CODE>`
 // before its RED line, its CODE a key of the family's CAUSES literal below; nothing else this witness prints or waits changes.
 // LAST LINE: GREEN MLV3 <what> · <n> clause(s) (exit 0) or RED MLV3 · <clauses> (exit 1)
@@ -245,16 +252,30 @@ const behaviour = async (id, fn) => { await clause(id, fn); BEHAVIOUR.push(resul
 
 const newBoot = (s1) => async () => { const s = await portUp(); return s && s.booted_at !== s1.booted_at ? s : null; };
 
+// UNIT mt1 (row 1276): the retire keeps its bound; the respawn is a BOOT that ends on an event (T2's shape)
+const retireThenBoot = async (n0, isNew) => {
+  const w0 = Date.now(), end = w0 + BOUND; let retireAt = null;
+  for (;;) {
+    const s2 = await isNew(), now = Date.now();
+    if (retireAt === null && (linesSince(n0, /RETIRING/) || linesSince(n0, /worker exit.*respawn now$/))) retireAt = now;
+    if (s2) { if (retireAt === null) retireAt = now; return { s2, why: `retire ${retireAt - w0} ms · respawn ${now - retireAt} ms` }; }
+    if (retireAt === null && now > end) return { s2: null, why: `no RETIRING line within ${BOUND} ms of the act`, code: "RETIRE-LATE" };
+    const ex = out.slice(n0).filter((l) => /worker exit/.test(l));
+    if (ex.length > 1 || ex.some((l) => !/respawn now$/.test(l)) || linesSince(n0, /keeper waiting/) || keeper.exitCode != null || keeper.signalCode != null)
+      return { s2: null, why: `retire ${retireAt === null ? "unseen" : `${retireAt - w0} ms`} · the respawn did not come up (${(ex.pop() || "keeper waiting or exited").slice(0, 120)})`, code: "RESPAWN-FAIL" };
+    await sleep(SLACK);
+  }
+};
 await behaviour("T1 IDLE · spool drained: a closure write retires the worker and the new bytes serve", async () => {
   const s1 = await portUp(); if (!s1) return { ok: false, why: "cannot run: no daemon answers its planted port", code: "NOT-UP" };
   const pend0 = sp.stats().pending;
-  const n = out.length;   // UNIT mkp24 (C0): read only, to name which link of the chain came late
+  const nR = out.length;
   touchClosure();
   const wrote = statSync(ENTRY).mtimeMs;
-  const s2 = await waitFor(newBoot(s1), BOUND);
+  // UNIT mt1 (row 1276): ~~const s2 = await waitFor(newBoot(s1), BOUND);~~
+  const rb = await retireThenBoot(nR, newBoot(s1)), s2 = rb.s2;
   const ok = !!s2 && Date.parse(s2.booted_at) >= Math.floor(wrote) - 1;
-  return { ok, why: s2 ? `booted ${s1.booted_at} → ${s2.booted_at} · spool pending before ${pend0}` : `the same boot ${s1.booted_at} after ${BOUND} ms (no retire)`,
-    code: !s2 ? (linesSince(n, /RETIRING/) ? "RESPAWN-LATE" : "RETIRE-LATE") : "BOOT-BEFORE-WRITE" };
+  return { ok, why: s2 ? `booted ${s1.booted_at} → ${s2.booted_at} · ${rb.why} · spool pending before ${pend0}` : `the same boot ${s1.booted_at} · ${rb.why} (no retire)`, code: !s2 ? (rb.code || "RETIRE-LATE") : "BOOT-BEFORE-WRITE" };
 });
 
 await behaviour("T2 ONCE · events streamed through a retire land exactly once, none lost, the spool drained", async () => {
@@ -304,13 +325,14 @@ await behaviour("T3 INFLIGHT · a capture request in flight defers the retire; i
   touchClosure();
   const deferred = await waitFor(async () => linesSince(n, /retire DEFERRED/), BOUND);
   const mid = await portUp();
+  const nR = out.length;
   req.end(body.slice(half));
   await waitFor(async () => answered !== null, BOUND);
-  const s2 = await waitFor(newBoot(s1), BOUND);
+  // UNIT mt1 (row 1276): ~~const s2 = await waitFor(newBoot(s1), BOUND);~~
+  const rb = await retireThenBoot(nR, newBoot(s1)), s2 = rb.s2;
   const times = landed(e.event_id);
   const ok = !!deferred && mid && mid.booted_at === s1.booted_at && answered === 200 && times === 1 && !!s2;
-  return { ok, why: `${deferred ? "DEFERRED" : "no DEFERRED line"} with the body half-sent · boot ${mid && mid.booted_at === s1.booted_at ? "unchanged" : "CHANGED"} · answered ${answered} · landed ${times} time(s) · then ${s2 ? "retired" : "no retire"}`,
-    code: !deferred ? "DEFER-MISSING" : !(mid && mid.booted_at === s1.booted_at) ? "DEFER-BROKEN" : answered !== 200 ? "ANSWER-FAIL" : times === 0 ? "LOST" : times > 1 ? "TWICE" : "NO-RETIRE-AFTER" };
+  return { ok, why: `${deferred ? "DEFERRED" : "no DEFERRED line"} with the body half-sent · boot ${mid && mid.booted_at === s1.booted_at ? "unchanged" : "CHANGED"} · answered ${answered} · landed ${times} time(s) · then ${s2 ? "retired" : "no retire"} · ${rb.why}`, code: !deferred ? "DEFER-MISSING" : !(mid && mid.booted_at === s1.booted_at) ? "DEFER-BROKEN" : answered !== 200 ? "ANSWER-FAIL" : times === 0 ? "LOST" : times > 1 ? "TWICE" : (rb.code || "NO-RETIRE-AFTER") };
 });
 
 await behaviour("T4 JUDGE · a held judge port defers the retire; freed, the next write retires", async () => {
@@ -323,11 +345,12 @@ await behaviour("T4 JUDGE · a held judge port defers the retire; freed, the nex
   const deferred = await waitFor(async () => linesSince(n, /retire DEFERRED.*judge/), BOUND);
   const mid = await portUp();
   await new Promise((r) => judge.close(r));
+  const nR = out.length;
   touchClosure();
-  const s2 = await waitFor(newBoot(s1), BOUND);
+  // UNIT mt1 (row 1276): ~~const s2 = await waitFor(newBoot(s1), BOUND);~~
+  const rb = await retireThenBoot(nR, newBoot(s1)), s2 = rb.s2;
   const ok = !!deferred && mid && mid.booted_at === s1.booted_at && !!s2;
-  return { ok, why: `${deferred ? "DEFERRED naming the judge" : "no DEFERRED line"} · boot while held ${mid && mid.booted_at === s1.booted_at ? "unchanged" : "CHANGED"} · freed → ${s2 ? "retired" : "no retire"}`,
-    code: !deferred ? "DEFER-MISSING" : !(mid && mid.booted_at === s1.booted_at) ? "DEFER-BROKEN" : "NO-RETIRE-AFTER" };
+  return { ok, why: `${deferred ? "DEFERRED naming the judge" : "no DEFERRED line"} · boot while held ${mid && mid.booted_at === s1.booted_at ? "unchanged" : "CHANGED"} · freed → ${s2 ? "retired" : "no retire"} · ${rb.why}`, code: !deferred ? "DEFER-MISSING" : !(mid && mid.booted_at === s1.booted_at) ? "DEFER-BROKEN" : (rb.code || "NO-RETIRE-AFTER") };
 });
 
 await killTree(keeper);
