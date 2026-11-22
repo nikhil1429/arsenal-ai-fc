@@ -274,7 +274,8 @@ function pBase() {
 
 // ── BOUND: only the named files differ ───────────────────────────────────────────────────────────────────────────────
 const NAMED = (rel) => /^suite\/members\/[^/]+\.json$/.test(rel) || ["scripts/organism_test.mjs", "package.json", "scripts/audit.mjs", "ci/mfac/witness_mfac.mjs", "ci/mpool/witness_mpool.mjs",
-  "ci/mlaw/witness_mlaw.mjs" /* forks row 1204: COVERAGE and HERMETIC re-cut by this unit (MHOT-M3 option A) */].includes(rel)
+  "ci/mlaw/witness_mlaw.mjs" /* forks row 1204: COVERAGE and HERMETIC re-cut by this unit (MHOT-M3 option A) */,
+  "ci/mcov/witness_mcov.mjs", "ci/mprk/witness_mprk.mjs", "ci/mdtl2/witness_mdtl2.mjs" /* forks row 1309 (1): MHOT-M2 = A */].includes(rel)
   || /^ci\/mhot\/(witness_mhot\.mjs|run_mutants_mhot\.mjs|BASE|PROOF\.md|LEDGER\.jsonl)$/.test(rel);
 function hashes(tree) {
   const m = new Map();
