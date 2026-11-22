@@ -1,3 +1,5 @@
+CHECKPOINT · ROW 1311 at 2026-11-22 · W8/W9 renamed "W8 BOUND"/"W9 BOUND" (mutants kept) · W7 named (whole-tree list vs a literal) · BASE 84cbc03 · witness RED base / GREEN build · mutants 15 of 15 · WITNESSES 64 units, 135 passed 0 failed
+
 CHECKPOINT · MERGED at 2026-11-22 (row 1300 (2)) · merge sha d4c6027 (5bfa45a + main 84cbc03126eddb85c7d5cf54b51610068800315c) · BASE 84cbc03 · witness RED base / GREEN build · mutants 15 of 15 · WITNESSES 64 units, 135 passed 0 failed · gates GREEN (checkJs 296)
 
 CHECKPOINT · MERGED at 2026-11-21T08:13Z (forks rows 1233 (2) / 1236) · merge sha b3f2cf7638d37a601545680ef0d32f0639eb3260 (e2cbcf0 + main 7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f) · BASE 7bf008b · conflicted files: NONE · witness base: RED MXB · W1 W2 W3 W4 W5 W6 W7 W11 · witness build: GREEN MXB … LF and CRLF · 13 clause(s) · mutants: run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN · legs of b3f2cf7 (run 44880052649) at 2026-11-21T08:13Z: npm test · node 22 in_progress · npm test · node 24 queued · hermetic twice · node 22 queued · hermetic twice · node 24 queued — not yet judged, none red; no retry
@@ -221,4 +223,27 @@ ORGANISM_TEST_PROFILE=hermetic GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo> node 
 organism_test: 135 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)
 node scripts/gates.mjs: other checkJs diagnostics 296 (baseline 296, may only fall)
 gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides, and every schema'd state file matches
+```
+
+## 15 · Row 1311 (1)/(2) — W8 and W9 are BOUND-class (2026-11-22)
+
+- Renamed exactly W8 → `"W8 BOUND"` and W9 → `"W9 BOUND"` (literals in ci/mxb/witness_mxb.mjs, so the member's
+  boundIds drops them: `[ 'W8 BOUND', 'W9 BOUND', 'BOUND' ]`). Their mutants stay: M8 kills "W8 BOUND", M9 kills "W9 BOUND".
+  The runner now reads a clause id up to its " · " (a multi-word id is read whole). No other file changed.
+- The other clauses, checked for the same shape (a whole-tree count or list compared base vs head):
+  W1-W6 judge ONE named state file's writers at head (not whole-tree, not vs base) · W10 a planted mini tree · W11 three
+  named selftest asserts · BOUND already BOUND · LAST the process table. **Named, not renamed: W7** compares a whole-tree
+  LIST (Q6) — not against the base but against the literal [usage_reading.json<usage_tap.mjs]; a later car that adds a
+  declared sole writer the IR cannot follow would add a Q6 row and redden W7 at head. The architect's call (row 1311
+  orders exactly W8 and W9).
+- origin/main is still 84cbc03: the merge was "Already up to date". BASE stays 84cbc03.
+
+```
+# 2026-11-22 — against BASE 84cbc03 (plant_mxb.mjs base)
+witness on BASE : RED MXB · W1 W2 W3 W4 W5 W6 W7 W11  (exit 1; W8 BOUND, W9 BOUND GREEN)
+witness on BUILD: GREEN MXB the six Q6 blindnesses resolved by the five rules + the guard, no writer invented, the NUL asserts state main, LF and CRLF · 13 clause(s)  (exit 0)
+run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN   (M8 RED by W8 BOUND · M9 RED by W9 BOUND)
+ORGANISM_TEST_PROFILE=hermetic GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo> node scripts/organism_test.mjs witnesses:
+  ok WITNESS ‹mxb› · GREEN at head against its BASE · ok WITNESSES · 64 unit(s) judged in 1914.0 s
+organism_test: 135 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)
 ```

@@ -40,3 +40,9 @@
 {"ts":"2026-11-22T11:50:59.451Z","act":"mutants","cmd":"node ci/mxb/run_mutants_mxb.mjs --org . --base-org <plant 84cbc03>","last_line":"run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-22T11:50:59.451Z","act":"witnesses-member","cmd":"ORGANISM_TEST_PROFILE=hermetic GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo> node scripts/organism_test.mjs witnesses","last_line":"organism_test: 135 passed, 0 failed · WITNESSES 64 unit(s) · ‹mxb› GREEN at head against its BASE"}
 {"ts":"2026-11-22T11:50:59.451Z","act":"gates","cmd":"node scripts/gates.mjs","last_line":"gates: GREEN — nothing rose … (checkJs 296, baseline 296)"}
+{"ts":"2026-11-22T13:10:01.288Z","act":"rename","cmd":"ci/mxb/witness_mxb.mjs W8->\"W8 BOUND\", W9->\"W9 BOUND\"; run_mutants kills follow","last_line":"boundIds = [ 'W8 BOUND', 'W9 BOUND', 'BOUND' ]"}
+{"ts":"2026-11-22T13:10:01.288Z","act":"merge","cmd":"git fetch origin; git merge --no-edit origin/main","last_line":"Already up to date (84cbc03)"}
+{"ts":"2026-11-22T13:10:01.288Z","act":"witness-base","cmd":"node ci/mxb/witness_mxb.mjs --org <plant 84cbc03> --base-org <same>","last_line":"RED MXB · W1 W2 W3 W4 W5 W6 W7 W11"}
+{"ts":"2026-11-22T13:10:01.288Z","act":"witness-build","cmd":"node ci/mxb/witness_mxb.mjs --org . --base-org <plant 84cbc03>","last_line":"GREEN MXB … · 13 clause(s)"}
+{"ts":"2026-11-22T13:10:01.288Z","act":"mutants","cmd":"node ci/mxb/run_mutants_mxb.mjs --org . --base-org <plant 84cbc03>","last_line":"run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-22T13:10:01.288Z","act":"witnesses-member","cmd":"ORGANISM_TEST_PROFILE=hermetic GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo> node scripts/organism_test.mjs witnesses","last_line":"organism_test: 135 passed, 0 failed · WITNESSES 64 unit(s) · ‹mxb› GREEN at head against its BASE"}
