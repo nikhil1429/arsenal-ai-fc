@@ -665,9 +665,9 @@ organism_test: 13 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: 
 
 So the count folded is the whole of main's three strings: 133 members, each with its suite and argv byte-faithful (H7).
 The list is `git ls-tree --name-only 87d327c suite/members/`. Of those 133, the ones landed since `7bf008b` number zero. The
-ones landed since this unit's cut (`5759cce`) are the eleven folded at §11-§17:
-`done`, `deck_lint`, `home_pin`, `probe`, `study_scope`, `senses`, `witness_cause`, `parked`, `red_cause`, and the moved
-`lawpack` (live null) — with `home_pin` and `lawpack` counted once each.
+ones landed since this unit's cut (`5759cce`) are nine new member files, folded at §11-§17: `done`, `deck_lint`,
+`home_pin`, `probe`, `study_scope`, `senses`, `witness_cause`, `parked`, `red_cause` — plus one moved reason, `lawpack`'s
+(its file's `live` set to null at §11).
 
 **The witness both ways, the mutants, the WITNESSES member** (git clones; `--base-org` = `--bound-base` = `84cbc03`):
 
