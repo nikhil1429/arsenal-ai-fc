@@ -2,7 +2,7 @@
 // ============================================================================
 // run_mutants_mhot.mjs — unit MHOT: ONE mutant per clause of ci/mhot/witness_mhot.mjs, each must turn RED the clause that names it.
 // CONTRACT:  node ci/mhot/run_mutants_mhot.mjs --org <build tree> --base-org <tree> [--bound-base <the land commit's parent>]
-//                                              [--unit-bases <dir holding one BASE tree per re-cut unit: mcov/, mprk/, mdtl2/>]
+//                                              [--unit-bases <dir holding one BASE tree per re-cut unit: mcov/, mprk/, mdtl2/, mpinr/>]
 //   (forks row 1200 (2)-(3): --bound-base is handed through to every witness run, so the bound reads the parent and the
 //   clauses read BASE; absent, the witness's own default holds.)
 //   Each mutant copies <org> under os.tmpdir() (node_modules rides as a link, never copied), breaks ONE thing in the copy (a
@@ -116,6 +116,7 @@ const mlawReds = (t) => {
 // once per unit). A witness's other reds (its BOUND, this container's) ride both lines unchanged.
 const UB = arg("--unit-bases") ? resolve(arg("--unit-bases")) : null;
 const WIT_MUTANTS = [
+  { unit: "mpinr", clause: "SUITE", re: /\bSUITE\b/, what: "the own_source member file removed (forks row 1332 (2))", m: (t) => { const p = join(t, "suite", "members", "own_source.json"); if (!existsSync(p)) return "own_source.json absent"; unlinkSync(p); return null; } },
   { unit: "mprk", clause: "COVER", re: /\bCOVER\b/, what: "the parked member file removed", m: (t) => { const p = join(t, "suite", "members", "parked.json"); if (!existsSync(p)) return "parked.json absent"; unlinkSync(p); return null; } },
   { unit: "mcov", clause: "C1 COVERAGE", re: /C1 COVERAGE/, what: "the planted mcov_slow member file never written (the plant's member file removed)", m: (t) => edit(t, "ci/mcov/witness_mcov.mjs", null, 'for (const o of ["mcov_slow", "mcov_hang"])', 'for (const o of ["mcov_hang"])') },
   { unit: "mcov", clause: "C5 ONE RECORD", re: /C5 ONE RECORD/, what: "a second member file for one organ (PROBE.json beside probe.json)", m: (t) => { const p = join(t, "suite", "members", "probe.json"); if (!existsSync(p)) return "probe.json absent"; writeFileSync(join(t, "suite", "members", "PROBE.json"), readFileSync(p, "utf8")); return null; } },
@@ -183,7 +184,7 @@ try {
       try { unlinkSync(join(t, "node_modules")); } catch { /* not linked */ }
       rmSync(t, { recursive: true, force: true });
     }
-  } else console.log(`  NOT RUN · the ${WIT_MUTANTS.length} re-cut-witness mutants (mcov, mprk, mdtl2) need --unit-bases <dir>`);
+  } else console.log(`  NOT RUN · the ${WIT_MUTANTS.length} re-cut-witness mutants (mcov, mprk, mdtl2, mpinr) need --unit-bases <dir>`);
   const c = runWitness(ORG, null);
   var control = c.code === 0 && /^GREEN MHOT /.test(c.last);
   console.log(`  ${control ? "ok  " : "FAIL"} CONTROL · the unmutated witness over --org → exit ${c.code} · ${c.last}`);
