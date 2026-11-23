@@ -330,6 +330,71 @@ Every red:
 it stood before G4 A. Each needs either its pin moved to the three-write tap (the reading, its rename, the history) or a
 ruled KNOWN_RED row. This unit does not edit either file. Every other open question stands as listed below.
 
+## CHECKPOINT · F1 and F13 re-cut in place (23 Nov 2026, forks row 1329 (1)-(2); still on main 722b72e, row 1332 (3))
+
+Ruled by forks row 1329: F1 and F13 take the shape of rows 1204 (1) / 1309 (1), with no known-red entry. Both clauses are
+re-cut in place as added edits, with the struck text kept. Row 1329 (2) names the two files to this unit, and nothing else
+of mpool or mxb moves.
+
+**The two re-cut clauses:**
+- **`ci/mpool/witness_mpool.mjs:157-171` · W3.1.** Where the tree's tap declares the history
+  (`const HISTORY_NAME = "usage_readings.jsonl";`, read from the tap with its comments stripped), the writes must be
+  EXACTLY the three G4 A names, each once: `writeFileSync(tmp`, `renameSync(tmp`, `appendFileSync(historyPath(root`. Where
+  it does not, the old count of two is kept. The tmp-then-rename shape is required either way. The declaration picks ONE
+  count, so it is never a bare OR. The old clause stands struck above it.
+- **`ci/mxb/witness_mxb.mjs:140-152` · W7.** Where --org's tap declares the same history, Q6 must be EXACTLY
+  `[usage_reading.json<usage_tap.mjs, usage_readings.jsonl<usage_tap.mjs]` (compared sorted). Where it does not, the old
+  one-file want is kept. The old clause stands struck above it. The tap is read with `existsSync`, with no catch.
+
+**Each witness on main 722b72e and on the build, by last line:**
+
+```
+mpool  --org <LF 722b72e>  --base-org <LF b1fc984>   ok W3.1 · GREEN MPOOL the usage tap · 33 clause(s)
+mpool  --org <build>       --base-org <LF b1fc984>   ok W3.1 · GREEN MPOOL the usage tap · 33 clause(s)
+mxb    --org <LF 722b72e>  --base-org <LF 84cbc03>   GREEN W7 (want [usage_reading.json<usage_tap.mjs]) · last line RED MXB · W8 BOUND W9 BOUND BOUND
+mxb    --org <build>       --base-org <LF 84cbc03>   GREEN W7 (want both files) · last line RED MXB · W8 BOUND W9 BOUND BOUND
+```
+
+mxb's last line names only BOUND-marked clauses (W8/W9 are whole-tree counts against its BASE, and BOUND is the
+only-xray-differs scope). They read the same at main and at the build. The suite member drops them (row 1311 (1)): its
+`red beyond BOUND` reads empty.
+
+**The two new mutants, plus their control** (`ci/mguard/run_mutants_mguard.mjs`, which runs the landed witnesses as they stand
+in this tree on a copy of --org):
+
+```
+ok   PIN CONTROL · mpool: GREEN MPOOL the usage tap · 33 clause(s) · mxb W7: GREEN W7 (both files)
+ok   M31 → mpool W3.1 · a FOURTH write in the tap · RED MPOOL · W3.1, J
+ok   M7 → mxb W7 · a THIRD outside-repo file the tap declares · RED W7 · Q6 = the three files
+```
+
+**This unit's own witness both ways, and the mutants n/n:**
+
+```
+--org <build>     --base-org <LF 722b72e>   GREEN MGUARD the spend guard · 7 clause(s)
+--org <LF 722b72e> --base-org <LF 722b72e>  RED MGUARD · JUDGE
+run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN
+```
+
+**The law pack** reads `own-literal-pin 39 · own-source-pin-unresolved 79`, every other count equal. Its last line:
+`lawpack: GREEN — no law's finding count rose, and every rule is on disk`.
+
+**The WITNESSES member over the tree `412a3a5`** (`GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo> ORGANISM_TEST_PROFILE=hermetic
+node scripts/organism_test.mjs witnesses`, 75 units in 2601.4 s):
+
+```
+witness ‹mguard› GREEN MGUARD the spend guard · 7 clause(s)
+witness ‹mpool›  GREEN MPOOL the usage tap · 33 clause(s)
+witness ‹mxb›    RED MXB · W8 BOUND W9 BOUND BOUND   (BOUND only: dropped by the member)
+organism_test: 157 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0
+```
+
+**There is no red.** F1 and F13 are closed by row 1329. `scripts/organism_test.mjs` is untouched.
+
+**What is left:** by row 1332 (3) this unit rides ON TOP of mhot's landing (mhot also edits
+`ci/mpool/witness_mpool.mjs`, its clause P near line 200). Nothing else is merged until the runner names the main after mhot
+lands. Then: merge it, keep both units' lines in that file, and re-run all of the above.
+
 ## FORKS
 
 - **F13 · the mxb witness's W7 against G1 A / G4 A.** `ci/mxb/witness_mxb.mjs:141` pins xray's Q6 to the tap's ONE outside-repo write. The ruled history is a second, so W7 reads RED at this tree and GREEN at main 722b72e. It is not this unit's file: architect.
