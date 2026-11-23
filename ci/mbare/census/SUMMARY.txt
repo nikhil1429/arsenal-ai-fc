@@ -1,0 +1,10 @@
+mbare re-census 5301f15 → a3cadcf (laws, FULL profile, planted trees; node v22.23.5 linux)
+LIVE_ASSERTS at base: 49 · judged by laws on T(base): 42 · base throw: registry row "study_deny_list" · its block's own asserts: 4
+run Z(5301f15) exit 2 · ok 11 · FAIL 2 · BLOCKED 0 · organism_test: 11 passed, 2 failed · ruled 0 · UNRULED 2
+run T(5301f15) exit 2 · ok 114 · FAIL 2 · BLOCKED 0 · organism_test: 114 passed, 2 failed · ruled 0 · UNRULED 2
+run Z(a3cadcf) exit 2 · ok 80 · FAIL 18 · BLOCKED 6 · organism_test: 80 passed, 18 failed · ruled 0 · UNRULED 18
+run Z(a3cadcf) exit 2 · ok 80 · FAIL 18 · BLOCKED 6 · organism_test: 80 passed, 18 failed · ruled 0 · UNRULED 18
+run T(a3cadcf) exit 2 · ok 114 · FAIL 2 · BLOCKED 0 · organism_test: 114 passed, 2 failed · ruled 0 · UNRULED 2
+run T+probe(a3cadcf) exit 2 · ok 114 · FAIL 2 · BLOCKED 0 · organism_test: 114 passed, 2 failed · ruled 0 · UNRULED 2
+run Z+probe(a3cadcf) exit 2 · ok 80 · FAIL 18 · BLOCKED 6 · organism_test: 80 passed, 18 failed · ruled 0 · UNRULED 18
+mbare re-census: 33 BLOCKED asserts at base · RIDES 15 · NEEDS-FIXTURE 13 · VACUOUS 4 · NOT-DECIDABLE 1

@@ -27,6 +27,9 @@
 //             --base-org's, jugad-literal-subject-list is LOWER and AT OR BELOW its frozen BASELINE (the pass line, row 1146 (3)),
 //             the gate exits 0, the tree's own scan sites NO jugad finding in ci_verdict.mjs, done.mjs or usage_tap.mjs, and
 //             lawpack.mjs's BASELINE is byte-equal on both sides.
+//             + unit mpin-law (row 1316 (1) / (3)): "byte-equal" is re-cut to PER KEY — each key of --base-org's BASELINE has the same
+//             value at --org, or the key is BORN (absent at --base-org) and its count is at or below --org's BASELINE; a born count is
+//             read against that BASELINE, never 0 (the struck text is kept beside the code).
 //   SURFACES  FK1 A (row 1146 (1)) · done.mjs reads his surfaces from the registry mechanisms row his_surfaces (lazySubjects,
 //             no literal): on a copy with an EMPTY state dir `done.mjs report` prints the named red "reach RED — no live
 //             mechanisms row "his_surfaces""; with that row planted through the copy's own `registry.mjs set` (ARSENAL_REGISTRY
@@ -205,13 +208,23 @@ try {
     const o = gate(ORG, "jo"), b = gate(BASE_ORG, "jb");
     const baselineOf = (tree) => { const s = read(join(tree, "scripts", "lawpack.mjs")) || ""; const i = s.indexOf("export const BASELINE = {"); return i < 0 ? null : s.slice(i, s.indexOf("\n};", i)); };
     const bo = baselineOf(ORG), bb = baselineOf(BASE_ORG);
-    const rose = o.n && b.n ? Object.keys(o.n).filter((k) => o.n[k] > (b.n[k] ?? 0)) : null;
+    // RE-CUT by unit mpin-law (forks row 1316 (1) / (3), spec ci/mpinl/AMENDMENT_1315.md A3); the struck text, kept as written:
+    //   const rose = o.n && b.n ? Object.keys(o.n).filter((k) => o.n[k] > (b.n[k] ?? 0)) : null;
+    //   … && !!bo && bo === bb,
+    // A count is BORN when --org's BASELINE holds its key and --base-org's does not: it is read against --org's BASELINE for it.
+    // Every other key keeps --base-org's number, and per key the BASELINE value at --org equals --base-org's, or the key is born.
+    const baseOf = (c) => evalIn(c, `const m = await import(${href(c, "scripts/lawpack.mjs")}); console.log(JSON.stringify(m.BASELINE));`);
+    const BO = baseOf(o.c), BB = baseOf(b.c);
+    const tables = !!BO && !!BB && typeof BO === "object" && typeof BB === "object" && !BO.error && !BB.error;
+    const bornOf = (k) => (tables && !(k in BB) && Number.isSafeInteger(BO[k]) ? BO[k] : 0);
+    const rose = o.n && b.n ? Object.keys(o.n).filter((k) => o.n[k] > (k in b.n ? b.n[k] : bornOf(k))) : null;
+    const perKey = tables && Object.keys(BB).every((k) => BO[k] === BB[k]) && Object.keys(BO).every((k) => k in BB || (o.n && Number.isSafeInteger(BO[k]) && (o.n[k] ?? 0) <= BO[k]));
     const fell = o.n && b.n ? o.n[JUGAD] < b.n[JUGAD] : false;
     const frozenJ = evalIn(o.c, `const m = await import(${href(o.c, "scripts/lawpack.mjs")}); console.log(JSON.stringify(m.BASELINE[${JSON.stringify(JUGAD)}]));`);
     const atLine = o.n && Number.isSafeInteger(frozenJ) && o.n[JUGAD] <= frozenJ;
     const sites = evalIn(o.c, `const lp = await import(${href(o.c, "scripts/lawpack.mjs")}); const S = ${JSON.stringify(SITES)}; console.log(JSON.stringify(lp.judgeJugad(lp.scan().matches).findings.filter((f) => S.some((s) => String(f.file).replace(/\\\\/g, "/").endsWith(s))).map((f) => f.file + ":" + f.line)));`);
-    clause("JUGAD", !!o.n && !!b.n && rose.length === 0 && fell && atLine && o.r.status === 0 && Array.isArray(sites) && sites.length === 0 && !!bo && bo === bb,
-      `${JUGAD} ${o.n ? o.n[JUGAD] : "?"} at --org (frozen ${Number.isSafeInteger(frozenJ) ? frozenJ : "?"}), ${b.n ? b.n[JUGAD] : "?"} at --base-org · count(s) higher at --org: ${rose ? (rose.join(", ") || "none") : "? (no findings line)"} · jugad sites in the three: ${Array.isArray(sites) ? (sites.join(", ") || "none") : clip(sites.error)} · lawpack.mjs BASELINE ${bo && bo === bb ? "byte-equal" : "DIFFERS or unreadable"} · gate exit ${o.r.status}: ${clip(lines(o.r.all).filter((l) => /^lawpack: /.test(l.trim())).at(-1), 70)}`);
+    clause("JUGAD", !!o.n && !!b.n && rose.length === 0 && fell && atLine && o.r.status === 0 && Array.isArray(sites) && sites.length === 0 && !!bo && !!bb && perKey,
+      `${JUGAD} ${o.n ? o.n[JUGAD] : "?"} at --org (frozen ${Number.isSafeInteger(frozenJ) ? frozenJ : "?"}), ${b.n ? b.n[JUGAD] : "?"} at --base-org · count(s) higher at --org: ${rose ? (rose.join(", ") || "none") : "? (no findings line)"} · jugad sites in the three: ${Array.isArray(sites) ? (sites.join(", ") || "none") : clip(sites.error)} · lawpack.mjs BASELINE ${bo && bo === bb ? "byte-equal" : perKey ? `equal per key, born: ${Object.keys(BO).filter((k) => !(k in BB)).join(", ") || "none"}` : "DIFFERS per key or unreadable"} · gate exit ${o.r.status}: ${clip(lines(o.r.all).filter((l) => /^lawpack: /.test(l.trim())).at(-1), 70)}`);
   }
 
   // ── SURFACES ──
