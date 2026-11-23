@@ -12,8 +12,9 @@
 // CLAUSES (each RED on the base, GREEN on the build; one mutant each in ci/mpinr/run_mutants_mpinr.mjs):
 //   SELFTEST   scripts/own_source.mjs exists and `node scripts/own_source.mjs selftest` exits 0 with
 //              `own_source selftest: <n> passed, 0 failed`, n > 0.
-//   SUITE      exactly ONE package.json suite chain (a script value holding `&& node scripts/`) runs
-//              `node scripts/own_source.mjs selftest`.
+//   SUITE      ~~exactly ONE package.json suite chain (a script value holding `&& node scripts/`) runs
+//              `node scripts/own_source.mjs selftest`.~~ RE-CUT by unit mhot (row 1332 (1)): the suite chains that run it PLUS
+//              the tree's own `roll --json` members for own_source with argv ["selftest"] (no roll verb: none) sum to EXACTLY ONE.
 //   NARROW     on a planted CRLF organ whose selftest carries the pinned token: the WHOLE file holds it (the old pin's
 //              subject — GREEN whatever the code says), ownCode(fn main) does NOT when main holds it only in a comment,
 //              does when main's code holds it; a missing anchor and the selftest block both THROW; and every narrow
@@ -190,7 +191,15 @@ try { process.kill(sleeper.pid); } catch { /* already gone */ }
   let pkg = {}; try { pkg = JSON.parse(readFileSync(join(COPY, "package.json"), "utf8")); } catch { /* no package.json: RED below */ }
   const chains = Object.entries(pkg.scripts || {}).filter(([, v]) => typeof v === "string" && v.includes("&& node scripts/"));
   const holding = chains.filter(([, v]) => v.split("&&").map((s) => s.trim()).includes("node scripts/own_source.mjs selftest")).map(([k]) => k);
-  clause("SUITE", holding.length === 1, `${holding.length} of ${chains.length} suite chain(s) run it${holding.length ? ` (${holding.join(", ")})` : ""}`);
+  // RE-CUT by unit mhot (forks row 1332 (1)-(2), MHOT-M5 = A; the class of rows 1204 (1) / 1187 F6 A), an ADDED edit in the shape
+  // of ci/mpool clause P: ~~exactly ONE package.json suite chain runs `node scripts/own_source.mjs selftest`~~ → the chains that
+  // run it PLUS the members the tree's OWN scripts/organism_test.mjs prints by `roll --json` for organ own_source with argv
+  // ["selftest"] (read in place in --org, never written; a tree with no roll verb prints no JSON and counts none), and the clause
+  // wants the sum EXACTLY ONE.
+  const rr = run([join(ORG, "scripts", "organism_test.mjs"), "roll", "--json"], { cwd: ORG });
+  const rj = (() => { try { return JSON.parse(rr.out); } catch { return null; } })();
+  const rolled = (rj && Array.isArray(rj.members) ? rj.members : []).filter((m) => m && m.organ === "own_source" && JSON.stringify(m.argv) === '["selftest"]').length;
+  clause("SUITE", holding.length + rolled === 1, `${holding.length} of ${chains.length} suite chain(s) run it${holding.length ? ` (${holding.join(", ")})` : ""} · ${rolled} member(s) in the tree's roll (own_source, ["selftest"])`);
 }
 probe("NARROW");
 probe("KILLED");

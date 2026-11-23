@@ -316,7 +316,14 @@ try {
     const pkg = readJ(join(COPY, "package.json")) || { scripts: {} };
     const hits = ["organism:selftest", "squad:selftest", "audit:selftest"].map((k) => (String(pkg.scripts[k] || "").match(/node scripts\/night\.mjs selftest/g) || []).length);
     const ot = readFileSync(join(COPY, "scripts", "organism_test.mjs"), "utf8");
-    clause("W7", hits.reduce((a, b) => a + b, 0) === 1 && !/OWN_MEMBERS/.test(ot), `night.mjs selftest in suites: ${hits.join("/")} · organism_test OWN_MEMBERS ${/OWN_MEMBERS/.test(ot) ? "PRESENT" : "absent"}`);
+    // RE-CUT by unit mhot (forks row 1187 F6 A), an ADDED edit holding the SAME property: ~~night.mjs selftest occurs exactly
+    // once across the three suite strings~~ → exactly once across the tree's membership records — the strings (a tree before
+    // mhot) PLUS the member roll the tree's own organism_test.mjs prints (`roll --json`, suite/members/*.json; a tree with no
+    // roll verb counts none). A member file is one suite by construction, so the sum is the number of suites naming it.
+    const rr = node(["scripts/organism_test.mjs", "roll", "--json"]);
+    const rj = (() => { try { return JSON.parse(rr.stdout); } catch { return null; } })();
+    const rolledN = (rj && Array.isArray(rj.members) ? rj.members : []).filter((m) => m && m.organ === "night" && JSON.stringify(m.argv) === '["selftest"]').length;
+    clause("W7", hits.reduce((a, b) => a + b, 0) + rolledN === 1 && !/OWN_MEMBERS/.test(ot), `night.mjs selftest in suites: ${hits.join("/")} · in the member roll: ${rolledN} · organism_test OWN_MEMBERS ${/OWN_MEMBERS/.test(ot) ? "PRESENT" : "absent"}`);
   }
   if (want("W8")) {
     const sk = existsSync(join(COPY, ".claude", "skills", "runner", "SKILL.md")) ? readFileSync(join(COPY, ".claude", "skills", "runner", "SKILL.md"), "utf8") : "";

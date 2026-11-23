@@ -29,7 +29,9 @@
 //                   ONE more call (4), and `step (unnamed) · failure` for a canary step name (F6 A).
 //   E9  SECOND-CHECK every red of every run, its machine-line cause replaced by a FORGED one of the right grammar: compare
 //                   re-writes each to red_cause's WITHHELD literal, and the forged bytes are in no leaving line.
-//   E10 RULED       every toy FAIL name, its detail line and its machine-line `unruled` entry are byte-identical between the
+//   E10 RULED       every toy FAIL name, its detail line and its machine-line `unruled` entry are ~~byte-identical~~ — RE-CUT by unit
+//                   mhot (row 1314 (1)): equal as SETS (the roll-up tail as the set of red members' tails) where the head tree holds
+//                   suite/members, byte-identical where it does not — between the
 //                   two trees, in the suites and the clauses runs (a KNOWN_RED entry keeps its match). A guard: GREEN at base.
 //   E11 GREEN-SILENT an all-green toy run's compare output is byte-identical between the two trees. A guard.
 //   E12 MDTL-INTACT mdtl's own D1 plant (a `WITNESS ‹toy›` red with `P1 · …`) reads byte-identical on both trees. A guard.
@@ -136,7 +138,14 @@ function plantRepo(tree, into, { members, files = {}, pkgPrefix = "", untracked 
   mkdirSync(into, { recursive: true });
   for (const p of ["scripts", ".github", "package.json"]) if (existsSync(join(tree, p))) cpSync(join(tree, p), join(into, p), { recursive: true, filter: (s) => !/[\\/]node_modules([\\/]|$)/.test(s) });
   const pkg = JSON.parse(readFileSync(join(into, "package.json"), "utf8"));
-  for (const n of ["organism:selftest", "squad:selftest", "audit:selftest"]) pkg.scripts[n] = n === "organism:selftest" ? members.map((m) => `node scripts/${m}.mjs selftest`).join(" && ") : "";
+  // RE-CUT by unit mhot (forks row 1309 (1), MHOT-M2 = A, row 1204 (1)'s shape), an ADDED edit: ~~the suites set to <members> in
+  // the package.json strings~~ → the members planted by THE TREE'S OWN DOOR. Where <tree> holds suite/members (the member roll,
+  // unit mhot), the planted repo gets suite/members with exactly one member file per planted member (organism:selftest, argv
+  // ["selftest"]), and the tree's own chain strings stand; where it does not, the strings as before. Never both.
+  if (existsSync(join(tree, "suite", "members"))) {
+    mkdirSync(join(into, "suite", "members"), { recursive: true });
+    for (const m of members) writeFileSync(join(into, "suite", "members", `${m}.json`), JSON.stringify({ suite: "organism:selftest", argv: ["selftest"], live: null }) + "\n");
+  } else for (const n of ["organism:selftest", "squad:selftest", "audit:selftest"]) pkg.scripts[n] = n === "organism:selftest" ? members.map((m) => `node scripts/${m}.mjs selftest`).join(" && ") : "";
   writeFileSync(join(into, "package.json"), pkgPrefix + JSON.stringify(pkg, null, 2));
   for (const [p, t] of Object.entries(files)) { mkdirSync(join(into, p, ".."), { recursive: true }); writeFileSync(join(into, p), t); }
   const e = [git(into, ["init", "-q"]), git(into, ["add", "-A"]), git(into, ["commit", "-q", "-m", "planted"])].find((r) => r.status !== 0);
@@ -273,9 +282,24 @@ if (!bad) {
     const j = machine(out);
     return JSON.stringify({ got, unruled: j ? j.unruled : null, reds: j ? j.reds : null });
   };
-  const j10 = ["suites", "clauses"].map((m) => [judged(O[m].out), judged(B[m].out)]);
+  // RE-CUT by unit mhot (forks row 1314 (1), MHOT-M4 = A), an ADDED edit: ~~byte-identical between the two trees~~ → where the
+  // HEAD tree (--org) holds suite/members, the roll walks members in file-name order and the string tree in string order, so the
+  // same reds come out in another order: there E10 compares the FAIL names, their details and the unruled entries as SETS, and
+  // the roll-up's tail (every continuation line under a FAIL, the red members' tails) as the SET of those tails. The guard holds
+  // that a known red keeps its match across trees, which is a property of the set. Where the head does not hold suite/members,
+  // byte for byte as before (the `judged` above). From mhot's landing both trees have one shape and one order.
+  const asSet = (out) => {
+    const L = lines(out), got = [];
+    L.forEach((l, i) => { if (!/^ {2}FAIL /.test(l)) return; const tail = []; for (let k = i + 1; k < L.length && /^ {9}/.test(L[k]); k++) tail.push(L[k]); got.push(JSON.stringify([l, [...new Set(tail)].sort()])); });
+    const j = machine(out);
+    const lineSet = (d) => [...new Set(String(d ?? "").split(/\r?\n/).map((x) => x.trim()))].sort();
+    const unruled = j && Array.isArray(j.unruled) ? j.unruled.map((u) => JSON.stringify([u.assert, lineSet(u.detail)])).sort() : null;
+    return JSON.stringify({ got: got.sort(), unruled, reds: j && Array.isArray(j.reds) ? [...j.reds].sort() : null });
+  };
+  const rolled = existsSync(join(ORG, "suite", "members"));
+  const j10 = ["suites", "clauses"].map((m) => (rolled ? [asSet(O[m].out), asSet(B[m].out)] : [judged(O[m].out), judged(B[m].out)]));
   const e10 = j10.every(([a, b]) => a === b && JSON.parse(a).got.length > 0);
-  clause("E10", e10, `toy FAIL names + detail lines + unruled entries ${e10 ? "byte-identical" : "DIFFER"} between the trees (suites, clauses: ${j10.map(([a]) => JSON.parse(a).got.length / 2).join(" + ")} judged red(s))`);
+  clause("E10", e10, `toy FAIL names + detail lines + unruled entries ${e10 ? (rolled ? "equal as SETS (the head holds suite/members)" : "byte-identical") : "DIFFER"} between the trees (suites, clauses: ${j10.map(([a]) => JSON.parse(a).got.length / (rolled ? 1 : 2)).join(" + ")} judged red(s))`);
   // E11
   const e11 = O.green.cmp === B.green.cmp && /B1_VERDICT node toy GREEN/.test(O.green.cmp);
   clause("E11", e11, `an all-green toy run's compare output ${O.green.cmp === B.green.cmp ? "is byte-identical" : "DIFFERS"} between the trees · GREEN ${/B1_VERDICT node toy GREEN/.test(O.green.cmp)}`);

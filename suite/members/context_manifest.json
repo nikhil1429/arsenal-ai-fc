@@ -1,0 +1,1 @@
+{"suite":"squad:selftest","argv":["selftest"],"live":"reads state/registry.json, state/resume_pointer.jsonl, state/compiled_notes.jsonl …"}

@@ -580,10 +580,14 @@ export function docExec() {
     skills: () => (existsSync(join(ROOT, ".claude", "skills")) ? readdirSync(join(ROOT, ".claude", "skills")).length : 0),
     "state files": () => readdirSync(STATE_DIR).filter((x) => /\.jsonl?$/.test(x)).length,
     "suite members": () => {
-      const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
-      const s = new Set();
-      for (const n of ["organism:selftest", "squad:selftest", "audit:selftest"]) for (const m of String(pkg.scripts[n] || "").matchAll(/scripts\/([A-Za-z0-9_\-]+)\.mjs/g)) s.add(m[1]);
-      return s.size;
+      // unit mhot (forks row 1187): the roll has ONE reader, organism_test.mjs's suiteRoll — spawned here, never copied
+      // (no second list of the suite names, no second member regex); a roll it cannot read counts 0 and says why
+      let out = "";
+      try { out = execFileSync(process.execPath, [join(ROOT, "scripts", "organism_test.mjs"), "roll", "--json"], { cwd: ROOT, encoding: "utf8", windowsHide: true }); }
+      catch (e) { out = String((e && /** @type {any} */ (e).stdout) || ""); console.error(`audit: the member roll exited non-zero (${String(e instanceof Error ? e.message : e).split(/\r?\n/)[0]})`); }
+      let roll = null;
+      try { roll = JSON.parse(out); } catch (e) { console.error(`audit: the member roll printed no JSON (${String(e instanceof Error ? e.message : e)})`); }
+      return new Set(((roll && Array.isArray(roll.members)) ? roll.members : []).map((m) => m.organ)).size;
     },
   };
   // ⚠ ONLY CLAIMS OF TOTALITY. A bare `N <noun>` in prose almost never asserts a

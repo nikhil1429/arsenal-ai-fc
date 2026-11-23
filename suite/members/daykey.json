@@ -1,0 +1,1 @@
+{"suite":"audit:selftest","argv":["selftest"],"live":"reads state/tasks_expected.json"}

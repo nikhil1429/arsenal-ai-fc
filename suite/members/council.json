@@ -1,0 +1,1 @@
+{"suite":"organism:selftest","argv":["selftest"],"live":"reads state/registry.json, state/council_config.json, state/brain_config.json"}

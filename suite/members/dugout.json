@@ -1,0 +1,1 @@
+{"suite":"organism:selftest","argv":["selftest"],"live":"reads state/registry.json, state/captain.json, state/readiness.json … · its verdict moves with the wall clock (red under a +90-day shift, green at the true date)"}
