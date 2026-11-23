@@ -847,3 +847,66 @@ are not in this container's local clone, so this is environment, the same five a
 BOUND. ‹mcrk2›'s G9 read green in this run; by row 1314 (2) it is not this unit's, and it was not re-run for colour.
 
 CHECKPOINT · 13:58 UTC 2026-11-22 · tip = the commit carrying this line (on 8bdfc04) · BASE 84cbc03 · mdtl2 E10 re-cut as SETS where the head holds suite/members · mdtl2 @ main: RED MDTL2 · BOUND · @ 8bdfc04: RED MDTL2 · BOUND (E10 GREEN both) · mutants 20/20 control GREEN · WITNESSES 134 passed 5 failed (mr3 mrf mrj mrt mrv: BASE not in the clone) · resume from: the next merge of main (rides alone and last)
+
+## 21 · THE FINAL MERGE (forks row 1328 (2), 2026-11-23) — main 722b72e, BASE 722b72e, the fold, the four witnesses' state
+
+**The merge.** Merge commit `50b5d8a` (parents `7ae20b2`, this branch, and `722b72e`, main; nineteen commits above
+`84cbc03`), a merge commit, never a rebase. `ci/mhot/BASE` = `722b72e106c9f28485afe5bcc8d5f56402aecc43` by the order.
+One conflicted hunk, `package.json`, the six keys `_selftest_coverage_law` … `_runner_law`:
+- *Main meant:* one new member, `node scripts/own_source.mjs selftest` on `organism:selftest`. That is the only scripts
+  difference `84cbc03` → `722b72e`, measured, and no LIVE table key moved.
+- *This unit meant:* the chain commands.
+- *The result is the union:* this unit's six lines, plus `suite/members/own_source.json` (organism:selftest,
+  `["selftest"]`, `live: null`).
+- `scripts/organism_test.mjs` merged clean: every landed line of every other unit stands.
+
+**The fold (row 1328 (2) item 2)**, read from the tree, never from the order's list:
+- **Suite members:** one new, `own_source`. The roll holds 134 members with 0 defects, and coverage reads (2026-11-23)
+  `13 passed, 0 failed`. `node scripts/own_source.mjs selftest` → `own_source selftest: 30 passed, 0 failed`.
+- **Hermetic unit witnesses newly on main** (`git diff --diff-filter=A 84cbc03 722b72e -- 'ci/*/witness_*.mjs'`): mbare,
+  mcid, mcollar, mg9, mkp24, mlink, mpinl, mpinr, mq2, mtrain, mxb (11). mlaw, mlv1, mlv2, mlv3, mrung and mrv, named by
+  the order, were already on this branch; main changed their files and they merged clean.
+- **Clause witnesses newly on main** (`ci/witness/`): mcanary, mfactory, mhands, mleft, mmach, mrehearse, mrulew,
+  mstrike (8).
+- This unit's suite file reads both kinds by WALKING `ci/`, never from a list: `witnessUnits` and `clauseWitnesses`
+  merged unchanged. Measured: `node scripts/organism_test.mjs witness-plan` → `units 75 · shards 3`, with every one of
+  the seventeen above present and none missing, and the clause walk lists all 17 `ci/witness/<u>/` directories.
+
+**THE CLASS GREP (row 1309 (2)), once more at the final merge — a FOURTH witness:** `ci/mpinr/witness_mpinr.mjs` **SUITE**
+(`:191-192`) counts `node scripts/own_source.mjs selftest` across the `&&` suite chains, and its BOUND (`:239`) allows
+the diff "a suite line with `&& node scripts/own_source.mjs selftest` appended". On this tree it reads
+`RED SUITE — 0 of 0 suite chain(s) run it`; on main `ok SUITE — 1 of 3 suite chain(s) run it`.
+**FORK MHOT-M5**, named, not edited (no row names `ci/mpinr/witness_mpinr.mjs` to this unit). The re-cut shape is row
+1204 (1)'s: where the tree holds `suite/members`, its roll names `own_source` with argv `["selftest"]` exactly once, else
+the chains as today; with one mutant, the `own_source` member file removed → SUITE red. Every other hit of the grep is a
+witness this unit re-cut (mcov, mdtl2, mfac, mpool, mprk, mlaw) or its own.
+
+**The runs** (git clones; `--base-org` = main `722b72e`):
+
+```
+$ node ci/mhot/witness_mhot.mjs --org <clone 50b5d8a> --base-org <clone 722b72e>                          # bare
+GREEN MHOT the member roll · 11 clause(s) · BOUND NOT JUDGED                                           (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <clone 50b5d8a> --base-org <clone 722b72e> --bound-base <clone 722b72e>
+GREEN MHOT the member roll · 12 clause(s)                                                              (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <clone 722b72e> --base-org <clone 722b72e>
+RED MHOT · H1, H2, H3, H4, H5, H6, H7, H8, H9                                                          (exit 1)
+$ node ci/mhot/run_mutants_mhot.mjs --org <clone 50b5d8a> --base-org <clone 722b72e> --bound-base <clone 722b72e> --unit-bases <dir>
+run_mutants: 20 of 20 mutant(s) RED by the clause that names them · control GREEN    (controls: MLAW · JUGAD · BOUND, MPRK/MCOV/MDTL2 · BOUND)
+$ node ci/mpinr/witness_mpinr.mjs --org <clone 722b72e> / <clone 50b5d8a> --base-org <clone of ci/mpinr/BASE>
+RED MPINR · ONLY-NAMED BOUND  /  RED MPINR · SUITE · ONLY-NAMED BOUND                    (SUITE = FORK MHOT-M5)
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs clauses                                # at 50b5d8a
+organism_test: 22 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)
+$ GITHUB_ACTIONS=true … ORGANISM_WITNESS_SHARD=1..3 node scripts/organism_test.mjs witnesses           # at 50b5d8a
+shard 1 45 passed, 1 failed · shard 2 55 passed, 2 failed · shard 3 55 passed, 3 failed → 155 passed, 6 failed
+  witness ‹mhot› GREEN MHOT the member roll · 11 clause(s) · BOUND NOT JUDGED · ‹mcov› ‹mprk› ‹mlaw› ‹mdtl2› … · BOUND only
+```
+
+The six WITNESSES reds, every one named:
+- **‹mpinr›:** "red beyond BOUND: SUITE", fork MHOT-M5.
+- **‹mr3›, ‹mrf›, ‹mrj›** (`52b51c1`), **‹mrt›** (`51055bb`), **‹mrv›** (`cf1ca54`): "its BASE is in the clone · <sha> is not a
+  commit here (the member never fetches)". Environment of this container's local clone, as at every merge since §18.
+
+**What is left:** the ruling on FORK MHOT-M5 (mpinr SUITE: re-cut by this seat in row 1204 (1)'s shape, or another
+option), then the architect's re-run of the cut as a train of one.
+
+CHECKPOINT · BASE 722b72e · members folded: 1 suite member (own_source; roll 134) + 11 unit witnesses + 8 clause witnesses walked · witness bare GREEN 11 · BOUND NOT JUDGED / named GREEN 12 / main RED H1-H9 · mutants 20/20 + control GREEN · WITNESSES 155 passed 6 failed (mpinr SUITE = FORK MHOT-M5; mr3 mrf mrj mrt mrv BASE not in the clone) · left: MHOT-M5, then the re-run · 03:41 UTC 2026-11-23

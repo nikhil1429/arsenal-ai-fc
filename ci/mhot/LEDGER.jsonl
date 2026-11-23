@@ -125,3 +125,12 @@
 {"ts":"2026-11-22T13:58:48.449Z","act":"mutants","cmd":"node ci/mhot/run_mutants_mhot.mjs --org <clone 8bdfc04> --base-org <clone 84cbc03> --bound-base <clone 84cbc03> --unit-bases <dir>","last_line":"run_mutants: 20 of 20 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-22T13:58:48.449Z","act":"witnesses","cmd":"GITHUB_ACTIONS=true … ORGANISM_WITNESS_SHARD=1..3 node scripts/organism_test.mjs witnesses (8bdfc04)","last_line":"134 passed, 5 failed (mr3 mrf mrj mrt mrv: BASE not in the clone)"}
 {"ts":"2026-11-22T13:58:48.449Z","act":"CHECKPOINT","cmd":"(PROOF §20)","last_line":"BASE 84cbc03 · E10 re-cut · mdtl2 both trees BOUND only · mutants 20/20 · WITNESSES 134/5"}
+{"ts":"2026-11-23T03:41:09.235Z","act":"order-1328","cmd":"(runner M, forks row 1328 (2))","last_line":"final merge of 722b72e, BASE 722b72e, fold every new member, witness both ways, mutants, WITNESSES, one checkpoint"}
+{"ts":"2026-11-23T03:41:09.235Z","act":"merge","cmd":"git fetch origin main && git merge FETCH_HEAD (722b72e into 7ae20b2)","last_line":"50b5d8a · package.json union (suite/members/own_source.json) · BASE 722b72e"}
+{"ts":"2026-11-23T03:41:09.235Z","act":"fold","cmd":"roll / witness-plan / clause walk","last_line":"own_source folded (roll 134) · 11 unit witnesses + 8 clause witnesses walked, none missing"}
+{"ts":"2026-11-23T03:41:09.235Z","act":"FORK","cmd":"ci/mpinr/witness_mpinr.mjs SUITE (class grep, row 1309 (2))","last_line":"FORK MHOT-M5: RED SUITE — 0 of 0 suite chain(s) run it on this tree; ok at main; not edited"}
+{"ts":"2026-11-23T03:41:09.235Z","act":"witness","cmd":"node ci/mhot/witness_mhot.mjs bare / named / main","last_line":"GREEN 11 · BOUND NOT JUDGED / GREEN 12 / RED MHOT · H1-H9"}
+{"ts":"2026-11-23T03:41:09.235Z","act":"mutants","cmd":"node ci/mhot/run_mutants_mhot.mjs … --unit-bases <dir>","last_line":"run_mutants: 20 of 20 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-23T03:41:09.235Z","act":"witnesses","cmd":"GITHUB_ACTIONS=true … ORGANISM_WITNESS_SHARD=1..3 witnesses (50b5d8a)","last_line":"155 passed, 6 failed (mpinr SUITE; mr3 mrf mrj mrt mrv BASE not in the clone)"}
+{"ts":"2026-11-23T03:41:09.235Z","act":"clauses","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs clauses (50b5d8a)","last_line":"organism_test: 22 passed, 0 failed"}
+{"ts":"2026-11-23T03:41:09.235Z","act":"CHECKPOINT","cmd":"(PROOF §21)","last_line":"BASE 722b72e · folded · mutants 20/20 · WITNESSES 155/6 · left: MHOT-M5, then the re-run"}
