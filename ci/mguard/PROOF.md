@@ -289,7 +289,11 @@ baseline 79, `scripts/lawpack.mjs:162`), read with mpinr's pin reader (`scripts/
 **Selftests on the tree:**
 - `usage_tap selftest 45/45 — all clauses hold`
 - presence: `ALL CHECKS PASSED`
-- `own_source selftest: 30 passed, 0 failed`
+- own_source, by its last line:
+
+  ```
+  own_source selftest: 30 passed, 0 failed
+  ```
 - `node scripts/models.mjs check`: exit 0
 
 **The witness both ways (LF trees):**
@@ -308,7 +312,12 @@ clause that names them · control GREEN`.
 
 **The WITNESSES member over the tree.** Command: `GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo> ORGANISM_TEST_PROFILE=hermetic
 node scripts/organism_test.mjs witnesses`, every unit's BASE commit present (three fetched by sha). Its last line:
-`organism_test: 155 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 0`. Every red:
+
+```
+organism_test: 155 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 0
+```
+
+Every red:
 1. `WITNESS ‹mpool› · GREEN at head against its BASE`, red beyond BOUND: **W3.1**. This is **F1**: mpool allows the tap
    two writes, and G4 A rules three.
 2. `WITNESS ‹mxb› · GREEN at head against its BASE`, red beyond BOUND: **W7**. This is **NEW, F13**. mxb's W7 pins xray's Q6
