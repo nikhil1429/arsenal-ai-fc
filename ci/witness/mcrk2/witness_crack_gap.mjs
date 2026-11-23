@@ -301,10 +301,18 @@ async function archive(p, recs, concept = "tokenization", sid = "sess-witness") 
     const [y, m, d] = D.split("-"), laneDir = join(arc, "data", "afferent", y, m); mkdirSync(laneDir, { recursive: true });
     writeFileSync(join(laneDir, `${d}.jsonl`), rs.map((r) => J({ rid: r.rid, ts_utc: r.at.toISOString(), payload: { source: r.role === "him" ? "claude-code" : "claude-code-teaching", text: r.text, session_id: sid, moment: { forge_concept: concept } } })).join("\n") + "\n");
   }
-  return { N, arc };
+  // unit mg9 (forks rows 1314 (2) / 1315 (4)): the latest record time planted, so the compile is never handed a clock before it
+  return { N, arc, lastAt: recs.reduce((m, r) => Math.max(m, r.at.getTime()), 0) };
 }
 const DIFF = "```diff\n- ek word = ek token\n+ ek word = ek ya zyada tokens (subwords)\n```\nKahan atke the?";
-const compile = (N, p, arc, D) => N.compileDay({ date: D, stateDir: p.state, path: join(p.state, "compiled_notes.jsonl"), root: arc, guard: () => ({ ran: false, ok: true, why: "witness: no guard on a plant" }) });
+// unit mg9 (forks rows 1314 (2) / 1315 (4)) — THE WITNESS'S OWN WAIT, STRUCK IN PLACE (never deleted). It read:
+//   ~~const compile = (N, p, arc, D) => N.compileDay({ date: D, stateDir: p.state, path: join(p.state, "compiled_notes.jsonl"), root: arc, guard: () => ({ ran: false, ok: true, why: "witness: no guard on a plant" }) });~~
+//   compileDay read its OWN clock (`now()`), and the records planted for it are stamped up to 40 ms in the FUTURE
+//   (`later(20)`, `later(40)`): a machine that reached the compile in under 20 ms dropped them (exchanges.mjs drops a record
+//   after `now`), so G9 (ii) read NOT PLACED and G8 lost its diff — a race in the witness, not the product (ci/mcrk2/G9_50.txt).
+// NOW the compile is handed a clock no earlier than the last record planted for it (and never before the real time):
+const compile = (N, p, arc, D, lastAt = 0) => N.compileDay({ date: D, stateDir: p.state, path: join(p.state, "compiled_notes.jsonl"), root: arc,
+  now: () => new Date(Math.max(Date.now(), lastAt + 1)), guard: () => ({ ran: false, ok: true, why: "witness: no guard on a plant" }) });
 const liveNotes = (N, p, D) => N.noteState(N.readRows(join(p.state, "compiled_notes.jsonl"))).live.filter((n) => N.noteDay(n) === D);
 
 await clause("G8", async () => {
@@ -313,9 +321,9 @@ await clause("G8", async () => {
   p.prompt(SAID, prm);
   const r = p.run("crack");
   const tDiff = later(10);
-  const { N, arc } = await archive(p, [{ rid: "rid-g8-1", at: q, role: "teacher", text: "Ek word kitne tokens banata hai?" }, { rid: "rid-g8-2", at: prm, role: "him", text: SAID }, { rid: "rid-g8-3", at: tDiff, role: "teacher", text: DIFF }]);
+  const { N, arc, lastAt } = await archive(p, [{ rid: "rid-g8-1", at: q, role: "teacher", text: "Ek word kitne tokens banata hai?" }, { rid: "rid-g8-2", at: prm, role: "him", text: SAID }, { rid: "rid-g8-3", at: tDiff, role: "teacher", text: DIFF }]);
   const D = N.noteDay({ ts: tDiff.toISOString() });
-  const c = compile(N, p, arc, D);
+  const c = compile(N, p, arc, D, lastAt);
   const note = liveNotes(N, p, D).find((n) => n.concept === "tokenization" && n.axis === "c");
   const it = note ? (note.note.items || []).find((x) => x.kind === "crack" && x.crack_id) : null;
   const gapLine = note ? (note.note.gaps || []).some((g) => /the teacher's miss, not his/.test(g) && it && g.includes(it.crack_id)) : false;
@@ -332,7 +340,7 @@ await clause("G9", async () => {
   const ka = a.run("crack"), ra = (a.cracks() || [])[0] || {};
   const tA = later(10);
   const A = await archive(a, [{ rid: "rid-g9i-1", at: pA, role: "him", text: SAID }, { rid: "rid-g9i-2", at: tA, role: "teacher", text: DIFF }]);
-  const DA = A.N.noteDay({ ts: tA.toISOString() }); const cA = compile(A.N, a, A.arc, DA);
+  const DA = A.N.noteDay({ ts: tA.toISOString() }); const cA = compile(A.N, a, A.arc, DA, A.lastAt);
   const nA = liveNotes(A.N, a, DA).find((n) => n.axis === "b"), iA = nA ? (nA.note.items || []).find((x) => x.crack_id === ra.id) : null;
   const okI = ka.code === 0 && ra.axis === "none" && !!iA && iA.axis_settled && iA.axis_settled.axis === "b" && /^axis window /.test(iA.axis_settled.by) && iA.words === SAID;
   out.push(`(i) ${okI ? "window → axis b" : `NOT PLACED (crack exit ${ka.code}, axis ${ra.axis}, note b ${nA ? "yes" : "no"}, ${cA.cracks || ""})`}`);
@@ -343,7 +351,7 @@ await clause("G9", async () => {
   const ax = b.run("axis", "c", "now");
   const tB = later(20), nB0 = later(40);
   const B = await archive(b, [{ rid: "rid-g9ii-1", at: pB, role: "him", text: SAID }, { rid: "rid-g9ii-2", at: tB, role: "teacher", text: DIFF }, { rid: "rid-g9ii-3", at: nB0, role: "him", text: "achha, toh subwords" }]);
-  const DB = B.N.noteDay({ ts: tB.toISOString() }); compile(B.N, b, B.arc, DB);
+  const DB = B.N.noteDay({ ts: tB.toISOString() }); compile(B.N, b, B.arc, DB, B.lastAt);
   const nB = liveNotes(B.N, b, DB).find((n) => n.axis === "c"), iB = nB ? (nB.note.items || []).find((x) => x.crack_id === rb.id) : null;
   const okII = kb.code === 0 && ax.code === 0 && rb.axis === "none" && !!iB && iB.axis_settled && iB.axis_settled.axis === "c" && /declared in the turn/.test(iB.axis_settled.by);
   out.push(`(ii) ${okII ? "declared in the turn → axis c" : `NOT PLACED (crack exit ${kb.code}, axis ${rb.axis}, note c ${nB ? "yes" : "no"})`}`);
@@ -352,7 +360,7 @@ await clause("G9", async () => {
   const pC = later(5); c.prompt(SAID, pC);
   const kc = c.run("crack"), rc = (c.cracks() || [])[0] || {};
   const C = await archive(c, [{ rid: "rid-g9iii-1", at: pC, role: "him", text: SAID }]);
-  const DC = C.N.noteDay({ ts: pC.toISOString() }); const cC = compile(C.N, c, C.arc, DC);
+  const DC = C.N.noteDay({ ts: pC.toISOString() }); const cC = compile(C.N, c, C.arc, DC, C.lastAt);
   const unC = (cC.unplaced || []).find((u) => u.id === rc.id);
   const inNoteC = liveNotes(C.N, c, DC).some((n) => (n.note.items || []).some((x) => x.crack_id === rc.id));
   const okIII = kc.code === 0 && !!unC && /no axis in the pacer ledger of its turn/.test(unC.why) && String(cC.cracks || "").includes(`${rc.id} (`) && !inNoteC;
@@ -363,7 +371,7 @@ await clause("G9", async () => {
   d.run("axis", "c", "now"); d.run("axis", "d", "now");
   const tD = later(20), nD0 = later(40);
   const Dd = await archive(d, [{ rid: "rid-g9iv-1", at: pD, role: "him", text: SAID }, { rid: "rid-g9iv-2", at: tD, role: "teacher", text: DIFF }, { rid: "rid-g9iv-3", at: nD0, role: "him", text: "hmm" }]);
-  const DD = Dd.N.noteDay({ ts: tD.toISOString() }); const cD = compile(Dd.N, d, Dd.arc, DD);
+  const DD = Dd.N.noteDay({ ts: tD.toISOString() }); const cD = compile(Dd.N, d, Dd.arc, DD, Dd.lastAt);
   const unD = (cD.unplaced || []).find((u) => u.id === rd.id);
   const inNoteD = liveNotes(Dd.N, d, DD).some((n) => (n.note.items || []).some((x) => x.crack_id === rd.id));
   const okIV = kd.code === 0 && !!unD && /two axes declared in its turn/.test(unD.why) && !inNoteD;

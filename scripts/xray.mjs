@@ -23,6 +23,8 @@
 // recipe written in prose, and any doc-claim checker built on grep, is SILENTLY
 // BLIND on 3 of 76 organs and reports false GREEN. An AST cannot be blinded that
 // way. This file therefore ASSERTS it parsed all 76 and fails loudly on a skip.
+// (Since forks row 616, 12 Oct 2026, those joins are the `\u0000` ESCAPE, not the raw
+// byte — lawpack's `raw-nul-in-source` holds it; the selftest asserts that state.)
 //
 // ── (a) POINTS-TO, over the file-path domain ────────────────────────────────
 // Abstract domain { Const(string) | Unknown }. Transfer functions: Literal →
@@ -109,6 +111,12 @@ const canon = (p) => slash(p).replace(/\.tmp$/i, "");
 const UNKNOWN = { k: "u" };
 const C = (v) => ({ k: "c", v: String(v) });
 const isC = (a) => a && a.k === "c";
+// unit mxb (B1-B6, ci/mxb/MXB_SPEC.md on its seat branch): an OBJECT value and a FUNCTION value beside Const and Unknown.
+// A sink reached only from a test context is a FIXTURE. unit mxb: `probe` is no longer a test word — the watchman's
+// nightly probes and models.mjs's finishProbe are production (the B1 write was classed a fixture by its name).
+const FIX_CTX = /selftest|selfTest|_test|fixture|demo|canary/i;
+const OBJV = (p) => ({ k: "o", p });           // an object value: key -> abstract value
+const FNV = (params, body, scope) => ({ k: "f", params, body, scope });   // a function value (a closure)
 
 // ============================================================================
 // PER-FILE ANALYSIS
@@ -270,9 +278,27 @@ function analyzeFile(absPath, src) {
         // import.meta.url → this file
         if (n.object && n.object.type === "MetaProperty" && n.property && n.property.name === "url") return C(selfFile);
         const flat = flatMember(n);
-        if (flat) { const v = scope.get(flat); if (v) return v; }
+        if (flat) { const v = scope.get(flat); if (v && !Array.isArray(v)) return v; }
+        // mxb R-OBJ: `deps.outPath` where `deps` holds an object value
+        if (!n.computed && n.property && n.property.type === "Identifier") {
+          const o = evalNode(n.object, scope);
+          if (o && o.k === "o" && o.p.has(n.property.name)) return o.p.get(n.property.name);
+        }
         return UNKNOWN;
       }
+      case "ObjectExpression": {
+        const p = new Map();
+        for (const pr of n.properties) {
+          if (pr.type !== "Property" || pr.computed) continue;
+          const key = String(pr.key.name ?? pr.key.value);
+          const v = evalNode(pr.value, scope);
+          if (v && v.k !== "u") p.set(key, v);
+        }
+        return OBJV(p);
+      }
+      case "ArrowFunctionExpression":
+      case "FunctionExpression":
+        return FNV(n.params, n.body, scope);
       case "NewExpression":
         return UNKNOWN;
       case "CallExpression": {
@@ -297,6 +323,9 @@ function analyzeFile(absPath, src) {
           default: {
             // zero-arg path thunk, seeded above
             if (name && n.arguments.length === 0) { const v = scope.get(`${name}()`); if (v) return v; }
+            // mxb R-CALL / R-RET: the return value of a call to a function value the IR can see
+            const fv = calleeValue(n.callee, scope);
+            if (fv) return applyFn(fv, A);
             return UNKNOWN;
           }
         }
@@ -316,6 +345,90 @@ function analyzeFile(absPath, src) {
     }
     if (cur && cur.type === "Identifier") { parts.unshift(cur.name); return parts.join("."); }
     return null;
+  };
+
+  // unit mxh N1: every name a parameter list binds — plain, defaulted, destructured (any depth), rest.
+  const bound = (p) => !p ? []
+    : p.type === "Identifier" ? [p.name]
+    : p.type === "AssignmentPattern" ? bound(p.left)
+    : p.type === "RestElement" ? bound(p.argument)
+    : p.type === "ArrayPattern" ? p.elements.flatMap(bound)
+    : p.type === "ObjectPattern" ? p.properties.flatMap((q) => bound(q.type === "RestElement" ? q.argument : q.value))
+    : [];
+  const patternNames = (ps) => ps.flatMap(bound);
+  const maskParams = (scope, ps) => { const sh = patternNames(ps).filter((nm) => scope.has(nm)); if (!sh.length) return scope; const m = new Map(scope); for (const nm of sh) m.delete(nm); return m; };
+  // ── mxb: the callee of a call, as a function value ─────────────────────────
+  // Identifier → a closure bound in scope, else a function this file declares (module scope);
+  // `F.sitting` → the property value of an object literal.
+  const calleeValue = (c, scope) => {
+    if (!c) return null;
+    if (c.type === "Identifier") {
+      const v = scope.get(c.name);
+      if (v && v.k === "f") return v;
+      if (v) return null;
+      const lf = localFns.get(c.name);
+      return lf ? FNV(lf.params, lf.body, env) : null;
+    }
+    if (c.type === "MemberExpression") { const v = evalNode(c, scope); return v && v.k === "f" ? v : null; }
+    return null;
+  };
+  // the parameters bound to the call's arguments; a missing argument takes its default (evaluated in the
+  // closure's scope), an Unknown one stays unbound (the parameter MASKS any outer name — N1).
+  const bindParams = (params, A, outer) => {
+    const s = maskParams(new Map(outer), params);
+    params.forEach((p, i) => {
+      const a = A[i];
+      const id = p.type === "Identifier" ? p : (p.type === "AssignmentPattern" && p.left.type === "Identifier" ? p.left : null);
+      if (id) {
+        if (a && a.k !== "u") s.set(id.name, a);
+        else if (a === undefined && p.type === "AssignmentPattern") { const d = evalNode(p.right, outer); if (d.k !== "u") s.set(id.name, d); }
+        return;
+      }
+      const pat = p.type === "ObjectPattern" ? p : (p.type === "AssignmentPattern" && p.left.type === "ObjectPattern" ? p.left : null);
+      if (pat && a && a.k === "o") {
+        for (const q of pat.properties) {
+          if (q.type !== "Property" || q.computed) continue;
+          const k = String(q.key.name ?? q.key.value);
+          const tgt = q.value.type === "Identifier" ? q.value : (q.value.type === "AssignmentPattern" && q.value.left.type === "Identifier" ? q.value.left : null);
+          if (!tgt) continue;
+          const v = a.p.get(k);
+          if (v && v.k !== "u") s.set(tgt.name, v);
+          else if (!a.p.has(k) && q.value.type === "AssignmentPattern") { const d = evalNode(q.value.right, outer); if (d.k !== "u") s.set(tgt.name, d); }
+        }
+      }
+    });
+    return s;
+  };
+  // the RETURN VALUE. An expression body is evaluated (R-CALL). A block body (R-RET) yields a value only when
+  // every return the IR CAN evaluate agrees (a Const path, or one object value); an Unknown return is the env
+  // door (`process.env.X || …`'s precedent) and does not veto. Re-entry on the same body is Unknown — no cap typed.
+  const active = new Set();
+  const applyFn = (fv, A) => {
+    if (active.has(fv.body)) return UNKNOWN;
+    const isBlock = fv.body.type === "BlockStatement";
+    active.add(fv.body);
+    try {
+      const s = bindParams(fv.params, A, fv.scope);
+      if (!isBlock) return evalNode(fv.body, s);
+      for (const st of fv.body.body) {
+        if (st.type !== "VariableDeclaration") continue;
+        for (const d of st.declarations) {
+          if (d.id.type !== "Identifier" || !d.init) continue;
+          s.delete(d.id.name);   // a local MASKS, it is not evaluated (railsBlindFile's `resolve("")` would be this machine's cwd)
+        }
+      }
+      // every return the body may take, nested functions excluded; a conditional return is TWO returns (each arm)
+      const arms = (e) => e && e.type === "ConditionalExpression" ? [...arms(e.consequent), ...arms(e.alternate)] : [e];
+      const retsOf = (x) => !x || typeof x.type !== "string" || /Function/.test(x.type) ? []
+        : x.type === "ReturnStatement" ? arms(x.argument).map((e) => (e ? evalNode(e, s) : UNKNOWN))
+        : Object.keys(x).filter((k) => k !== "loc" && k !== "start" && k !== "end" && k !== "type").flatMap((k) => (Array.isArray(x[k]) ? x[k].flatMap(retsOf) : retsOf(x[k])));
+      const rets = retsOf(fv.body);
+      const known = rets.filter((r) => r.k !== "u");
+      if (!known.length) return UNKNOWN;
+      if (known.every((r) => isC(r) && r.v === known[0].v)) return known[0];
+      if (known.length === 1) return known[0];
+      return UNKNOWN;
+    } finally { active.delete(fv.body); }
   };
 
   // Walk a call/member chain down to its base identifier: for
@@ -382,6 +495,8 @@ function analyzeFile(absPath, src) {
                 if (pr.type !== "Property" || pr.computed) continue;
                 const key = pr.key.name || pr.key.value;
                 keys.push(String(key));
+                // mxb R-CALL: `const F = { sitting: () => join(STATE_DIR, "sitting.json") }` — the property is a function value
+                if ((pr.value.type === "ArrowFunctionExpression" || pr.value.type === "FunctionExpression")) { scope.set(`${d.id.name}.${key}`, FNV(pr.value.params, pr.value.body, scope)); continue; }
                 const v = evalNode(pr.value, scope);
                 if (isC(v)) scope.set(`${d.id.name}.${key}`, v);
               }
@@ -415,6 +530,8 @@ function analyzeFile(absPath, src) {
             }
             const v = evalNode(d.init, scope);
             if (isC(v)) scope.set(d.id.name, v);
+            // mxb: a closure (`const P = mkP(dir)`) or an object value (`const deps = liveDeps(now)`) is kept too
+            else if (v && (v.k === "f" || v.k === "o")) scope.set(d.id.name, v);
           }
         }
       } else if (stmt.type === "FunctionDeclaration" && stmt.id) {
@@ -440,16 +557,6 @@ function analyzeFile(absPath, src) {
   const paramEnv = new Map();   // fnName -> Map(param -> Set<string>)
   const callArgs = [];          // deferred: [fnName, [AbsVal]]
 
-  // unit mxh N1: every name a parameter list binds — plain, defaulted, destructured (any depth), rest.
-  const bound = (p) => !p ? []
-    : p.type === "Identifier" ? [p.name]
-    : p.type === "AssignmentPattern" ? bound(p.left)
-    : p.type === "RestElement" ? bound(p.argument)
-    : p.type === "ArrayPattern" ? p.elements.flatMap(bound)
-    : p.type === "ObjectPattern" ? p.properties.flatMap((q) => bound(q.type === "RestElement" ? q.argument : q.value))
-    : [];
-  const patternNames = (ps) => ps.flatMap(bound);
-  const maskParams = (scope, ps) => { const sh = patternNames(ps).filter((nm) => scope.has(nm)); if (!sh.length) return scope; const m = new Map(scope); for (const nm of sh) m.delete(nm); return m; };
   const walkBody = (node, scope, ctx) => {
     const visit = (n) => {
       if (!n || typeof n.type !== "string") return;
@@ -495,9 +602,21 @@ function analyzeFile(absPath, src) {
           }
           break;
         }
+        case "VariableDeclarator": {
+          // mxb R-FD: `const fd = openSync(file, flag)` — the descriptor remembers its path
+          if (n.id && n.id.type === "Identifier" && n.init && n.init.type === "CallExpression" && calleeName(n.init) === "openSync") {
+            const v = evalNode(n.init.arguments[0], scope);
+            if (isC(v)) scope.set(`${n.id.name}#fd`, v);
+          }
+          break;
+        }
         case "CallExpression": {
           const name = calleeName(n);
           const line = n.loc.start.line;
+          if (name === "writeSync" && n.arguments[0] && n.arguments[0].type === "Identifier") {
+            const v = scope.get(`${n.arguments[0].name}#fd`);
+            if (isC(v)) addSink(writes, v.v, line, "writeSync→WRITE(fd)");
+          }
           if (name && (READ_FNS.has(name) || WRITE_FNS.has(name) || MKDIR_FNS.has(name))) {
             const v = evalNode(n.arguments[0], scope);
             if (isC(v)) {
@@ -544,7 +663,10 @@ function analyzeFile(absPath, src) {
             }
           } else if (name && localFns.has(name)) {
             // INTERPROCEDURAL: bind arguments into parameter slots.
-            callArgs.push([name, n.arguments.map((a) => evalNode(a, scope))]);
+            // mxb R-OBJ: an object value built at a TEST call site never binds a production parameter — the callee
+            // records its sinks under its OWN ctx, so a selftest's `{ stateDir: bare }` would land as a live lane
+            const fixSite = FIX_CTX.test(String(CTX));
+            callArgs.push([name, n.arguments.map((a) => { const v = evalNode(a, scope); return fixSite && v && v.k === "o" ? UNKNOWN : v; })]);
           }
           break;
         }
@@ -676,10 +798,23 @@ function analyzeFile(absPath, src) {
       if (!fn) continue;
       if (!paramEnv.has(fname)) paramEnv.set(fname, new Map());
       const pe = paramEnv.get(fname);
+      const put = (nm, v) => { if (!pe.has(nm)) pe.set(nm, new Set()); if (pe.get(nm).size < PARAM_CAP && !pe.get(nm).has(v)) { pe.get(nm).add(v); changed = true; } };
       fn.params.forEach((p, i) => {
         const id = p.type === "Identifier" ? p : (p.type === "AssignmentPattern" && p.left.type === "Identifier" ? p.left : null);
-        if (!id) return;
         const a = argv[i];
+        // mxb R-OBJ: an object value into a parameter — `{ path }` binds `path`; a plain `deps` binds `deps.outPath`
+        if (a && a.k === "o") {
+          const pat = p.type === "ObjectPattern" ? p : (p.type === "AssignmentPattern" && p.left.type === "ObjectPattern" ? p.left : null);
+          if (id) { for (const [k, v] of a.p) if (isC(v)) put(`${id.name}.${k}`, v.v); }
+          else if (pat) for (const q of pat.properties) {
+            if (q.type !== "Property" || q.computed) continue;
+            const tgt = q.value.type === "Identifier" ? q.value : (q.value.type === "AssignmentPattern" && q.value.left.type === "Identifier" ? q.value.left : null);
+            const v = tgt && a.p.get(String(q.key.name ?? q.key.value));
+            if (isC(v)) put(tgt.name, v.v);
+          }
+          return;
+        }
+        if (!id) return;
         if (!isC(a)) return;
         if (!pe.has(id.name)) pe.set(id.name, new Set());
         if (pe.get(id.name).size < PARAM_CAP && !pe.get(id.name).has(a.v)) { pe.get(id.name).add(a.v); changed = true; }
@@ -906,7 +1041,7 @@ export function build() {
       // reported four deliberate "this file is missing on purpose" probes as
       // dead reads — the audit inventing findings out of the repo's own tests.
       const NEGATIVE_PROBE = /(^|\/)__[^/]*__\.(json|jsonl|txt)$|CANARY|__no_such/i;
-      const fixtureOnly = (s, p) => NEGATIVE_PROBE.test(p) || s.every((x) => /selftest|selfTest|_test|fixture|demo|canary|probe/i.test(String(x.ctx)));
+      const fixtureOnly = (s, p) => NEGATIVE_PROBE.test(p) || s.every((x) => FIX_CTX.test(String(x.ctx)));
       organs[f] = {
         loc: a.loc,
         reads: [...a.reads].map(([p, s]) => ({ path: relRepo(p), lines: s.map((x) => x.line), fixture: fixtureOnly(s, p) })),
@@ -1188,7 +1323,7 @@ export function verbGraph(ir) {
       // and its own regression test for the day a typo silently regenerated real
       // state instead of erroring. Reporting a test's own fixture as a broken
       // edge is the audit reading a scar as a wound.
-      if (/selftest|selfTest|_test|fixture|demo|canary|probe/i.test(String(sp.ctx || ""))) continue;
+      if (FIX_CTX.test(String(sp.ctx || ""))) continue;
       const callee = ir.organs[sp.script];
       if (!callee) { brokenEdges.push({ caller, callee: sp.script, verb: sp.verb, why: "callee organ does not exist", line: sp.line }); continue; }
       const k = known(sp.script);
@@ -1284,11 +1419,16 @@ function selftest() {
   const ir = build();
   assert(`ALL ${ir.organs_expected} organs parsed — no silent skip (grep's failure mode)`, ir.organs_parsed === ir.organs_expected && ir.parse_errors.length === 0);
 
-  // THE NUL-BYTE PROOF. The three deliberate-NUL organs are exactly where grep
-  // goes blind and reports false GREEN. An AST must see straight through them.
+  // THE NUL-BYTE PROOF. The three deliberate-NUL organs were exactly where grep
+  // went blind and reported false GREEN. Since forks row 616 (12 Oct 2026) the raw
+  // byte is the `\u0000` ESCAPE (lawpack.mjs `raw-nul-in-source`, frozen 0), so the
+  // assert states what main holds (unit mxb F-SELFTEST, forks row 1161 (4)): the
+  // composite-key join is still there, as the escape, and no raw NUL byte came back.
   for (const f of ["calibration.mjs", "dmn.mjs", "rejirah.mjs"]) {
     const raw = readFileSync(join(ROOT, "scripts", f));
-    assert(`${f} really does contain NUL bytes (the trap is still live)`, raw.includes(0));
+    const rawNul = raw.filter((b) => b === 0).length, esc = raw.toString("utf8").split("\\u0000").length - 1;
+    assert(`${f} holds its NUL join as the \\u0000 escape, and no raw NUL byte (the grep trap stays closed)`, rawNul === 0 && esc > 0,
+      `raw NUL byte(s) ${rawNul} · \\u0000 escape(s) ${esc}`);
     assert(`…and xray read it anyway — ${(ir.organs[f].reads.length + ir.organs[f].writes.length)} fs edges recovered where grep sees "Binary file … matches"`,
       ir.organs[f] && (ir.organs[f].reads.length + ir.organs[f].writes.length) > 0);
   }

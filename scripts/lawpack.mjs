@@ -151,6 +151,15 @@ export const BASELINE = {
   // the rematch voice line). His word, 30 Aug 2026: "Bro are again referring me as tera tu." A
   // baseline of 0 is the class fix: the ratchet refuses the first string that brings it back.
   "tum-not-tu-prose": 0,
+  // UNIT mpin-law (forks row 1160 (2) / (4), 19 Nov 2026) — born with the law and READ FROM THE TREE by the law itself at its
+  // landing (`node scripts/lawpack.mjs report`, the own-literal census line), never typed from a spec. Read on main fb42118:
+  // own-literal 39 = mcon's census 38 (its conductor repair landed) + scripts/mutagen.mjs:967, which F6 (a)'s whole-line-comment
+  // filter resolves; unresolved 77 = mcon's 78 − that one. A unit landing after this law lowers its number as its last commit,
+  // read from its own land tree. May only FALL. RE-READ 21 Nov 2026 on main 7bf008b merged (rows 1233 (2) / 1236): landed
+  // units brought two new unresolved sites (forge_session.mjs's unknown-verb test, row 1189 (8)), so 77 → 79 is the tree's
+  // read, never this law's rise; own-literal still 39.
+  "own-literal-pin": 39,
+  "own-source-pin-unresolved": 79,
   depcruise_errors: 7,
 };
 
@@ -530,6 +539,233 @@ export function importReads({ root = ROOT, dirs = ["scripts", "hooks"], readers 
   return { live: true, why: null, readers: [...R].sort(), files, parseErrors, findings, dispatch };
 }
 
+// ── THE OWN-LITERAL PIN CLASS (unit mpin-law · forks row 1160 (1)-(6); spec ci/mpin/MPIN_SPEC.md @ fb7c6b2 Q3 L1-L9) ──
+// A PIN is a positive text check — `/re/.test(S)`, `/re/.exec(S)`, `S.includes("lit")`, `S.match(/re/)` — not directly under a
+// `!`. Its subject S is SELF-SOURCE when it is the file's own text (readFileSync of fileURLToPath(import.meta.url) / new
+// URL(import.meta.url) / __filename / process.argv[1] / a path call whose last argument is the file's own basename), directly,
+// through a const bound to it, or through a `.slice(a, b)` / `.substring` whose bounds are numbers or `.indexOf` /
+// `.lastIndexOf` of a string on the same text, evaluated on the real text, so the subject is an exact character RANGE.
+// The pin is SATISFIED BY ITS OWN LITERAL when that range covers the pin's own literal and the pin matches inside the literal's
+// own text: it reads true whatever the code under test says. That is the count `own-literal-pin`.
+// THE DEFINITION IS mcon's, PORTED (ci/mcon/census_mcon.mjs at 4c4feb8: isSelfPath, range, selfSatisfied, the walk over the
+// AST with its ancestors). The census file stays on mcon's branch as its record (L9); this is the one code path now.
+// ONE EXTENSION, BY RULING (row 1160 (4), F6 C): the WHOLE-LINE-COMMENT FILTER is a resolved range —
+// `S.split("\n" | /\r?\n/).filter((l) => !/re/.test(l)).join("\n")` over a resolved S keeps S's range and DROPS each line of it
+// that /re/ matches, so a literal on a kept line is covered (scripts/mutagen.mjs:967 at fb42118, the 78's one same-shape site).
+// Every other derivation is UNRESOLVED, and since one of the 78 was a dead pin, an unresolved site is where the next one hides:
+// it is counted too, as `own-source-pin-unresolved`, unless the site declares `law-waiver:own-literal-pin` with its why.
+// "own assert" (the match lies in the enclosing assert call, not in the pin's own literal) is LISTED, never counted.
+// THE WALK (row 1160 (5), F7): scripts/ + hooks/, every *.mjs / *.js (legacy/ included, node_modules never). The census over
+// ci/ on the main this law was cut from (fb42118) read zero hits of any kind, so ci/ stays out; ci/mpinl's witness re-reads
+// it on the tree it judges, and one or more hits there is a RED that sends the walk back to take ci/.
+// A dead acorn is INSTRUMENT DEAD and a file acorn cannot parse is INSTRUMENT BLIND (judgeMeasured): never a clean zero.
+const OLP_PARSE = { ecmaVersion: "latest", sourceType: "module", allowHashBang: true, allowAwaitOutsideFunction: true, allowReturnOutsideFunction: true, locations: true };
+
+/** is this expression a path to the file's own source? (census_mcon isSelfPath, verbatim in meaning)
+ *  @param {any} node @param {string} own @param {Set<string>} selfIds @returns {boolean} */
+function olpSelfPath(node, own, selfIds) {
+  if (!node) return false;
+  if (node.type === "Identifier") return node.name === "__filename" || selfIds.has(node.name);
+  if (node.type === "MetaProperty") return true;
+  if (node.type === "MemberExpression") {
+    if (node.object && node.object.type === "MetaProperty") return true;
+    return Boolean(node.object && node.object.type === "MemberExpression" && node.object.object && node.object.object.name === "process"
+      && node.object.property && node.object.property.name === "argv" && node.property && node.property.value === 1);
+  }
+  if (node.type === "CallExpression" || node.type === "NewExpression") {
+    const args = node.arguments || [];
+    if (args.length && olpSelfPath(args[0], own, selfIds) && (node.callee.name === "fileURLToPath" || node.callee.name === "URL")) return true;
+    const lits = args.filter((/** @type {any} */ a) => a.type === "Literal" && typeof a.value === "string");
+    const last = lits.length ? lits[lits.length - 1].value : null;
+    return Boolean(last && basename(last) === own && args[args.length - 1].type === "Literal");
+  }
+  return false;
+}
+const olpReadFile = (/** @type {any} */ n) => n && n.type === "CallExpression" && ((n.callee.type === "Identifier" && n.callee.name === "readFileSync") || (n.callee.type === "MemberExpression" && n.callee.property.name === "readFileSync"));
+
+/** THE DEFINITION (census_mcon selfSatisfied): the subject range covers the pin's own literal [s, e), and the pin matches inside
+ *  that literal's text. A filtered range (F6 a) covers it only when no line the literal sits on is one the filter drops.
+ *  @param {{test:(t:string)=>boolean}} matcher @param {string} src @param {number} s @param {number} e @param {{a:number,b:number,drop:RegExp|null}} r */
+export function olpSelfSatisfied(matcher, src, s, e, r) {
+  if (!(r.a <= s && e <= r.b)) return false;
+  if (r.drop && olpKept(src, r, s, e) !== src.slice(s, e)) return false;
+  return matcher.test(src.slice(s, e));
+}
+/** the text a range keeps of [s, e): the plain slice, or (filtered) the kept lines' parts inside [s, e), joined by "\n" as the
+ *  subject's own join() does. A line's segment is what split() hands the filter: the part of the line inside the range.
+ *  @param {string} src @param {{a:number,b:number,drop:RegExp|null}} r @param {number} s @param {number} e */
+function olpKept(src, r, s, e) {
+  const lo = Math.max(r.a, s), hi = Math.min(r.b, e);
+  if (lo >= hi) return "";
+  if (!r.drop) return src.slice(lo, hi);
+  // the lines of [a, b) exactly as split("\n") hands them to the filter, each with its start; keep, clip to [lo, hi), join
+  const first = Math.max(r.a, (lo > 0 ? src.lastIndexOf("\n", lo - 1) : -1) + 1);
+  const drop = r.drop;
+  let next = first;
+  return src.slice(first, r.b).split("\n")
+    .map((text) => { const seg = { text, at: next }; next += text.length + 1; return seg; })
+    .filter((seg) => seg.at < hi && !drop.test(seg.text))
+    .map((seg) => src.slice(Math.max(seg.at, lo), Math.min(seg.at + seg.text.length, hi)))
+    .join("\n");
+}
+
+/** the pins of ONE file's source (CRLF folded): own-literal · own-assert · unresolved, each with its file:line.
+ *  @param {string} raw @param {string} rel @param {{acorn:any, walk:any}} kit */
+export function ownLiteralPinsOf(raw, rel, kit) {
+  const src = String(raw).replace(/\r\n/g, "\n");
+  const ast = kit.acorn.parse(src, OLP_PARSE);
+  const own = basename(rel);
+  const lineOf = (/** @type {number} */ pos) => src.slice(0, pos).split("\n").length;
+  /** @type {Map<string, {pos:number, init:any}[]>} */
+  const binds = new Map();
+  kit.walk.full(ast, (/** @type {any} */ n) => {
+    if (n.type === "VariableDeclarator" && n.id.type === "Identifier" && n.init) {
+      if (!binds.has(n.id.name)) binds.set(n.id.name, []);
+      binds.get(n.id.name).push({ pos: n.start, init: n.init });
+    }
+  });
+  const selfIds = new Set();
+  for (const [name, list] of binds) if (list.every((b) => olpSelfPath(b.init, own, selfIds))) selfIds.add(name);
+  const bindingAt = (/** @type {string} */ name, /** @type {number} */ pos) => { const l = (binds.get(name) || []).filter((b) => b.pos < pos); return l.length ? l[l.length - 1].init : null; };
+  const newline = (/** @type {any} */ a) => a && a.type === "Literal" && (a.value === "\n" || (a.regex && (a.regex.pattern === "\\r?\\n" || a.regex.pattern === "\\n") && !a.regex.flags));
+  /** F6 (a): the drop regex of `(l) => !/re/.test(l)` (an expression body or one return), else null @param {any} f */
+  const dropOf = (f) => {
+    if (!f || (f.type !== "ArrowFunctionExpression" && f.type !== "FunctionExpression") || f.params.length !== 1 || f.params[0].type !== "Identifier") return null;
+    let body = f.body;
+    if (body.type === "BlockStatement") body = body.body.length === 1 && body.body[0].type === "ReturnStatement" ? body.body[0].argument : null;
+    if (!body || body.type !== "UnaryExpression" || body.operator !== "!") return null;
+    const c = body.argument;
+    if (!c || c.type !== "CallExpression" || c.callee.type !== "MemberExpression" || c.callee.computed || c.callee.property.name !== "test") return null;
+    if (!c.callee.object.regex || c.arguments.length !== 1 || c.arguments[0].type !== "Identifier" || c.arguments[0].name !== f.params[0].name) return null;
+    return new RegExp(c.callee.object.regex.pattern, c.callee.object.regex.flags.replace(/[gy]/g, ""));
+  };
+  /** RANGE of a subject over src: {a, b, drop} for self-source · "unresolved" for a self-derivation not evaluated · null for not-self
+   *  @param {any} node @param {number} pos @param {number} [depth] @returns {any} */
+  function range(node, pos, depth = 0) {
+    if (!node || depth > 8) return null;
+    if (node.type === "ChainExpression") return range(node.expression, pos, depth + 1);
+    if (olpReadFile(node)) return olpSelfPath(node.arguments[0], own, selfIds) ? { a: 0, b: src.length, drop: null } : null;
+    if (node.type === "Identifier") { const init = bindingAt(node.name, pos); return init ? range(init, init.start, depth + 1) : null; }
+    if (node.type === "CallExpression" && node.callee.type === "MemberExpression") {
+      const m = node.callee.property.name;
+      if (m === "join" && newline(node.arguments[0]) && node.arguments.length === 1) {
+        const f = node.callee.object;
+        if (f && f.type === "CallExpression" && f.callee.type === "MemberExpression" && !f.callee.computed && f.callee.property.name === "filter") {
+          const sp = f.callee.object;
+          if (sp && sp.type === "CallExpression" && sp.callee.type === "MemberExpression" && !sp.callee.computed && sp.callee.property.name === "split" && newline(sp.arguments[0]) && sp.arguments.length === 1) {
+            // depth + 3: the join, the filter and the split each spend one level of the census's own budget, exactly as its
+            // generic member-call walk would (the definition is mcon's; a deeper reach here would count sites it cuts off)
+            const under = range(sp.callee.object, pos, depth + 3);
+            if (!under) return null;
+            const drop = dropOf(f.arguments[0]);
+            return under !== "unresolved" && !under.drop && drop && f.arguments.length === 1 ? { a: under.a, b: under.b, drop } : "unresolved";
+          }
+        }
+      }
+      const base = range(node.callee.object, pos, depth + 1);
+      if (!base) return null;
+      if (base === "unresolved" || base.drop) return "unresolved";
+      if (m === "slice" || m === "substring") {
+        const text = src.slice(base.a, base.b);
+        /** @type {(a:any) => number|null} */
+        const ev = (a) => {
+          if (!a) return null;
+          if (a.type === "Literal" && typeof a.value === "number") return a.value;
+          if (a.type === "UnaryExpression" && a.operator === "-" && a.argument.type === "Literal") return -a.argument.value;
+          if (a.type === "BinaryExpression" && (a.operator === "+" || a.operator === "-")) { const l = ev(a.left), r = ev(a.right); return l == null || r == null ? null : a.operator === "+" ? l + r : l - r; }
+          if (a.type === "CallExpression" && a.callee.type === "MemberExpression" && (a.callee.property.name === "indexOf" || a.callee.property.name === "lastIndexOf")) {
+            const on = range(a.callee.object, pos, depth + 1);
+            if (!on || on === "unresolved" || on.drop || on.a !== base.a || on.b !== base.b) return null;
+            const [lit, from] = a.arguments;
+            if (!lit || lit.type !== "Literal" || typeof lit.value !== "string") return null;
+            const f = from ? ev(from) : undefined;
+            if (from && f == null) return null;
+            return a.callee.property.name === "indexOf" ? text.indexOf(lit.value, f) : text.lastIndexOf(lit.value, f);
+          }
+          return null;
+        };
+        const args = node.arguments;
+        let a = args[0] ? ev(args[0]) : 0, b = args[1] ? ev(args[1]) : text.length;
+        if (a == null || b == null) return "unresolved";
+        const L = text.length;
+        const norm = (/** @type {number} */ x) => (x < 0 ? Math.max(0, L + x) : Math.min(x, L));
+        a = norm(a); b = norm(b);
+        if (m === "substring" && a > b) [a, b] = [b, a];
+        if (b < a) b = a;
+        return { a: base.a + a, b: base.a + b, drop: null };
+      }
+      return "unresolved";
+    }
+    if (node.type === "MemberExpression") return range(node.object, pos, depth + 1) ? "unresolved" : null;
+    if (node.type === "BinaryExpression" && node.operator === "+") return range(node.left, pos, depth + 1) || range(node.right, pos, depth + 1) ? "unresolved" : null;
+    if (node.type === "TemplateLiteral") return node.expressions.some((/** @type {any} */ x) => range(x, pos, depth + 1)) ? "unresolved" : null;
+    if (node.type === "LogicalExpression" || node.type === "ConditionalExpression") {
+      const parts = node.type === "LogicalExpression" ? [node.left, node.right] : [node.consequent, node.alternate];
+      return parts.some((p) => range(p, pos, depth + 1)) ? "unresolved" : null;
+    }
+    return null;
+  }
+  /** @type {{pins: {file:string, line:number, kind:string, pin:string, assert:string|null, why:string}[]}} */
+  const out = { pins: [] };
+  const pins = out.pins;
+  kit.walk.fullAncestor(ast, (/** @type {any} */ n, /** @type {any} */ _st, /** @type {any[]} */ anc) => {
+    if (n.type !== "CallExpression" || n.callee.type !== "MemberExpression" || n.callee.computed) return;
+    const m = n.callee.property.name;
+    let lit = null, subject = null, matcher = null;
+    if ((m === "test" || m === "exec") && n.callee.object.type === "Literal" && n.callee.object.regex) {
+      lit = n.callee.object; subject = n.arguments[0];
+      matcher = new RegExp(lit.regex.pattern, lit.regex.flags.replace(/[gy]/g, ""));
+    } else if ((m === "includes" || m === "match") && n.arguments[0] && n.arguments[0].type === "Literal") {
+      lit = n.arguments[0]; subject = n.callee.object;
+      if (lit.regex) matcher = new RegExp(lit.regex.pattern, lit.regex.flags.replace(/[gy]/g, ""));
+      else if (typeof lit.value === "string") { const v = lit.value; matcher = { test: (/** @type {string} */ t) => t.includes(v) }; }
+    }
+    if (!lit || !subject || !matcher) return;
+    const parent = anc[anc.length - 2];
+    if (parent && parent.type === "UnaryExpression" && parent.operator === "!") return;   // a NEGATIVE pin: not this class
+    if ((m === "match" || m === "exec") && parent && (parent.type === "MemberExpression" || parent.type === "ChainExpression")) return;   // a value, not a boolean
+    const r = range(subject, n.start);
+    if (!r) return;
+    const assertCall = [...anc].reverse().find((a) => a !== n && a.type === "CallExpression" && a.callee.type === "Identifier"
+      && a.arguments[0] && (a.arguments[0].type === "TemplateLiteral" || (a.arguments[0].type === "Literal" && typeof a.arguments[0].value === "string")));
+    const row = { file: rel, line: lineOf(lit.start), pin: src.slice(lit.start, lit.end).slice(0, 120), assert: assertCall ? `${assertCall.callee.name}(…) @ ${rel}:${lineOf(assertCall.start)}` : null };
+    if (r === "unresolved") { pins.push({ ...row, kind: "unresolved", why: "a pin on the file's own text through a derivation the range evaluator does not resolve; a dead pin can hide here — resolve the subject, narrow it, or declare law-waiver:own-literal-pin with its why" }); return; }
+    if (olpSelfSatisfied(matcher, src, lit.start, lit.end, r)) { pins.push({ ...row, kind: "own-literal", why: `its subject (${rel}:${lineOf(r.a)}-${lineOf(r.b)}) covers the pin's own literal, so it reads true whatever the code says; read the behaviour, or narrow the subject off the selftest` }); return; }
+    if (assertCall && olpKept(src, r, assertCall.start, assertCall.end) && matcher.test(olpKept(src, r, assertCall.start, assertCall.end))) pins.push({ ...row, kind: "own-assert", why: "the match lies inside its own assert call (listed, never counted)" });
+  });
+  return pins;
+}
+
+/** ownLiteralPins — the law's census over a tree. findings = own-literal pins · unresolved = unresolved sites not waived.
+ *  @param {{root?:string, dirs?:string[], kit?:{acorn:any, walk:any, why:string|null}}} [o] */
+export function ownLiteralPins({ root = ROOT, dirs = ["scripts", "hooks"], kit = acornKit() } = {}) {
+  const shown = dirs.join("+");
+  if (!kit.acorn || !kit.walk) return { live: false, why: kit.why || "acorn absent", dirs: shown, files: 0, parseErrors: [], findings: [], unresolved: [], ownAssert: [], waived: [] };
+  /** @type {(d: string) => string[]} */
+  const walkDir = (d) => readdirSync(join(root, d), { withFileTypes: true }).flatMap((e) => e.isDirectory()
+    ? (e.name === "node_modules" ? [] : walkDir(`${d}/${e.name}`))
+    : (/\.(mjs|js)$/.test(e.name) ? [`${d}/${e.name}`] : []));
+  const list = dirs.filter((d) => existsSync(join(root, d))).flatMap(walkDir).sort();
+  /** @type {{findings:any[], unresolved:any[], ownAssert:any[], declared:any[], parseErrors:string[]}} */
+  const got = { findings: [], unresolved: [], ownAssert: [], declared: [], parseErrors: [] };
+  const { findings, unresolved, ownAssert, declared, parseErrors } = got;
+  let files = 0;
+  for (const rel of list) {
+    const raw = readFileSync(join(root, rel), "utf8");
+    let pins;
+    try { pins = ownLiteralPinsOf(raw, rel, kit); }
+    catch (e) { parseErrors.push(`${rel} · ${String((e && e.message) || e).slice(0, 120)}`); continue; }
+    files++;
+    for (const p of pins) {
+      if (p.kind === "own-literal") findings.push(p);
+      else if (p.kind === "own-assert") ownAssert.push(p);
+      else if (waived(raw, p.line, "own-literal-pin")) declared.push(p);
+      else unresolved.push(p);
+    }
+  }
+  return { live: true, why: null, dirs: shown, files, parseErrors, findings, unresolved, ownAssert, waived: declared };
+}
+
 // ── RAW NUL BYTES IN SOURCE (forks row 616, 12 Oct 2026) ─────────────────────
 // acts.mjs, calibration.mjs, dmn.mjs and rejirah.mjs each carried ONE raw NUL byte inside a template literal,
 // as a key separator (the 12 Oct census named the first two; this law found the other two, forks row 653 A2).
@@ -610,7 +846,7 @@ export function knipLeads() {
 }
 
 // ── MEASURE-ALL ─────────────────────────────────────────────────────────────
-export async function measure({ withDepcruise = true, scanFn = scan, depcruiseFn = depcruise, rawNulFn = rawNulFiles, importFn = importReads } = {}) {
+export async function measure({ withDepcruise = true, scanFn = scan, depcruiseFn = depcruise, rawNulFn = rawNulFiles, importFn = importReads, olpFn = ownLiteralPins } = {}) {
   // L2 (fate 35): the scan's EXIT CODE is read beside its output — sgHealth — never thrown away.
   const sc = scanFn();
   const { matches, raw } = sc;
@@ -632,6 +868,7 @@ export async function measure({ withDepcruise = true, scanFn = scan, depcruiseFn
   const ig = importFn();   // forks row 661: the acorn judge over scripts/ and hooks/ (any reader, alias or wrapper; dispatches apart)
   const ir = judgeImportTimeRead(matches, ig);
   const nul = rawNulFn();
+  const olp = olpFn();   // unit mpin-law (row 1160): the own-literal pin census over scripts/ and hooks/ (two counts, F6 C)
   const dc = withDepcruise ? depcruiseFn() : { available: false, errors: [], leads: [] };
   const counts = {
     "owners-only-state-write": o.findings.length,
@@ -644,15 +881,17 @@ export async function measure({ withDepcruise = true, scanFn = scan, depcruiseFn
     "import-time-registry-read": ir.findings.length,
     "unguarded-dispatch": ir.dispatch.length,
     "raw-nul-in-source": nul.findings.length,
+    "own-literal-pin": olp.findings.length,
+    "own-source-pin-unresolved": olp.unresolved.length,
     depcruise_errors: dc.available ? dc.errors.length : 0,
   };
-  return { matches, counts, o, m, j, t, c, rt, tm, ir, ig, nul, dc, raw, sg, rulesPresent: RULE_IDS.filter((id) => existsSync(join(RULES_DIR, `${id}.yml`))) };
+  return { matches, counts, o, m, j, t, c, rt, tm, ir, ig, nul, olp, dc, raw, sg, rulesPresent: RULE_IDS.filter((id) => existsSync(join(RULES_DIR, `${id}.yml`))) };
 }
 
 /** judgeMeasured — L2 (fate 35): the ratchet over a REAL measurement. A dead ast-grep is a RED that names
  *  it, and none of the seven laws it feeds may print a FALL; a dead dependency-cruiser is a RED too; an
  *  ABSENT one is NOT MEASURED — named in `notes`, never a fallen count. Everything else is judge()'s.
- *  @param {{counts:Record<string,number>, sg?:{tool:string, live:boolean, code:number|null, why:string|null}, dc?:{available?:boolean, parsed?:boolean, code?:number|null, raw?:string}, nul?:{live:boolean, why:string|null}, ig?:{live:boolean, why:string|null, parseErrors:string[]}}} m */
+ *  @param {{counts:Record<string,number>, sg?:{tool:string, live:boolean, code:number|null, why:string|null}, dc?:{available?:boolean, parsed?:boolean, code?:number|null, raw?:string}, nul?:{live:boolean, why:string|null}, ig?:{live:boolean, why:string|null, parseErrors:string[]}, olp?:{live:boolean, why:string|null, parseErrors:string[]}}} m */
 export function judgeMeasured(m, base = BASELINE) {
   const j = judge(m.counts, base);
   const reds = [...j.reds], notes = [];
@@ -674,6 +913,14 @@ export function judgeMeasured(m, base = BASELINE) {
       ? `INSTRUMENT DEAD — the import-graph judge: ${m.ig.why}. import-time-registry-read and unguarded-dispatch are not judged; an unparsed tree is not a clean one.`
       : `INSTRUMENT BLIND — acorn could not parse ${m.ig.parseErrors.length} file(s) that name registry.mjs (${m.ig.parseErrors.slice(0, 3).join(" | ")}); their import-time reads are unseen, never zero.`);
     falls = falls.filter((f) => !f.startsWith("import-time-registry-read FELL") && !f.startsWith("unguarded-dispatch FELL"));
+  }
+  if (m.olp && (!m.olp.live || (m.olp.parseErrors || []).length)) {
+    // unit mpin-law (row 1160, spec L7): the own-literal census feeds two laws; with no acorn, or a walked file acorn cannot
+    // parse, it is RED by name and neither law may print a FALL its unseen pins would have made.
+    reds.push(!m.olp.live
+      ? `INSTRUMENT DEAD — own-literal census: ${m.olp.why}. own-literal-pin and own-source-pin-unresolved are not judged; an unparsed tree is not a clean one.`
+      : `INSTRUMENT BLIND — own-literal census: acorn could not parse ${m.olp.parseErrors.length} walked file(s) (${m.olp.parseErrors.slice(0, 3).join(" | ")}); their pins are unseen, never zero.`);
+    falls = falls.filter((f) => !f.startsWith("own-literal-pin FELL") && !f.startsWith("own-source-pin-unresolved FELL"));
   }
   if (dc.available && !dc.parsed) {
     reds.push(`INSTRUMENT DEAD — dependency-cruiser: exited ${dc.code} and its answer did not parse — raw: ${String(dc.raw || "").trim().slice(0, 200) || "(no output)"}. depcruise_errors is not judged.`);
@@ -728,6 +975,103 @@ export const IMPORT_PLANTS = {
   "c_dispatch.mjs": 'import { preCyborg } from "./registry.mjs";\nfunction run() { return preCyborg({}); }\nconst cmd = process.argv[2];\nif (cmd === "run") run();\n',
   "d_lazy.mjs": 'import { lazySubjects } from "./registry.mjs";\nexport const D = lazySubjects("act_doors");\nexport function f() { return D.length; }\n',
   "e_alias.mjs": 'import { rowOf as r } from "./registry.mjs";\nexport const M = r("mechanisms", "x");\n',
+};
+
+/** THE OWN-LITERAL PLANTS (unit mpin-law · row 1160): written into a throwaway tree by every selftest and judged by
+ *  ownLiteralPins, both ways. RED: a whole-file self-source pin (own-literal) · the whole-line-comment filter over it, the pin on a
+ *  kept line (own-literal, F6 a) · a derivation the evaluator does not resolve (unresolved) · the same with a declared waiver
+ *  (waived, never counted). CLEAN (zero pins of any kind): the subject sliced off the selftest · the same filtered · a narrowed
+ *  ownCode subject (spec W5) · the house concatenated needle (scripts/dugout.mjs:4255 at fb42118) · a negative pin · a filter that
+ *  DROPS the pin's own line. */
+export const OLP_PLANTS = {
+  "p_whole.mjs": String.raw`import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const assert = (n, c) => c;
+export function selftest() {
+  const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+  return assert("the door is wired", /ZZDOOR/.test(SRC));
+}
+`,
+  "p_filter.mjs": String.raw`import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const assert = (n, c) => c;
+export function selftest() {
+  const selfSrc = readFileSync(fileURLToPath(import.meta.url), "utf8");
+  // a comment line the filter drops
+  const codeOnly = selfSrc.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+  return assert("the coverage env is used", /ZZ_COVERAGE/.test(codeOnly));
+}
+`,
+  "p_unresolved.mjs": String.raw`import { readFileSync } from "node:fs";
+const assert = (n, c) => c;
+export function selftest() {
+  const SRC = readFileSync(new URL(import.meta.url), "utf8");
+  return assert("the door is wired", /ZZDOOR/.test(SRC.replace(/\s+/g, " ")));
+}
+`,
+  "p_waived.mjs": String.raw`import { readFileSync } from "node:fs";
+const assert = (n, c) => c;
+export function selftest() {
+  const SRC = readFileSync(new URL(import.meta.url), "utf8");
+  // law-waiver:own-literal-pin the planted why: the header prose is the documented surface
+  return assert("the door is wired", /ZZDOOR/.test(SRC.replace(/\s+/g, " ")));
+}
+`,
+};
+export const OLP_CLEAN_PLANTS = {
+  "c_sliced.mjs": String.raw`import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const assert = (n, c) => c;
+export const door = () => "ZZDOOR";
+export function selftest() {
+  const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+  const code = SRC.slice(0, SRC.indexOf("function selftest"));
+  return assert("the door is wired", /ZZDOOR/.test(code));
+}
+`,
+  "c_sliced_filtered.mjs": String.raw`import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const assert = (n, c) => c;
+export const door = () => "ZZDOOR";
+export function selftest() {
+  const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+  const code = SRC.slice(0, SRC.indexOf("function selftest")).split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+  return assert("the door is wired", /ZZDOOR/.test(code));
+}
+`,
+  "c_narrowed.mjs": String.raw`import { fileURLToPath } from "node:url";
+import { ownCode } from "./own_source.mjs";
+const assert = (n, c) => c;
+export function selftest() {
+  const code = ownCode(fileURLToPath(import.meta.url), { fn: "deal" });
+  return assert("the cap's ttl lives in deal()", /ZZ_TTL/.test(code));
+}
+`,
+  "c_concat.mjs": String.raw`import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const assert = (n, c) => c;
+export function selftest() {
+  const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+  return assert("the door is wired", SRC.includes("ZZ" + "DOOR"));
+}
+`,
+  "c_negative.mjs": String.raw`import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const assert = (n, c) => c;
+export function selftest() {
+  const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+  return assert("no percentage is printed", !/ZZ_PERCENT/.test(SRC));
+}
+`,
+  "c_dropped_line.mjs": String.raw`import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const assert = (n, c) => c;
+export function selftest() {
+  const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+  const kept = SRC.split("\n").filter((l) => !/ZZDROP/.test(l)).join("\n");
+  return assert("a line the filter drops is not in the subject", /ZZDROP/.test(kept));
+}
+`,
 };
 
 /** plants defaults to the RED set; CLEAN_PLANTS is the other way (unit mdn2), scanned in its OWN throwaway project so
@@ -911,6 +1255,51 @@ async function selftest() {
     }
   }
 
+  // 4d · THE OWN-LITERAL PIN CLASS (unit mpin-law · row 1160) — planted both ways in a throwaway tree, on every run
+  {
+    const kit = acornKit();
+    if (kit.acorn) {
+      const od = mkdtempSync(join(tmpdir(), "arsenal-lawpack-olp-"));
+      try {
+        mkdirSync(join(od, "scripts"), { recursive: true });
+        mkdirSync(join(od, "hooks"), { recursive: true });
+        for (const [f, code] of Object.entries(OLP_PLANTS)) writeFileSync(join(od, "scripts", f), code);
+        for (const [f, code] of Object.entries(OLP_CLEAN_PLANTS)) writeFileSync(join(od, "hooks", f), code);
+        const o1 = ownLiteralPins({ root: od, kit });
+        const at = (/** @type {any[]} */ rows, /** @type {string} */ f) => rows.filter((x) => x.file === f).map((x) => x.line).join(",");
+        assert("OWN-LITERAL — a pin whose subject is its file's whole text, its own literal inside it, is a finding with its file:line",
+          at(o1.findings, "scripts/p_whole.mjs") === "6", JSON.stringify(o1.findings));
+        assert("OWN-LITERAL — F6 (a): the whole-line-comment filter is a RESOLVED range, and a pin on a kept line is a finding (mutagen:967's shape)",
+          at(o1.findings, "scripts/p_filter.mjs") === "8", JSON.stringify(o1.findings));
+        assert("OWN-LITERAL — a derivation the evaluator does not resolve is counted as unresolved, never as clean and never as own-literal",
+          at(o1.unresolved, "scripts/p_unresolved.mjs") === "5" && at(o1.findings, "scripts/p_unresolved.mjs") === "", JSON.stringify(o1.unresolved));
+        assert("OWN-LITERAL — an unresolved site that DECLARES law-waiver:own-literal-pin is recorded as waived, not counted",
+          at(o1.waived, "scripts/p_waived.mjs") === "6" && at(o1.unresolved, "scripts/p_waived.mjs") === "", JSON.stringify(o1.waived));
+        const cleanHits = [...o1.findings, ...o1.unresolved, ...o1.ownAssert, ...o1.waived].filter((x) => x.file.startsWith("hooks/"));
+        assert("OWN-LITERAL — CLEAN: sliced off the selftest, the same filtered, a narrowed ownCode subject, the concatenated needle, a negative pin and a filter that drops the pin's own line hold ZERO pins of any kind (hooks/ is walked too)",
+          cleanHits.length === 0 && o1.files === Object.keys(OLP_PLANTS).length + Object.keys(OLP_CLEAN_PLANTS).length, JSON.stringify(cleanHits));
+        writeFileSync(join(od, "scripts", "p_whole.mjs"), OLP_PLANTS["p_whole.mjs"].replace(/\n/g, "\r\n"));
+        const o2 = ownLiteralPins({ root: od, kit });
+        assert("OWN-LITERAL — a CRLF file reads the same finding at the same line (Windows checkout)", at(o2.findings, "scripts/p_whole.mjs") === "6");
+        writeFileSync(join(od, "scripts", "p_broken.mjs"), "export const x = (;\n");
+        const o3 = ownLiteralPins({ root: od, kit });
+        const blind = judgeMeasured({ counts: { ...base }, olp: o3 });
+        assert("OWN-LITERAL — a walked file acorn cannot parse is a BLIND instrument, RED by name, never a clean zero",
+          o3.parseErrors.length === 1 && !blind.ok && blind.reds.some((r) => /^INSTRUMENT BLIND — own-literal census/.test(r)), JSON.stringify(blind.reds));
+        const mo = await measure({ scanFn: () => ({ matches: [], raw: "[]", code: 0, signal: null }), depcruiseFn: () => ({ available: false, errors: [], leads: [], raw: "" }), olpFn: () => o1 });
+        assert("OWN-LITERAL — measure() carries both counts on the machine line's keys, from the census it ran",
+          mo.counts["own-literal-pin"] === o1.findings.length && mo.counts["own-source-pin-unresolved"] === o1.unresolved.length && o1.findings.length === 2 && o1.unresolved.length === 1);
+      } finally { try { rmSync(od, { recursive: true, force: true }); } catch { /* a temp dir the OS will reap anyway */ } }
+    } else {
+      assert("BARE CHECKOUT — no acorn, so the own-literal plants are skipped and SAID (measurability is an answer)", true);
+    }
+    const dead = ownLiteralPins({ kit: { acorn: null, walk: null, why: "acorn could not load (planted)" } });
+    const jDead = judgeMeasured({ counts: { ...base, "own-literal-pin": 0, "own-source-pin-unresolved": 0 }, olp: dead });
+    assert("OWN-LITERAL — a census with no acorn is a DEAD instrument: RED by name, and neither of its laws prints a FALL to 0",
+      !dead.live && !jDead.ok && jDead.reds.some((r) => /^INSTRUMENT DEAD — own-literal census/.test(r))
+        && !jDead.falls.some((f) => /own-literal-pin FELL|own-source-pin-unresolved FELL/.test(f)), JSON.stringify(jDead));
+  }
+
   // 5 · THE PLANT — every rule proven to BITE, on every run, in a throwaway project
   if (available()) {
     const m2 = plantAndScan();
@@ -969,6 +1358,9 @@ async function main() {
     top("IMPORT-TIME REGISTRY READ", m.ir.findings);
     top("UNGUARDED DISPATCH", m.ir.dispatch);
     top("RAW NUL", m.nul.findings);
+    console.log(`  own-literal census · walk ${m.olp.dirs} · ${m.olp.files} file(s) · own-literal ${m.olp.findings.length} · unresolved ${m.olp.unresolved.length} · own-assert ${m.olp.ownAssert.length} (listed) · waived ${m.olp.waived.length} · parse errors ${m.olp.parseErrors.length}`);
+    top("OWN-LITERAL PIN", m.olp.findings);
+    top("OWN-SOURCE PIN UNRESOLVED", m.olp.unresolved);
     if (m.dc.available) for (const e of m.dc.errors.slice(0, 8)) console.log(`      DEPCRUISE ${e.rule.name} · ${e.from} → ${e.to}`);
   }
   for (const r of j.reds) console.log(`  RED  ${r}`);

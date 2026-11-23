@@ -1,0 +1,5 @@
+{"ts":"2026-11-22T15:20:00Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mcid-build FETCH_HEAD","last_line":"0cfc70cf6568cc670a23040e396d2545d866ef08"}
+{"ts":"2026-11-22T15:35:00Z","act":"witness both ways","cmd":"node ci/mcid/witness_mcid.mjs --org <head> --base-org <base>","last_line":"GREEN MCID NO-CI-DIR holds on a clause witness · 10 clause(s)"}
+{"ts":"2026-11-22T15:36:00Z","act":"witness on base","cmd":"node ci/mcid/witness_mcid.mjs --org <base>","last_line":"RED MCID · CLAUSE, UNIT, NEITHER, OTHER, BASEHEX, TOUCH, NAME, HEADER"}
+{"ts":"2026-11-22T15:40:00Z","act":"mutants","cmd":"node ci/mcid/run_mutants_mcid.mjs","last_line":"run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-22T15:41:00Z","act":"models check","cmd":"node scripts/models.mjs check","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)"}

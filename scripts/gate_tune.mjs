@@ -15,8 +15,11 @@
 //   AUTO-REVERT — keeps the gate honest afterward. The gate still NEVER
 //   retunes itself: every apply rides a card he answered.
 //
-// OWNER STATUS: this file is the DECLARED OWNER of thalamus_config.json's
-//   `tiers` edits made under the wind-tunnel lane, and the SOLE WRITER of
+// OWNER STATUS: this file OWNS the wind-tunnel `tiers` proposal lane — it
+//   decides WHAT the tiers become — and WRITES THROUGH the config's sole writer
+//   (unit mq2, forks row 1175 F1 A): applyTiers, exported by the thalamus,
+//   which fences the edit to tiers + its legacy + its receipt, writes indent 1
+//   and refuses a stale read. This file is the SOLE WRITER of
 //   gate_tune_ledger.jsonl. The receipt note pattern follows thalamus_config's
 //   own `_gemini_lane_2026_08_09` precedent (P7): a gated file edited under a
 //   ruling carries the ruling in itself, dated.
@@ -42,15 +45,16 @@
 //   the live mutation WITHOUT claiming a metric verdict (writing `kept` there
 //   would make this ledger report a measured keep on a window nobody measured),
 //   records what the cut-short window had collected, and REQUIRES the ruling.
-// WRITES: thalamus_config.json (tiers, under the ruling above) ·
-//         gate_tune_ledger.jsonl (sole)
+// WRITES: gate_tune_ledger.jsonl (sole) · thalamus_config.json `tiers` only
+//         THROUGH the thalamus export applyTiers (never a file write here)
 // READS:  brain_out/nightshift/wind_tunnel_*.json · salience_ledger.jsonl
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync, mkdirSync, appendFileSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, appendFileSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { rowOf } from "./registry.mjs";   // S10 — the mutation target is a ROW, never this organ's own literal
+import { applyTiers } from "./thalamus.mjs";   // unit mq2 (row 1175) — the config's SOLE writer; its tiers lane door
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = process.env.ARSENAL_GATETUNE_STATE_DIR || join(__dirname, "..", "dressing-room", "state");
@@ -72,12 +76,8 @@ const TUNNEL_DIR = () => join(STATE_DIR, "brain_out", "nightshift");
 const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } };
 const readLines = (p) => { const o = []; try { for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch { } } } catch { } return o; };
 const localDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-function writeAtomic(path, obj) {
-  mkdirSync(dirname(path), { recursive: true });
-  const tmp = `${path}.${process.pid}.tmp`;
-  writeFileSync(tmp, typeof obj === "string" ? obj : JSON.stringify(obj, null, 2));
-  renameSync(tmp, path);
-}
+// unit mq2: the indent-2 writeAtomic that lived here was this organ's only config write, and it is
+// gone with the edit — the thalamus's applyTiers writes the file now (one format, a fence, a stale guard).
 
 // ── PURE CORE ────────────────────────────────────────────────────────────────
 
@@ -205,9 +205,11 @@ function main() {
     const f = findProposalFile(process.argv[3] || "latest");
     if (!f || !existsSync(f)) { console.error("gate_tune: no wind_tunnel proposal file found"); process.exit(1); }
     const p = readJson(f);
-    const r = applyProposal(p, readJson(CONFIG()), readLines(LEDGER()), now);
-    if (!r.ok) { console.error(`gate_tune: NOT applied — ${r.why}`); process.exit(1); }
-    writeAtomic(CONFIG(), r.cfg);
+    // unit mq2: the decision is judged on the very bytes the sole writer read, and written by it
+    let r = null;
+    const w = applyTiers((cfg) => { r = applyProposal(p, cfg, readLines(LEDGER()), now); return r.ok ? r.cfg : null; }, { path: CONFIG() });
+    if (r && !r.ok) { console.error(`gate_tune: NOT applied — ${r.why}`); process.exit(1); }
+    if (!w.ok || !r) { console.error(`gate_tune: NOT applied — ${w.why}`); process.exit(1); }
     appendFileSync(LEDGER(), JSON.stringify(r.row) + "\n");
     console.log(`gate_tune: APPLIED ${p.id} → tiers ${JSON.stringify(r.cfg.tiers)} (receipt written; old tiers frozen in _gate_tune_legacy).`);
     console.log(`gate_tune: window ${p.review_after_days}d, band [${p.metric.band}] — score runs nightly; out-of-band auto-reverts. Restart the thalamus to load the new tiers (its own note says it never hot-reloads).`);
@@ -249,8 +251,9 @@ function main() {
       return;
     }
     if (v.action === "reverted") {
-      const cfg = readJson(CONFIG());
-      writeAtomic(CONFIG(), applyRevert(cfg, live, now));
+      // unit mq2: the revert writes through the sole writer too; a refused write leaves no ledger row, so the next score retries it
+      const w = applyTiers((cfg) => applyRevert(cfg, live, now), { path: CONFIG() });
+      if (!w.ok) { console.error(`gate_tune: ${live.id} revert NOT written — ${w.why}`); process.exit(1); }
     }
     appendFileSync(LEDGER(), JSON.stringify({ ts: now.toISOString(), kind: v.action, id: live.id, measured: v.measured, why: v.why }) + "\n");
     console.log(`gate_tune: ${live.id} ${v.action.toUpperCase()} — ${v.why}`);

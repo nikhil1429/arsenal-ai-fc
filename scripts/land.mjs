@@ -11,17 +11,25 @@
 //   prints it · L3 exactly ONE commit per landing · L4 a rejected push leaves main at the landed sha, the verb retries
 //   (once, when origin still sits at the parent) and `push <unit>` retries later; groundsman knows the commit as lawful ·
 //   C1 (row 1023) THE SHA JUDGED IS THE SHA LANDED: the CI verdict is read at T and T itself is what main becomes; no
-//   verdict ever carries · C2 a witness declares what it reads in `// READS:` header lines · C3 the suite is not a
+//   verdict ever carries · C1-TRAIN (row 1313 (1), unit mtrain) beside C1, never instead of it: with --train-top TOP the
+//   sha JUDGED may be a train top ABOVE the landed commit — the verdict of step 6 is read at TOP, and only when T is TOP or
+//   on TOP's first-parent chain with every commit in T..TOP single-parent (TOP's tree holds every car); anything else is
+//   REFUSED by name (TRAIN-TOP-FLAG · TRAIN-TOP-UNRESOLVED · TRAIN-TOP-NOT-DESCENDANT · TRAIN-TOP-MERGE). The landed commit is
+//   still exactly ONE commit (L3) and T is still what main becomes; the ledger row carries train_top · C2 a witness declares what it reads in `// READS:` header lines · C3 the suite is not a
 //   carrying witness (it declares no list) · S1 hermetic witnesses live at ci/<unit>/ (F10 A, row 1066) · step 8 never uses
 //   `git worktree add` (a shared clone) · step 11 PRINTS the stale units and restarts nothing · Q4 a NEW file under
 //   ci/ lands only with the campaign names-gate result as an input (--names-gate); absent = REFUSED.
 //   NO-CI-DIR (unit ms1 · row 1066 F7 A): once main carries a ci/<unit>/BASE (ms1's landing on), a landing whose tree lacks
 //   ci/<unit>/witness_<unit>.mjs with a 40-hex ci/<unit>/BASE, or that touches nothing under ci/<unit>/, is REFUSED.
+//   NO-CI-DIR · THE CLAUSE WITNESS (unit mcid · row 1321 (1)) beside it, the sentence above kept: the law ALSO holds when the
+//   landing carries a 40-hex ci/<unit>/BASE, touches ci/<unit>/, and carries at least one ci/witness/<unit>/witness_NAME.mjs
+//   (NAME [a-z0-9_-]+ — the path the suite's clauses member runs); a landing with neither witness is REFUSED NO-CI-DIR as today.
 //   THE JUDGE-HELD REFUSAL (unit mlj, rows 1040 (2) F1 / 1043 (2) F1; spec ci/mlv0/PROOF.md FORK 1): while a judge round
 //   holds keeper's JUDGE_PORT the verb (and its --dry) REFUSES JUDGE-HELD — read through keeper.mjs judgeHeld, the one
 //   predicate every retire reads, as the LAST gate before the move. A wait, not a stop of his: the count is not reset.
 // MODES:
 //   node scripts/land.mjs <unit> [--dry] [--live <witness>]… [--names-gate <file>]   the verb (twelve steps)
+//   node scripts/land.mjs <unit> --train-top <sha> [the verb's other flags]   C1-TRAIN: step 6 reads the verdict at <sha>
 //   node scripts/land.mjs push <unit>                    L4: retry the push of a landing main already holds
 //   node scripts/land.mjs count                          L2: landings since the last stop a human resolved
 //   node scripts/land.mjs carry <witness> <H0> <H1> --green-at <sha>   the carry predicate (§3.1), a reader
@@ -155,17 +163,42 @@ function namesGate(file, t, added, touched) {
   }
   return { ok: true, why: `${fresh.length} new ci/ file(s) passed the names gate` };
 }
+// ── C1-TRAIN (row 1313 (1), unit mtrain) — the sha the verdict is read at, when a train top is named ────────────────────
+/** the flag's own grammar: given at most once, as `--train-top <sha>` with a value @param {string[]} argv */
+function trainTopArg(argv) {
+  const at = argv.map((a, i) => (/^--train-top(=|$)/.test(a) ? i : -1)).filter((i) => i > -1);
+  if (!at.length) return null;
+  const v = argv[at[0] + 1];
+  if (at.length > 1) return { bad: `--train-top given ${at.length} times — a train has one top` };
+  if (argv[at[0]] !== "--train-top" || !v || v.startsWith("-") || !v.trim()) return { bad: "--train-top needs one sha after it (`--train-top <sha>`)" };
+  return { raw: v };
+}
+/** TOP judges T iff T is TOP or on TOP's first-parent chain and every commit in T..TOP has one parent @param {string} T @param {string} raw */
+function trainTop(T, raw) {
+  const top = sha(raw);
+  if (!top) return { ok: false, name: "TRAIN-TOP-UNRESOLVED", why: `--train-top ${raw} does not resolve to a commit here (fetch it first)` };
+  if (top === T) return { ok: true, top };
+  const chain = lines(git(["rev-list", "--first-parent", "--parents", top, `^${T}`]).out).map((l) => l.split(/\s+/));
+  const oldest = chain[chain.length - 1];
+  if (!oldest || oldest[1] !== T) return { ok: false, top, name: "TRAIN-TOP-NOT-DESCENDANT", why: `${top.slice(0, 7)} is not T or a descendant of T along first parents — the top's tree does not hold this car` };
+  const merge = chain.find((c) => c.length !== 2);
+  if (merge) return { ok: false, top, name: "TRAIN-TOP-MERGE", why: `${merge[0].slice(0, 7)} between T and the top has ${merge.length - 1} parents — a train is single-parent` };
+  return { ok: true, top };
+}
 
 // ── THE VERB ─────────────────────────────────────────────────────────────────────────────────────────────────────
-/** @param {string} unit @param {{ dry: boolean, live: string[], namesGate: string|null }} opt */
+/** @param {string} unit @param {{ dry: boolean, live: string[], namesGate: string|null, trainTop?: { raw?: string, bad?: string } | null }} opt */
 async function land(unit, opt) {
+  // C1-TRAIN: the ledger row carries the top when the flag is given (resolved sha once known), and is today's row when not
+  let topOf = opt.trainTop ? { train_top: opt.trainTop.raw ?? null } : {};
   /** @param {number} code @param {string} outcome @param {string} name @param {string} why @param {string|null} t */
   const stop = (code, outcome, name, why, t = null) => {
-    if (!opt.dry) record({ unit, sha: t, outcome, name, human: HUMAN_STOPS.has(name) });
+    if (!opt.dry) record({ unit, sha: t, outcome, name, human: HUMAN_STOPS.has(name), ...topOf });
     console.log(`${outcome} ${name} · ${unit}${t ? ` ${t.slice(0, 7)}` : ""} — ${why}`);
     return code;
   };
   if (!/^[a-z0-9-]+$/.test(unit)) return stop(1, "REFUSED", "BAD-UNIT", "a unit is [a-z0-9-]+");
+  if (opt.trainTop && opt.trainTop.bad) return stop(1, "REFUSED", "TRAIN-TOP-FLAG", opt.trainTop.bad);
   const br = `land/${unit}`;
   // 1 · fetch
   if (!git(["fetch", "-q", "origin", "main", br]).ok) return stop(1, "REFUSED", "NO-FETCH", `origin main + ${br} could not be read`);
@@ -200,8 +233,10 @@ async function land(unit, opt) {
     const has = (p) => git(["cat-file", "-e", `${T}:${p}`]).ok;
     const w = [`ci/${unit}/witness_${unit}.mjs`, `ci/${unit}/witness_${unit.replace(/-/g, "_")}.mjs`].find(has) || `ci/${unit}/witness_${unit}.mjs`;
     const baseOk = has(b) && /^[0-9a-f]{40}$/.test(git(["cat-file", "blob", `${T}:${b}`]).out);
-    if (!has(w) || !baseOk || !touched.some((p) => p.startsWith(`ci/${unit}/`)))
-      return stop(1, "REFUSED", "NO-CI-DIR", `a landing carries ${w} and a 40-hex ${b}, and touches ci/${unit}/`, T);
+    //   row 1321 (1): OR at least one clause witness of THIS unit, ci/witness/<unit>/witness_NAME.mjs (the clauses member's path)
+    const cw = lines(git(["ls-tree", "-r", "--name-only", T, "--", `ci/witness/${unit}/`]).out).some((p) => p.startsWith(`ci/witness/${unit}/`) && /^witness_[a-z0-9_-]+\.mjs$/.test(p.slice(`ci/witness/${unit}/`.length)));
+    if ((!has(w) && !cw) || !baseOk || !touched.some((p) => p.startsWith(`ci/${unit}/`)))
+      return stop(1, "REFUSED", "NO-CI-DIR", `a landing carries ${w} (or a ci/witness/${unit}/witness_NAME.mjs) and a 40-hex ${b}, and touches ci/${unit}/`, T);
   }
   const idx = join(mkdtempSync(join(os.tmpdir(), "land-index-")), "index");
   try {
@@ -211,8 +246,11 @@ async function land(unit, opt) {
   } finally { rmSync(dirname(idx), { recursive: true, force: true }); }
   const ng = namesGate(opt.namesGate, T, added, touched);
   if (!ng.ok) return stop(1, "REFUSED", ng.list ? "NAMES-LIST-PATH" : "NAMES-GATE-ABSENT", ng.why, T);
-  // 6 · the verdict at T
-  const v = verdictAt(T);
+  // 6 · the verdict at T — or, under C1-TRAIN, at the train top above it (row 1313 (1))
+  const tt = opt.trainTop ? trainTop(T, /** @type {string} */ (opt.trainTop.raw)) : null;
+  if (tt && tt.top) topOf = { train_top: tt.top };
+  if (tt && !tt.ok) return stop(1, "REFUSED", /** @type {string} */ (tt.name), /** @type {string} */ (tt.why), T);
+  const v = verdictAt(tt ? /** @type {string} */ (tt.top) : T);
   if (!v.ok) return stop(1, "REFUSED", /** @type {string} */ (v.name), v.line, T);
   // 7 · no sitting open
   const s = sittingState();
@@ -259,7 +297,7 @@ async function land(unit, opt) {
     node(join(ROOT, "scripts", "captains_call.mjs"), ["file", "--line", `Landing ${unit} (${T.slice(0, 7)}) local main par hai, origin ne push nahi liya. Runner: node scripts/land.mjs push ${unit}`, "--key", `land:${unit}:push`]);
     return stop(4, "PUSHED NO", "PUSH-REJECTED", `main stays at ${T.slice(0, 7)} (L4); retry: node scripts/land.mjs push ${unit}`, T);
   }
-  record({ unit, sha: T, outcome: "LANDED", name: "LANDED", human: false });
+  record({ unit, sha: T, outcome: "LANDED", name: "LANDED", human: false, ...topOf });
   // 12 · ONE line
   console.log(`LANDED ${unit} ${T.slice(0, 7)} · verdict ${v.runs.join(" ") || "GREEN"} · acts ${acts.length ? acts.join(", ") + " (printed, not run)" : "none"} · stale units ${su.stale.join(", ") || "none"}${su.keepers.length ? ` · keepers retire themselves: ${su.keepers.join(", ")}` : ""} · ${countLine()}`);
   return 0;
@@ -350,6 +388,6 @@ function main() {
   if (mode === "reads-probe") { const i = argv.indexOf("--"); return readsProbe(argv[1], i > -1 ? argv.slice(i + 1) : []); }
   if (!mode || mode.startsWith("-") || mode === "help") { console.log("land.mjs <unit> [--dry] [--live <witness>]… [--names-gate <file>] | push <unit> | count | carry <witness> <H0> <H1> --green-at <sha> | reads-probe <witness> [-- args]"); return mode ? 0 : 2; }
   const live = []; argv.forEach((a, i) => { if (a === "--live" && argv[i + 1]) live.push(argv[i + 1]); });
-  return land(mode, { dry: argv.includes("--dry"), live, namesGate: flag("--names-gate") });
+  return land(mode, { dry: argv.includes("--dry"), live, namesGate: flag("--names-gate"), trainTop: trainTopArg(argv) });
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) Promise.resolve(main()).then((c) => { process.exitCode = c; });
