@@ -137,9 +137,19 @@ try {
     });
     clause(id, rs.map((r) => r.ok), `${say(rs)} (want [${organ}])`);
   }
+  // RE-CUT, forks row 1329 (1)-(2) (the shape of rows 1204 (1) / 1309 (1); an added edit, named to unit mguard): where --org's
+  // tap DECLARES the reading history (`const HISTORY_NAME = "usage_readings.jsonl";`, row 1176 G1 A, kept outside the repo
+  // under the campaign root like the reading), Q6 is EXACTLY the two outside-repo files; where it does not, the old one.
+  // Never a bare OR: the declaration picks ONE want. STRUCK, the text it replaces:
+  //   ~~const rs = per(({ O }) => ({ ok: O.q6.length === 1 && O.q6[0] === "usage_reading.json<usage_tap.mjs", s: … }));
+  //   clause("W7", rs.map((r) => r.ok), `${say(rs)} (want [usage_reading.json<usage_tap.mjs])`);~~
   {
-    const rs = per(({ O }) => ({ ok: O.q6.length === 1 && O.q6[0] === "usage_reading.json<usage_tap.mjs", s: `Q6=[${O.q6.join(", ")}]` }));
-    clause("W7", rs.map((r) => r.ok), `${say(rs)} (want [usage_reading.json<usage_tap.mjs])`);
+    const tapP = join(ORG, "scripts", "usage_tap.mjs");
+    const tapCode = existsSync(tapP) ? readFileSync(tapP, "utf8").replace(/\r\n/g, "\n").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "") : "";
+    const want = /^const HISTORY_NAME = "usage_readings\.jsonl";$/m.test(tapCode)
+      ? ["usage_reading.json<usage_tap.mjs", "usage_readings.jsonl<usage_tap.mjs"] : ["usage_reading.json<usage_tap.mjs"];
+    const rs = per(({ O }) => ({ ok: JSON.stringify([...O.q6].sort()) === JSON.stringify(want), s: `Q6=[${O.q6.join(", ")}]` }));
+    clause("W7", rs.map((r) => r.ok), `${say(rs)} (want [${want.join(", ")}])`);
   }
   {
     const rs = per(({ O, Bf }) => {

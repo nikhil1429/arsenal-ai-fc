@@ -154,9 +154,20 @@ const CLAUSES = [
     if (!existsSync(c.tap)) return false; const lits = [...strip(readFileSync(c.tap, "utf8")).matchAll(/(?<![\w.$])\d+(?:\.\d+)?(?![\w.])/g)].map((m) => Number(m[0]));
     return lits.length > 0 && lits.every((x) => [0, 1, 2, 3, 60, 100, 1000].includes(x));
   }],
-  ["W3.1", "static: the tap's only writes are its reading's tmp and the rename onto the reading", (c) => {
-    if (!existsSync(c.tap)) return false; const w = [...strip(readFileSync(c.tap, "utf8")).matchAll(/\b(writeFileSync|renameSync|appendFileSync|createWriteStream|unlinkSync|rmSync|mkdirSync|copyFileSync|cpSync)\(([^,)]*)/g)].map((m) => `${m[1]}(${m[2].trim()}`);
-    return w.length === 2 && w.every((x) => /^(writeFileSync\(tmp|renameSync\(tmp)$/.test(x)) && /const path = readingPath\(root\), tmp = `\$\{path\}\.tmp-/.test(readFileSync(c.tap, "utf8"));
+  // RE-CUT, forks row 1329 (1)-(2) (the shape of rows 1204 (1) / 1309 (1); an added edit, named to unit mguard): where the
+  // tree's tap DECLARES the reading history (`const HISTORY_NAME = "usage_readings.jsonl";`, row 1176 G1 A), the writes are
+  // EXACTLY the three G4 A names (the reading's tmp, its rename, the history's one append); where it does not, the old
+  // count of two. Never a bare OR: the declaration picks ONE count. STRUCK, the text it replaces:
+  //   ~~["W3.1", "static: the tap's only writes are its reading's tmp and the rename onto the reading", (c) => { … return
+  //   w.length === 2 && w.every((x) => /^(writeFileSync\(tmp|renameSync\(tmp)$/.test(x)) && /const path = readingPath\(root\),
+  //   tmp = `\$\{path\}\.tmp-/.test(readFileSync(c.tap, "utf8")); }]~~
+  ["W3.1", "static: the tap's only writes are its reading's tmp and the rename onto the reading — and, where the tap declares the reading history (row 1176 G4 A), exactly its one append", (c) => {
+    if (!existsSync(c.tap)) return false; const code = strip(readFileSync(c.tap, "utf8"));
+    const w = [...code.matchAll(/\b(writeFileSync|renameSync|appendFileSync|createWriteStream|unlinkSync|rmSync|mkdirSync|copyFileSync|cpSync)\(([^,)]*)/g)].map((m) => `${m[1]}(${m[2].trim()}`);
+    const tmpRename = /const path = readingPath\(root\), tmp = `\$\{path\}\.tmp-/.test(readFileSync(c.tap, "utf8"));
+    const one = (x) => w.filter((y) => y === x).length === 1;
+    if (/^const HISTORY_NAME = "usage_readings\.jsonl";$/m.test(code)) return w.length === 3 && one("writeFileSync(tmp") && one("renameSync(tmp") && one("appendFileSync(historyPath(root") && tmpRename;
+    return w.length === 2 && w.every((x) => /^(writeFileSync\(tmp|renameSync\(tmp)$/.test(x)) && tmpRename;
   }],
   ["W3.2", "the reading holds no go / verdict / status / launch key", (c) => { c.fresh(); c.run(["statusline"], { input: both() }); const j = readJ(c.reading); return !!j && !Object.keys(j).some((k) => /^(go|verdict|status|launch)$/i.test(k)); }],
   ["W3.4", "verdict twice → the same answer, and the planted trees are byte-and-mtime identical (a read writes nothing)", (c) => {
