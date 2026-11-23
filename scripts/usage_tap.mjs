@@ -341,7 +341,8 @@ function need() {
 
 // ═══ SELFTEST — every plant under os.tmpdir(); nothing above this line is a test ═══════════════════════════════════
 async function selftest() {
-  const { mkdtempSync, rmSync, mkdirSync, utimesSync, existsSync } = await import("node:fs");
+  const { mkdtempSync, rmSync, mkdirSync, utimesSync, existsSync, readdirSync } = await import("node:fs");
+  const { basename } = await import("node:path");
   const { tmpdir } = await import("node:os");
   const tmp = mkdtempSync(join(tmpdir(), "usage-tap-st-"));
   let ok = 0, n = 0;
@@ -393,7 +394,6 @@ async function selftest() {
     const writes = [...code.matchAll(/\b(writeFileSync|renameSync|appendFileSync|createWriteStream|unlinkSync|rmSync|mkdirSync)\(([^,)]*)/g)].map((m) => `${m[1]}(${m[2].trim()}`);
     // row 1176 G4 A (ruled stricter): the write law names EXACTLY THREE writes — the reading's tmp, its rename, the history's append
     t("W3.1 (G4 A) exactly three writes: the reading's tmp, its rename, and the history's one append", writes.length === 3 && writes.filter((w) => w === "writeFileSync(tmp").length === 1 && writes.filter((w) => w === "renameSync(tmp").length === 1 && writes.filter((w) => w === "appendFileSync(historyPath(root").length === 1);
-    t("W3.3 (G4 A) the history's name has ONE home in code, and nothing else names it", (code.match(/usage_readings/g) || []).length === 1);
     // P3 — spanSpend, PURE (row 1176 G2 A / G3 A)
     const R = (m, f, w, fr = 300, wr = 9000) => ({ v: 1, source: "statusline", read_at: at(m).toISOString(), five: { pct: f, resets_at: at(fr).toISOString() }, week: { pct: w, resets_at: at(wr).toISOString() } });
     const span = { start: at(10).toISOString(), end: at(70).toISOString() };
@@ -448,6 +448,11 @@ async function selftest() {
     t("G1 A the history appends a moved value and dedupes the same value (2 rows from 3 renders)", H.length === 2 && H[0].five.pct === 12 && H[1].five.pct === 13);
     const pn = cli(["panel", "--five", "40", "--week", "60"]);
     t("W4.5 panel → source his-panel, and the verdict reads it GO under the same age law", pn.status === 0 && readReading(readingPath(root))?.source === "his-panel" && cli(["verdict"]).status === 0);
+    // W3.3 (G4 A), by BEHAVIOUR (never this file's own text — unit mpin-law): after every CLI mode above has run on this root,
+    // the only files the tap left on it are the reading and the history at historyPath(root), its one home; a second home
+    // or a stray write would be a further file here
+    const left = readdirSync(root, { withFileTypes: true }).filter((d) => d.isFile()).map((d) => d.name).sort();
+    t("W3.3 (G4 A) the history has ONE home: the files the tap left on the root are exactly the reading and historyPath(root)", JSON.stringify(left) === JSON.stringify([basename(readingPath(root)), basename(historyPath(root))].sort()) && H.length > 0);
   } finally { rmSync(tmp, { recursive: true, force: true }); }
   console.log(`usage_tap selftest ${ok}/${n}` + (ok === n ? " — all clauses hold" : " — RED"));
   process.exit(ok === n ? 0 : 1);
