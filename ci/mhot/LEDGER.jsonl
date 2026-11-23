@@ -134,3 +134,11 @@
 {"ts":"2026-11-23T03:41:09.235Z","act":"witnesses","cmd":"GITHUB_ACTIONS=true … ORGANISM_WITNESS_SHARD=1..3 witnesses (50b5d8a)","last_line":"155 passed, 6 failed (mpinr SUITE; mr3 mrf mrj mrt mrv BASE not in the clone)"}
 {"ts":"2026-11-23T03:41:09.235Z","act":"clauses","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs clauses (50b5d8a)","last_line":"organism_test: 22 passed, 0 failed"}
 {"ts":"2026-11-23T03:41:09.235Z","act":"CHECKPOINT","cmd":"(PROOF §21)","last_line":"BASE 722b72e · folded · mutants 20/20 · WITNESSES 155/6 · left: MHOT-M5, then the re-run"}
+{"ts":"2026-11-23T04:59:48.402Z","act":"ruling-1332","cmd":"(runner M, forks row 1332 (1)-(2): MHOT-M5 = A)","last_line":"re-cut mpinr SUITE in clause P shape (chains + roll, sum exactly one); one mutant; no merge"}
+{"ts":"2026-11-23T04:59:48.402Z","act":"recut","cmd":"ci/mpinr/witness_mpinr.mjs SUITE","last_line":"cf90026"}
+{"ts":"2026-11-23T04:59:48.402Z","act":"witness","cmd":"node ci/mpinr/witness_mpinr.mjs --org <clone 722b72e> / <clone cf90026> --base-org <clone of ci/mpinr/BASE>","last_line":"RED MPINR · ONLY-NAMED BOUND / RED MPINR · ONLY-NAMED BOUND (SUITE ok both)"}
+{"ts":"2026-11-23T04:59:48.402Z","act":"witness","cmd":"node ci/mhot/witness_mhot.mjs bare / named / main","last_line":"GREEN 11 · BOUND NOT JUDGED / GREEN 12 / RED MHOT · H1-H9"}
+{"ts":"2026-11-23T04:59:48.402Z","act":"mutants","cmd":"node ci/mhot/run_mutants_mhot.mjs … --unit-bases <dir>","last_line":"run_mutants: 21 of 21 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-23T04:59:48.402Z","act":"witnesses","cmd":"GITHUB_ACTIONS=true … ORGANISM_WITNESS_SHARD=1..3 witnesses (cf90026)","last_line":"156 passed, 5 failed (mr3 mrf mrj mrt mrv: BASE not in the clone)"}
+{"ts":"2026-11-23T04:59:48.402Z","act":"clauses","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs clauses (cf90026)","last_line":"organism_test: 22 passed, 0 failed"}
+{"ts":"2026-11-23T04:59:48.402Z","act":"CHECKPOINT","cmd":"(PROOF §22)","last_line":"BASE 722b72e · MHOT-M5 re-cut · mutants 21/21 · WITNESSES 156/5 · left: the runner re-cut and the architect re-run"}

@@ -910,3 +910,59 @@ The six WITNESSES reds, every one named:
 option), then the architect's re-run of the cut as a train of one.
 
 CHECKPOINT · BASE 722b72e · members folded: 1 suite member (own_source; roll 134) + 11 unit witnesses + 8 clause witnesses walked · witness bare GREEN 11 · BOUND NOT JUDGED / named GREEN 12 / main RED H1-H9 · mutants 20/20 + control GREEN · WITNESSES 155 passed 6 failed (mpinr SUITE = FORK MHOT-M5; mr3 mrf mrj mrt mrv BASE not in the clone) · left: MHOT-M5, then the re-run · 03:41 UTC 2026-11-23
+
+## 22 · FORKS ROW 1332 (1)-(2) — MHOT-M5 RULED A: mpinr SUITE re-cut in clause P's shape (2026-11-23)
+
+No merge: main is still `722b72e`, and `ci/mhot/BASE` is unchanged. Row 1332 (2) names `ci/mpinr/witness_mpinr.mjs` to this
+unit for clause SUITE only; nothing else in that file moves. The witness's BOUND set names it.
+
+**The re-cut**, in place, an ADDED edit, the struck text kept, in the shape of `ci/mpool` clause P (a sum, not a shape switch):
+
+```
+//   SUITE      ~~exactly ONE package.json suite chain (a script value holding `&& node scripts/`) runs
+//              `node scripts/own_source.mjs selftest`.~~ RE-CUT by unit mhot (row 1332 (1)): the suite chains that run it PLUS
+//              the tree's own `roll --json` members for own_source with argv ["selftest"] (no roll verb: none) sum to EXACTLY ONE.
+  const rr = run([join(ORG, "scripts", "organism_test.mjs"), "roll", "--json"], { cwd: ORG });   // read in place, never written; bounded
+  const rolled = (rj && Array.isArray(rj.members) ? rj.members : []).filter((m) => m && m.organ === "own_source" && JSON.stringify(m.argv) === '["selftest"]').length;
+  clause("SUITE", holding.length + rolled === 1, …);
+```
+
+**mpinr against its own BASE** (this tree's witness file; git clones):
+
+```
+$ node ci/mpinr/witness_mpinr.mjs --org <clone 722b72e> --base-org <clone of ci/mpinr/BASE>
+  ok  SUITE — 1 of 3 suite chain(s) run it (organism:selftest) · 0 member(s) in the tree's roll (own_source, ["selftest"])
+RED MPINR · ONLY-NAMED BOUND                     (exit 1: the same BOUND line it printed at main before the re-cut)
+$ node ci/mpinr/witness_mpinr.mjs --org <clone cf90026> --base-org <clone of ci/mpinr/BASE>
+  ok  SUITE — 0 of 0 suite chain(s) run it · 1 member(s) in the tree's roll (own_source, ["selftest"])
+RED MPINR · ONLY-NAMED BOUND                     (exit 1: BOUND only)
+```
+
+**The runs** (git clones; `--base-org` = main `722b72e`):
+
+```
+$ node ci/mhot/witness_mhot.mjs --org <clone cf90026> --base-org <clone 722b72e>                          # bare
+GREEN MHOT the member roll · 11 clause(s) · BOUND NOT JUDGED                                           (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <clone cf90026> --base-org <clone 722b72e> --bound-base <clone 722b72e>
+GREEN MHOT the member roll · 12 clause(s)                                                              (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <clone 722b72e> --base-org <clone 722b72e>
+RED MHOT · H1, H2, H3, H4, H5, H6, H7, H8, H9                                                          (exit 1)
+$ node ci/mhot/run_mutants_mhot.mjs --org <clone cf90026> --base-org <clone 722b72e> --bound-base <clone 722b72e> --unit-bases <dir>
+  ok   MPINR CONTROL · the unmutated copy → RED MPINR · ONLY-NAMED BOUND
+  ok   M-MPINR-SUITE · the own_source member file removed (forks row 1332 (2)) → RED MPINR · SUITE · ONLY-NAMED BOUND
+run_mutants: 21 of 21 mutant(s) RED by the clause that names them · control GREEN    (12 mhot + 2 mlaw + 7 re-cut)
+$ GITHUB_ACTIONS=true … ORGANISM_WITNESS_SHARD=1..3 node scripts/organism_test.mjs witnesses           # at cf90026
+shard 1 46 passed, 0 failed · shard 2 55 passed, 2 failed · shard 3 55 passed, 3 failed → 156 passed, 5 failed
+  ‹mhot› GREEN MHOT the member roll · 11 clause(s) · BOUND NOT JUDGED · ‹mpinr› RED MPINR · ONLY-NAMED BOUND · ‹mcov› ‹mprk› ‹mlaw› ‹mdtl2› BOUND only
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs clauses                                # at cf90026
+organism_test: 22 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)
+```
+
+The five WITNESSES reds, every one named: ‹mr3›, ‹mrf›, ‹mrj› (`52b51c1`), ‹mrt› (`51055bb`), ‹mrv› (`cf1ca54`), each with
+"its BASE is in the clone · <sha> is not a commit here (the member never fetches)". Those BASE commits are absent from this
+container's local clone: environment, the same five since §18. No witness reds beyond BOUND.
+
+**What is left:** nothing in this seat's hands. The runner re-cuts the car on main `722b72e`, the architect re-runs it, and it
+rides as a train of one.
+
+CHECKPOINT · BASE 722b72e · MHOT-M5 re-cut (mpinr SUITE) · mpinr @ main: RED MPINR · ONLY-NAMED BOUND (SUITE ok) · @ cf90026: RED MPINR · ONLY-NAMED BOUND (SUITE ok) · mutants 21/21 + control GREEN · WITNESSES 156 passed 5 failed (mr3 mrf mrj mrt mrv: BASE not in the clone) · left: the runner's re-cut and the architect's re-run · 04:59 UTC 2026-11-23
