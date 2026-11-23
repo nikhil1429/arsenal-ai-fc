@@ -262,7 +262,68 @@ finding count rose`.
 **The push.** Pushed ONCE, with `[skip ci]` in the head commit message, by the runner's order, so no leg runs on this
 tip. Carried open: **F1** (mpool W3.1's two writes vs G4 A's three), still the architect's.
 
+## CHECKPOINT · merge of main 722b72e, the own-source pin resolved (23 Nov 2026, forks rows 1300 (1) / 1328 (3))
+
+**The merge.** `git fetch origin main` gave FETCH_HEAD `722b72e106c9f28485afe5bcc8d5f56402aecc43`, with units mpinl and mpinr on it.
+`git merge --no-edit FETCH_HEAD` made merge commit **`83fcb0c24a818ef109ebb0e9dd50b29cefb2092b`**, with **no conflict**. Then
+`ci/mguard/BASE` = `722b72e106c9f28485afe5bcc8d5f56402aecc43`. `scripts/organism_test.mjs` is not touched by this unit (the order).
+
+**The pin, resolved with no waiver.** The law is the own-literal pin law (lawpack rule `own-source-pin-unresolved`, frozen
+baseline 79, `scripts/lawpack.mjs:162`), read with mpinr's pin reader (`scripts/own_source.mjs`) on the tree.
+- **The site:** `scripts/usage_tap.mjs` selftest W3.3. It was `(code.match(/usage_readings/g) || []).length === 1` over
+  the file's own text: a pin on its own source that the range evaluator does not resolve.
+- **The repair, by READ, not by text** (own_source.mjs's second repair class; no selftest needle of the file's own text).
+  W3.3 now runs after every CLI mode of the selftest has worked on its temp root. It asserts that the only files the tap
+  left on that root are exactly `basename(readingPath(root))` and `basename(historyPath(root))`, the history's one home,
+  and that the history holds rows. A second home or a stray write would be a further file there.
+- **Mutant:** a planted second history append reads `FAIL W3.3` (and W3.1), and the selftest reads 43/45. Unmutated it reads
+  `usage_tap selftest 45/45 — all clauses hold`.
+- **The count, by `node scripts/lawpack.mjs report`, read to its last line:**
+  - **before** (the merge `83fcb0c`): `own-literal-pin 39 · own-source-pin-unresolved 80`, last line
+    `lawpack: 1 RED — a gate may only get stricter (§10-D rule 6)` (`own-source-pin-unresolved ROSE — 80, baseline 79`)
+  - **after** (`cfcc5c8`): `own-literal-pin 39 · own-source-pin-unresolved 79`, last line
+    `lawpack: GREEN — no law's finding count rose, and every rule is on disk`
+
+  Every other count is equal: jugad 90 · bare-catch 37 · receipt 5 · import-time 2 · depcruise 7, the rest 0.
+
+**Selftests on the tree:**
+- `usage_tap selftest 45/45 — all clauses hold`
+- presence: `ALL CHECKS PASSED`
+- `own_source selftest: 30 passed, 0 failed`
+- `node scripts/models.mjs check`: exit 0
+
+**The witness both ways (LF trees):**
+
+```
+--org <tree cfcc5c8>   --base-org <LF 722b72e>   GREEN MGUARD the spend guard · 7 clause(s)   (exit 0)
+--org <LF 722b72e>     --base-org <LF 722b72e>   RED MGUARD · JUDGE                            (exit 1)
+```
+
+R1176.3 · U1177 · G1 · G2 · G3 · G4 each read `build GREEN · base RED`, and LAST is ok.
+
+**Mutants:** `CONTROL · GREEN MGUARD the spend guard · 7 clause(s) (exit 0)` · `run_mutants: 7 of 7 mutant(s) RED by the
+clause that names them · control GREEN`.
+
+**The judge's plants mode** (CLAUSE WITNESSES): `PLANTS mguard · 15 of 15 plant(s) as expected`.
+
+**The WITNESSES member over the tree.** Command: `GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo> ORGANISM_TEST_PROFILE=hermetic
+node scripts/organism_test.mjs witnesses`, every unit's BASE commit present (three fetched by sha). Its last line:
+`organism_test: 155 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 0`. Every red:
+1. `WITNESS ‹mpool› · GREEN at head against its BASE`, red beyond BOUND: **W3.1**. This is **F1**: mpool allows the tap
+   two writes, and G4 A rules three.
+2. `WITNESS ‹mxb› · GREEN at head against its BASE`, red beyond BOUND: **W7**. This is **NEW, F13**. mxb's W7 pins xray's Q6
+   to exactly `[usage_reading.json<usage_tap.mjs]`. On this tree Q6 reads
+   `[usage_reading.json<usage_tap.mjs, usage_readings.jsonl<usage_tap.mjs]` (LF and CRLF), because the history row 1176
+   G1 A rules is a second file the tap writes outside the repo. On LF `722b72e` the same witness reads `GREEN W7` and
+   `GREEN MXB … 13 clause(s)`. The cause is this unit's ruled write, and its file is mxb's, not this unit's.
+
+**What is left (for the architect):** F1 and F13 are the same shape. A landed unit's witness pins the tap's write set as
+it stood before G4 A. Each needs either its pin moved to the three-write tap (the reading, its rename, the history) or a
+ruled KNOWN_RED row. This unit does not edit either file. Every other open question stands as listed below.
+
 ## FORKS
+
+- **F13 · the mxb witness's W7 against G1 A / G4 A.** `ci/mxb/witness_mxb.mjs:141` pins xray's Q6 to the tap's ONE outside-repo write. The ruled history is a second, so W7 reads RED at this tree and GREEN at main 722b72e. It is not this unit's file: architect.
 
 - **F1 · the mpool witness's W3.1 against G4 A.** `ci/mpool/witness_mpool.mjs:157-160` (a landed unit's witness, judged
   at HEAD by the suite's walker) asserts that the tap makes EXACTLY TWO writes. Row 1176 G4 A rules three. At this build
