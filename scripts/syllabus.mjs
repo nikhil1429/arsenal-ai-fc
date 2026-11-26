@@ -73,7 +73,7 @@ export function fromPack(pack, bank, sourceNote = "") {
   return {
     ok: true,
     syllabus: {
-      part: "study_syllabus", status: pack.status,
+      part: "study_syllabus", status: pack.status, status_note: pack.status_note || "",   // row 1403: the pack's own ruling cite rides the file
       written_by: "scripts/syllabus.mjs build (sole writer; ruling row 1399)", source: sourceNote,
       depth_words: pack.depth_words || {}, product_domain_note: pack.product_domain_note || "",
       stages, tracks, light: pack.light || [], not_studied: pack.not_studied || [],

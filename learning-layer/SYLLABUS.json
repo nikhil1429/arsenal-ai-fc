@@ -1,6 +1,7 @@
 {
   "part": "study_syllabus",
-  "status": "draft",
+  "status": "ruled",
+  "status_note": "RULED: HIS RULING since 26 Nov 2026 by ruling row 1403 on his word 347 (\"so this syllabus is finalized right, i think it is okay to go with\"); his yes on the order was read from his word 346 (row 1399 (1)); the product stays invoices by default. Corrected 26 Nov 2026 by the lane S runner under ruling row 1397 (2), his word 345: the order is the architect's merged syllabus (records folder, syllabus-2026-11-25/SYLLABUS_FINAL__2026-11-26.md), and the eleven corrections (a)-(k) of row 1397 are applied over it after the runner read the whole research report (syllabus-2026-11-25/GEMINI_REPORT__2026-11-26.txt). Folded from draft 1, each by name, none cut: code assertions into the golden set (the merge's 'golden set and code graders'); agent failure modes into agent evaluation (the merge's single concept); confidence scoring and multi-model verification into hallucination and grounding (span checks, abstention) and the human-in-the-loop screen (the screen under uncertainty, row 1397 (2)(d)); online metrics into regression in CI (the report's online loops); classical ML metrics out of the light list into statistics for evals (the merge raised them); ReAct renamed the raw-SDK tool loop (the merge's name). Every count any output prints is computed from this file; no count is written here.",
   "written_by": "scripts/syllabus.mjs build (sole writer; ruling row 1399)",
   "source": "the new repo's corrected pack and its question bank (rows 1397, 1398)",
   "depth_words": {
