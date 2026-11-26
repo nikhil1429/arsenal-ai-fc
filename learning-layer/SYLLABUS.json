@@ -1,0 +1,1142 @@
+{
+  "part": "study_syllabus",
+  "status": "draft",
+  "written_by": "scripts/syllabus.mjs build (sole writer; ruling row 1399)",
+  "source": "the new repo's corrected pack and its question bank (rows 1397, 1398)",
+  "depth_words": {
+    "core": "defend it three 'why' levels down, in design and in code (the report's CORE)",
+    "standard": "build it cleanly and defend the main trade-offs (the report's STANDARD)",
+    "light": "know what it is and when not to use it (the report's LIGHT)"
+  },
+  "product_domain_note": "Row 1397 (2)(j): invoice and finance-operations knowledge is NOT a concept; it is learned on the product steps: two-way and three-way matching of purchase order, goods receipt and invoice, tolerance bands, duplicate and bank-change fraud checks, GST (GSTR-2B against 3B), TDS and the 45-day MSME rule (the report's section 3 row 22, domain depth).",
+  "stages": [
+    {
+      "id": "mechanism",
+      "name": "model mechanism",
+      "concepts": [
+        {
+          "id": "tokenization",
+          "name": "tokenization",
+          "depth": "standard",
+          "depth_row": "2 · tokenization · STANDARD",
+          "aliases": [],
+          "list": [],
+          "questions": [
+            {
+              "id": "q06",
+              "text": "Is tokenization deterministic, or can it change over time for the same input?",
+              "source": "Real transcript (MeetAssist, Jun 2026)"
+            }
+          ]
+        },
+        {
+          "id": "embeddings",
+          "name": "embeddings",
+          "depth": "core",
+          "depth_row": "3 · embeddings and vector search · CORE",
+          "aliases": [],
+          "list": [],
+          "questions": []
+        },
+        {
+          "id": "neuralnet",
+          "name": "neural net",
+          "depth": "core",
+          "depth_row": "none: section 3 has no neural-net row (its row 1 is transformer and attention internals)",
+          "aliases": [],
+          "list": [],
+          "questions": [
+            {
+              "id": "q10",
+              "text": "Vectorize One-Nearest-Neighbor and express it as a neural forward pass.",
+              "source": "OpenAI Applied AI Engineer (Q3 2026, InterviewQuery)"
+            }
+          ]
+        },
+        {
+          "id": "inference",
+          "name": "inference and sampling",
+          "depth": "core",
+          "depth_row": "4 · inference, sampling, decoding, structured output · CORE",
+          "aliases": [],
+          "list": [
+            "KV cache: what it stores, where it lives, how its memory grows",
+            "prefill against decode (compute-bound against memory-bound)",
+            "time to first token against time per output token",
+            "continuous batching",
+            "quantization trade-offs",
+            "temperature, top-k, top-p, why outputs are not deterministic"
+          ],
+          "note": "row 1397 (2)(b): inference names KV cache, prefill against decode and time to first token",
+          "questions": [
+            {
+              "id": "q04",
+              "text": "What happens step by step when an LLM receives a prompt and generates a response?",
+              "source": "Real transcripts (MeetAssist, Oct 2026)"
+            },
+            {
+              "id": "q05",
+              "text": "What is KV caching, where does it live, and how does it work during LLM inference?",
+              "source": "Apple GenAI (IGotAnOffer) and MeetAssist (Nov 2026)"
+            },
+            {
+              "id": "q09",
+              "text": "If a chatbot uses a knowledge base and you change temperature from 0.2 to 1.0, how will that affect its responses?",
+              "source": "Real transcript (MeetAssist, Jul 2026)"
+            },
+            {
+              "id": "q49",
+              "text": "Design an end-to-end inference batching system for LLM queries balancing latency, throughput, and GPU utilization under load.",
+              "source": "OpenAI FDE and AI-first companies (2026)"
+            },
+            {
+              "id": "q50",
+              "text": "A team self-hosting an open-weight model faces unacceptable TTFT and throughput bottlenecks during traffic spikes. What inference optimizations do you suggest?",
+              "source": "Real transcript (MeetAssist, Aug 2026)"
+            }
+          ]
+        },
+        {
+          "id": "self_attention",
+          "name": "self-attention and the transformer",
+          "depth": "standard",
+          "depth_row": "1 · transformer and attention internals · STANDARD (CORE only for big-tech and model-lab research loops)",
+          "aliases": [],
+          "list": [
+            "self-attention, step by step",
+            "the residual stream",
+            "decoder-only against encoder-only against encoder-decoder (and which one GPT is)",
+            "grouped-query attention against multi-head (the KV-cache memory it saves)",
+            "rotary positions (RoPE)",
+            "RMSNorm against LayerNorm",
+            "mixture of experts: many parameters, few active"
+          ],
+          "note": "row 1397 (2)(c): a full concept, not a refresh (his repeated question on record is how attention works); the interview list at SPOKEN level; no PyTorch drill",
+          "questions": [
+            {
+              "id": "q01",
+              "text": "Explain the Attention Mechanism.",
+              "source": "LinkedIn AI Engineer IC2 Phone Screen (LeetCode Discuss)"
+            },
+            {
+              "id": "q02",
+              "text": "Code a Multi-Head Attention (MHA) layer from scratch in PyTorch (torch.nn: QKV projections, scaled dot-product attention, output projection).",
+              "source": "Repeated across India GenAI/MLE loops (r/developersIndia, 2025-2026)",
+              "note": "he answers it at spoken level; no PyTorch drill (row 1397 (2)(c))"
+            },
+            {
+              "id": "q03",
+              "text": "Implement RMSNorm in PyTorch and explain why current LLMs prefer it over LayerNorm; compare MHA vs. GQA vs. MQA memory and compute trade-offs.",
+              "source": "a European model lab (2026)",
+              "note": "spoken level: the why and the trade-off, not the code"
+            },
+            {
+              "id": "q07",
+              "text": "What is the difference between decoder-only, encoder-only, and encoder-decoder architectures, and which type is GPT?",
+              "source": "Real transcript (MeetAssist, Jul 2026)"
+            },
+            {
+              "id": "q08",
+              "text": "How does a model have 100 billion-plus parameters but only activate a small number at a time (Mixture of Experts)?",
+              "source": "Real transcripts (MeetAssist, Jul 2026)"
+            }
+          ]
+        },
+        {
+          "id": "context_window",
+          "name": "context window",
+          "depth": "core",
+          "depth_row": "5 · context window, prompt caching, context engineering · CORE",
+          "aliases": [],
+          "list": [
+            "context rot: quality falls as input grows",
+            "the four failure modes: poisoning, distraction, confusion, clash",
+            "write, select, compress, isolate",
+            "prompt caching: the stable prefix first, the changing part last",
+            "compaction against a context reset against observation masking",
+            "why a long window does not remove the need for retrieval"
+          ],
+          "note": "with prompt caching and context engineering",
+          "questions": [
+            {
+              "id": "q13",
+              "text": "Why does a 200K-token long context window not eliminate the need for RAG, and how do you address cost, latency, the lost-in-the-middle effect, and citation requirements?",
+              "source": "Real transcripts (MeetAssist, Nov 2026)"
+            },
+            {
+              "id": "q25",
+              "text": "How would you manage growing conversation history and decide what context to keep, summarize, or drop?",
+              "source": "Real transcripts (MeetAssist, Oct 2026)"
+            },
+            {
+              "id": "q26",
+              "text": "How would you measure whether a summarization or pruning strategy is harming performance?",
+              "source": "Real transcript (MeetAssist, Oct 2026)"
+            }
+          ]
+        },
+        {
+          "id": "hallucination",
+          "name": "hallucination and grounding",
+          "depth": "core",
+          "depth_row": "11 · hallucination and grounding · CORE",
+          "aliases": [
+            "hallucinations"
+          ],
+          "list": [
+            "why a model makes things up (probability, not lying)",
+            "citations and span verification",
+            "deterministic checks: the arithmetic of an invoice",
+            "abstaining when the evidence is missing",
+            "confidence shown to the user"
+          ],
+          "note": "draft 1's confidence scoring and multi-model verification folds in here",
+          "questions": [
+            {
+              "id": "q43",
+              "text": "How would you reduce hallucinations in an AI system and evaluate whether your approach works?",
+              "source": "Real transcripts (MeetAssist, Oct 2026)"
+            }
+          ]
+        },
+        {
+          "id": "post_training",
+          "name": "post-training at concept level",
+          "depth": "light",
+          "depth_row": "10 · fine-tuning, LoRA, distillation · LIGHT",
+          "aliases": [],
+          "list": [
+            "SFT, DPO and RLHF as ideas, no maths"
+          ],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "programming",
+      "name": "programming against models",
+      "product_step": "product step 1: one endpoint that turns a raw invoice (PDF or image) into strict, checked fields: nullable fields, a confidence per field, and a rules check in plain code (line items add up to the subtotal, subtotal plus GST equals the total, GSTIN and dates valid, no duplicate invoice number, the vendor's bank account matches)",
+      "concepts": [
+        {
+          "id": "api_fundamentals",
+          "name": "API fundamentals",
+          "depth": "core",
+          "depth_row": "none: section 3 has no API row; the report's section 1 finds LLM APIs in 86 percent of its 50 job posts",
+          "aliases": [],
+          "list": [
+            "messages, roles, stop reason",
+            "streaming",
+            "retries with backoff on rate limits"
+          ],
+          "questions": []
+        },
+        {
+          "id": "structured_output",
+          "name": "structured output",
+          "depth": "core",
+          "depth_row": "4 · inference, sampling, decoding, structured output · CORE",
+          "aliases": [],
+          "list": [
+            "constrained decoding (strict JSON schema)",
+            "Pydantic validation loops",
+            "a nullable escape hatch, so the model is not forced to invent a value",
+            "checking the stop reason and a refusal before parsing",
+            "schema validity times semantic quality, not parse rate alone"
+          ],
+          "questions": []
+        },
+        {
+          "id": "tool_use",
+          "name": "tool use and function calling",
+          "depth": "core",
+          "depth_row": "8 · agents, tool use, MCP, orchestration · CORE",
+          "aliases": [],
+          "list": [
+            "a tool schema",
+            "the model asks, the code runs",
+            "a tool result back into the context"
+          ],
+          "questions": []
+        },
+        {
+          "id": "context_engineering",
+          "name": "prompting as context engineering",
+          "depth": "standard",
+          "depth_row": "6 · prompt engineering · STANDARD",
+          "aliases": [],
+          "list": [
+            "a right-altitude system prompt",
+            "prompts versioned and tested like code",
+            "reasoning models: they think inside, manual step-by-step adds delay for little gain",
+            "effort levels and thinking budgets"
+          ],
+          "note": "row 1397 (2)(b): reasoning models and effort budgets are named here",
+          "questions": []
+        },
+        {
+          "id": "when_not_to_use_model",
+          "name": "when NOT to use a model (rules, classical ML or a model)",
+          "depth": "core",
+          "depth_row": "row 1397 (2)(d): core for his target title; the report's section 3 row 21, product sense, is CORE for AI product and forward-deployed roles",
+          "aliases": [],
+          "list": [
+            "deterministic rules first where the answer is exact",
+            "a small classifier where a label is enough",
+            "a model only where language or judgement is needed",
+            "the cost and failure risk each one adds"
+          ],
+          "note": "row 1397 (2)(d): closes stage 2; the screen under uncertainty rides human in the loop",
+          "questions": [
+            {
+              "id": "q69",
+              "text": "A long-term care pharmacy software company (200 facilities, 400 tickets/day, 40% repeated) struggles to find answers in docs. Can AI help, and how would you approach this?",
+              "source": "Real transcripts (MeetAssist, May 2026)"
+            },
+            {
+              "id": "q71",
+              "text": "When should you NOT use an LLM, and how do you choose between deterministic rules, classical ML, and an LLM?",
+              "source": "LinkedIn and AI Product Rounds (2026)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "evaluation",
+      "name": "evaluation",
+      "product_step": "product step 2: the evaluation suite of about 100 invoices (clean, degraded scans, multi-page tables, credit notes, planted errors), a code scorer per field, a judge calibrated against his own labels, and a CI gate that blocks a change that makes it worse",
+      "concepts": [
+        {
+          "id": "error_analysis",
+          "name": "error analysis on real traces",
+          "depth": "core",
+          "depth_row": "9 · evaluation · CORE",
+          "aliases": [],
+          "list": [
+            "read 50 to 100 traces by hand",
+            "open coding: the first thing that went wrong",
+            "axial coding: a countable failure list for this product",
+            "stop when new traces add no new failure"
+          ],
+          "questions": [
+            {
+              "id": "q32",
+              "text": "Metric X for our AI agent is down; how do you diagnose which data to pull and prioritize fixes?",
+              "source": "Sierra Agent Engineer (Thita.ai, Oct 2026)"
+            }
+          ]
+        },
+        {
+          "id": "golden_set",
+          "name": "golden set and code graders",
+          "depth": "core",
+          "depth_row": "9 · evaluation · CORE",
+          "aliases": [],
+          "list": [
+            "layered cases: clean, degraded, edge, unanswerable",
+            "a held-out split nobody tunes on",
+            "contamination: test cases leaking into training or prompts",
+            "deterministic graders first: exact match on totals, dates, IDs"
+          ],
+          "note": "row 1397 (2)(f): held-out split and contamination are named here; draft 1's code assertions fold in here",
+          "questions": [
+            {
+              "id": "q20",
+              "text": "How would you build an evaluation dataset for a RAG system that retrieves drug aliases?",
+              "source": "Real transcript (MeetAssist, Jul 2026)"
+            },
+            {
+              "id": "q34",
+              "text": "Suppose you suspect your safety benchmark is contaminated by training data. What concrete tests would you run to detect contamination, and how would you redesign it?",
+              "source": "Real transcript (MeetAssist, Nov 2026)"
+            },
+            {
+              "id": "q38",
+              "text": "In an offline benchmark, how would you prevent training to the test and data contamination while iterating on prompts or models, especially if the same raters author test cases?",
+              "source": "Real transcript (MeetAssist, Oct 2026)"
+            }
+          ]
+        },
+        {
+          "id": "llm_judge",
+          "name": "LLM-as-judge and its calibration against human labels",
+          "depth": "core",
+          "depth_row": "9 · evaluation · CORE",
+          "aliases": [],
+          "list": [
+            "a scoped pass or fail judge, not a 1-to-5 score",
+            "judge biases: position, length, self-preference",
+            "true-positive and true-negative rate against human labels",
+            "Cohen's kappa",
+            "a rubric turned into a rater guide with anchors and borderline cases"
+          ],
+          "questions": [
+            {
+              "id": "q37",
+              "text": "How would you turn rubric criteria for scoring AI-generated monthly variance commentary into a rater guide with anchors, examples, thresholds, and borderline cases?",
+              "source": "Real transcript (MeetAssist, Nov 2026)"
+            }
+          ]
+        },
+        {
+          "id": "eval_statistics",
+          "name": "statistics for evals and the classical metrics",
+          "depth": "core",
+          "depth_row": "9 · evaluation · CORE (its classical-metrics half is row 16, classical ML basics, STANDARD)",
+          "aliases": [],
+          "list": [
+            "precision, recall, F1, ROC-AUC under class imbalance",
+            "train, validation and test splits; data leakage",
+            "A/B tests, confidence intervals, p-values",
+            "when XGBoost beats a model"
+          ],
+          "note": "classical ML metrics moved here from the light list (the merge raised them: Indian loops ask them)",
+          "questions": [
+            {
+              "id": "q33",
+              "text": "When an offline safety or utility benchmark and online user outcomes disagree after a model update, how do you design a root-cause experiment to separate distribution shift, metric misspecification, and model behavior drift?",
+              "source": "Real transcript (MeetAssist, Nov 2026)"
+            },
+            {
+              "id": "q64",
+              "text": "Design a \"Second Pass Ranker\" for a social feed serving billions of users (no pre-existing embeddings); justify retrieval vs. ranking architectures and multi-label Sigmoid vs. Softmax loss.",
+              "source": "LinkedIn AI Engineer IC2 ML System Design (LeetCode Discuss)",
+              "note": "the classical-ML ambush kind; mapped to the concept that carries the classical metrics"
+            }
+          ]
+        },
+        {
+          "id": "eval_regression_ci",
+          "name": "regression in CI and the online loop",
+          "depth": "core",
+          "depth_row": "9 · evaluation · CORE",
+          "aliases": [],
+          "list": [
+            "a regression gate on every change",
+            "production failures fed back into the golden set",
+            "alert thresholds for a rollback or a human"
+          ],
+          "note": "draft 1's online metrics fold in here",
+          "questions": [
+            {
+              "id": "q31",
+              "text": "What evaluation would catch failures before customers see them?",
+              "source": "OpenAI FDE (Thita.ai / Aced, Oct 2026)"
+            },
+            {
+              "id": "q36",
+              "text": "How would you evaluate an LLM pipeline at scale using 3-5 reliability metrics, including over-refusal and cross-domain leakage, and set alert thresholds for rollback or human routing?",
+              "source": "Real transcript (MeetAssist, Nov 2026)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rag",
+      "name": "RAG",
+      "product_step": "product step 3: questions over company payment policies, vendor contracts and GST, TDS and MSME rules, answered with inline citations and an honest 'not in the documents'; a table of the plain dense baseline against hybrid plus re-ranking",
+      "concepts": [
+        {
+          "id": "pdf_table_parsing",
+          "name": "parsing PDFs and tables",
+          "depth": "core",
+          "depth_row": "15 · multimodal and document parsing · STANDARD, CORE for his finance-operations product",
+          "aliases": [],
+          "list": [
+            "OCR and layout parsers against a vision model",
+            "tables across pages",
+            "per-field against per-invoice accuracy (11 fields at 98 percent each is about 80 percent error-free invoices)"
+          ],
+          "questions": [
+            {
+              "id": "q19",
+              "text": "Design a backend that ingests claims from emails and PDFs, extracts fields by retrieval, and controls token cost.",
+              "source": "Scale AI FDE (Thita.ai / Aced, Oct 2026)"
+            }
+          ]
+        },
+        {
+          "id": "chunking",
+          "name": "chunking",
+          "depth": "core",
+          "depth_row": "7 · RAG · CORE",
+          "aliases": [],
+          "list": [
+            "structure-aware chunks that keep table headers and section names",
+            "metadata and version tags on each chunk"
+          ],
+          "questions": [
+            {
+              "id": "q12",
+              "text": "Design the retrieval layer for a customer's private knowledge base; justify chunking and indexing.",
+              "source": "OpenAI FDE (Thita.ai / Aced, Oct 2026)"
+            }
+          ]
+        },
+        {
+          "id": "vector_search",
+          "name": "vector search",
+          "depth": "core",
+          "depth_row": "3 · embeddings and vector search · CORE",
+          "aliases": [],
+          "list": [
+            "HNSW",
+            "why dense search misses an exact invoice or product code",
+            "filter before or after the search",
+            "pgvector"
+          ],
+          "questions": []
+        },
+        {
+          "id": "retrieval",
+          "name": "hybrid retrieval and re-ranking",
+          "depth": "core",
+          "depth_row": "7 · RAG · CORE",
+          "aliases": [],
+          "list": [
+            "BM25 plus dense, merged by reciprocal rank fusion",
+            "a cross-encoder re-ranker",
+            "contextual retrieval"
+          ],
+          "questions": [
+            {
+              "id": "q18",
+              "text": "How would you evaluate a retrieval pipeline after embedding and reranking, and which metrics would you use?",
+              "source": "Real transcript (MeetAssist, May 2026)"
+            }
+          ]
+        },
+        {
+          "id": "rag_evaluation",
+          "name": "RAG evaluation, grounding and citations",
+          "depth": "core",
+          "depth_row": "7 · RAG · CORE",
+          "aliases": [],
+          "list": [
+            "retrieval metrics: recall at k, MRR, NDCG",
+            "answer metrics: faithfulness, abstention, citation checks",
+            "is the wrong answer retrieval, chunking, the prompt or the model"
+          ],
+          "questions": [
+            {
+              "id": "q14",
+              "text": "Your RAG system has 95% retrieval recall, but users still complain about incorrect answers. How would you investigate?",
+              "source": "Real transcript (MeetAssist, Sep 2026)"
+            },
+            {
+              "id": "q15",
+              "text": "How would you determine whether an incorrect RAG answer comes from retrieval, chunk size, the prompt, or the language model?",
+              "source": "Real transcript (MeetAssist, Oct 2026)"
+            },
+            {
+              "id": "q16",
+              "text": "How would you evaluate a RAG system using customer-specific test cases and metrics?",
+              "source": "Real transcripts (MeetAssist, Oct 2026)"
+            },
+            {
+              "id": "q39",
+              "text": "What makes a Perplexity answer great vs. mediocre, and how would you evaluate an answer's citation quality?",
+              "source": "Perplexity Product and Craft Round (Jul 2026)"
+            }
+          ]
+        },
+        {
+          "id": "rag_access_freshness",
+          "name": "access control and freshness",
+          "depth": "core",
+          "depth_row": "7 · RAG · CORE",
+          "aliases": [],
+          "list": [
+            "per-user and per-tenant access applied before retrieval",
+            "re-indexing, superseded documents, deletion"
+          ],
+          "questions": [
+            {
+              "id": "q17",
+              "text": "How would you build an assistant that provides accurate, up-to-date, cited, access-controlled answers from multiple data sources?",
+              "source": "Real transcript (MeetAssist, Apr 2026)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "agents",
+      "name": "agents",
+      "product_step": "product step 4: a bounded agent that reads an invoice, looks up the purchase order, goods receipt and vendor in a read-only server, runs the matching and GST checks in code, sends exceptions and high-value invoices to his review screen, and posts only a draft, only after approval",
+      "concepts": [
+        {
+          "id": "workflows_vs_agents",
+          "name": "workflows versus agents",
+          "depth": "core",
+          "depth_row": "8 · agents, tool use, MCP, orchestration · CORE",
+          "aliases": [],
+          "list": [
+            "the five workflow patterns: chaining, routing, parallel, orchestrator and workers, evaluator and optimiser",
+            "a fixed workflow, a single agent or many agents",
+            "the deterministic outer loop (12-factor agents)"
+          ],
+          "questions": [
+            {
+              "id": "q23",
+              "text": "When would you choose a fixed workflow, a single agent, or a multi-agent system?",
+              "source": "Real transcripts (MeetAssist, Aug 2026)"
+            }
+          ]
+        },
+        {
+          "id": "tool_loop",
+          "name": "a tool loop from the raw SDK",
+          "depth": "core",
+          "depth_row": "8 · agents, tool use, MCP, orchestration · CORE",
+          "aliases": [],
+          "list": [
+            "step limits and a budget ceiling",
+            "detecting a repeated call",
+            "idempotency keys"
+          ],
+          "note": "draft 1 named it ReAct",
+          "questions": [
+            {
+              "id": "q28",
+              "text": "How would you validate tool outputs and enforce stop conditions in a LangGraph workflow, including the checks or guards you would implement?",
+              "source": "Real transcript (MeetAssist, Aug 2026)"
+            }
+          ]
+        },
+        {
+          "id": "stateful_runtime",
+          "name": "one stateful runtime",
+          "depth": "core",
+          "depth_row": "8 · agents, tool use, MCP, orchestration · CORE",
+          "aliases": [],
+          "list": [
+            "checkpoints and persistent state",
+            "pause for a human, then resume",
+            "why this runtime and not CrewAI or AutoGen"
+          ],
+          "note": "one runtime, not five frameworks",
+          "questions": [
+            {
+              "id": "q27",
+              "text": "Why would you choose LangGraph over LangChain? Compare graph-based multi-agent systems vs. linear agentic automation and how to cost-optimize each.",
+              "source": "India GenAI / AI Engineer interviews (r/developersIndia, 2026)"
+            }
+          ]
+        },
+        {
+          "id": "mcp",
+          "name": "MCP",
+          "depth": "core",
+          "depth_row": "8 · agents, tool use, MCP, orchestration · CORE",
+          "aliases": [],
+          "list": [
+            "a server: tools, resources, prompts",
+            "tool-schema bloat and loading tools only when needed",
+            "least privilege behind the server"
+          ],
+          "questions": [
+            {
+              "id": "q24",
+              "text": "How would you build an MCP server, and what components would it include?",
+              "source": "Real transcripts (MeetAssist, Sep 2026)"
+            }
+          ]
+        },
+        {
+          "id": "agent_memory",
+          "name": "agent memory",
+          "depth": "core",
+          "depth_row": "8 · agents, tool use, MCP, orchestration · CORE (the report's section 7 tags the memory block STANDARD)",
+          "aliases": [],
+          "list": [
+            "short-term thread state against long-term memory",
+            "keeping memory from bloating",
+            "privacy in memory"
+          ],
+          "questions": [
+            {
+              "id": "q30",
+              "text": "How do you design short-term versus long-term agent memory so it remains useful without causing context bloat or privacy issues?",
+              "source": "Real transcript (MeetAssist, Aug 2026)"
+            }
+          ]
+        },
+        {
+          "id": "agent_evaluation",
+          "name": "agent failure modes and agent evaluation",
+          "depth": "core",
+          "depth_row": "9 · evaluation · CORE",
+          "aliases": [],
+          "list": [
+            "grading the outcome (the database state) against the path taken",
+            "all-of-k against one-of-k: an agent right 70 percent per try looks 97 percent at one-of-three and is 34 percent at all-of-three",
+            "an accurate agent against a reliable one"
+          ],
+          "note": "row 1397 (2)(f): all-of-k against one-of-k is named here; draft 1's agent failure modes fold in here",
+          "questions": [
+            {
+              "id": "q21",
+              "text": "When agents are in production, how do you decide what is reliable enough to give them autonomy?",
+              "source": "Real transcripts (MeetAssist, Nov 2026)"
+            },
+            {
+              "id": "q22",
+              "text": "What is the difference between an accurate agent and a reliable one?",
+              "source": "Real transcripts (MeetAssist, Nov 2026)"
+            },
+            {
+              "id": "q35",
+              "text": "How would you design an evaluation task to test whether an AI agent can identify a revenue discrepancy across a CRM record, an order entry, and emails?",
+              "source": "Real transcript (MeetAssist, Nov 2026)"
+            }
+          ]
+        },
+        {
+          "id": "human_in_loop",
+          "name": "human in the loop",
+          "depth": "core",
+          "depth_row": "21 · product sense · CORE for AI product and forward-deployed roles",
+          "aliases": [],
+          "list": [
+            "the review screen in React: the PDF beside the fields",
+            "uncertainty shown: a badge, the citation, the box on the page",
+            "approve, edit, reject, and every correction logged back into the evaluation set"
+          ],
+          "note": "row 1397 (2)(d): the screen under uncertainty rides here",
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "production",
+      "name": "production",
+      "product_step": "product step 5: deployed and public, with a trace dashboard, live cost per invoice and latency, a red-team set of about 15 PDFs with hidden instructions, an architecture picture and a 2-minute walkthrough",
+      "concepts": [
+        {
+          "id": "tracing",
+          "name": "tracing",
+          "depth": "core",
+          "depth_row": "13 · observability, tracing, cost and latency · CORE",
+          "aliases": [],
+          "list": [
+            "OpenTelemetry GenAI spans and traces",
+            "a trace you can replay"
+          ],
+          "questions": []
+        },
+        {
+          "id": "cost_latency",
+          "name": "cost and latency (caching)",
+          "depth": "core",
+          "depth_row": "13 · observability, tracing, cost and latency · CORE",
+          "aliases": [],
+          "list": [
+            "p95 and p99 latency",
+            "cost per task",
+            "prompt caching and semantic caching",
+            "a monthly token bill estimated out loud"
+          ],
+          "questions": [
+            {
+              "id": "q47",
+              "text": "How would you reduce token usage and API costs in an LLM application, and how would you measure the savings?",
+              "source": "Real transcripts (MeetAssist, Sep-Oct 2026)"
+            },
+            {
+              "id": "q48",
+              "text": "Traffic spikes 10x overnight; how do you maintain latency and cost targets?",
+              "source": "OpenAI FDE (Thita.ai / Aced, Oct 2026)"
+            },
+            {
+              "id": "q52",
+              "text": "LLM token costs have doubled. How would you diagnose the increase and optimize the system?",
+              "source": "Real transcript (MeetAssist, Sep 2026)"
+            }
+          ]
+        },
+        {
+          "id": "model_routing",
+          "name": "model selection and routing",
+          "depth": "standard",
+          "depth_row": "14 · model selection and routing · STANDARD (CORE for senior cost-design rounds)",
+          "aliases": [],
+          "list": [
+            "a small model for easy tasks, a large one on failure",
+            "a cascade gated by validation",
+            "fallback chains",
+            "pinning a session so the prompt cache survives",
+            "when the router costs more than it saves"
+          ],
+          "note": "row 1397 (2)(e): its own concept now (it was inside cost and latency)",
+          "questions": [
+            {
+              "id": "q51",
+              "text": "How would you decide which tasks to route to smaller models, and when might the complexity of building and governing the router outweigh the savings?",
+              "source": "Real transcript (MeetAssist, Nov 2026)"
+            }
+          ]
+        },
+        {
+          "id": "guardrails",
+          "name": "security: guardrails, prompt injection, PII",
+          "depth": "core",
+          "depth_row": "12 · guardrails, prompt injection, security · CORE",
+          "aliases": [],
+          "list": [
+            "the lethal trifecta: private data, untrusted content, a way out",
+            "indirect prompt injection hidden in a PDF or an email",
+            "least-privilege tools, an allow-list for writes, a human approval",
+            "PII redaction",
+            "the OWASP top ten for LLMs"
+          ],
+          "questions": [
+            {
+              "id": "q40",
+              "text": "Where should guardrails live (in the prompt, the model, or the platform) and how would you test that they actually work?",
+              "source": "Real transcripts (MeetAssist, Nov 2026)"
+            },
+            {
+              "id": "q41",
+              "text": "What happens when an agent reads an email containing hidden instructions (indirect prompt injection)?",
+              "source": "Real transcripts (MeetAssist, Nov 2026)"
+            },
+            {
+              "id": "q42",
+              "text": "How would you implement PII protection and related security controls in an LLM application?",
+              "source": "Real transcripts (MeetAssist, Oct 2026)"
+            },
+            {
+              "id": "q44",
+              "text": "What are three risks in the OWASP LLM Top 10, and how would you mitigate each?",
+              "source": "Real transcripts (MeetAssist, Nov 2026)"
+            },
+            {
+              "id": "q45",
+              "text": "In a customer-facing RAG assistant pulling from internal docs and calling downstream APIs, what are the trust boundaries and what controls belong on each?",
+              "source": "Real transcript (MeetAssist, Sep 2026)"
+            }
+          ]
+        },
+        {
+          "id": "deploy",
+          "name": "Docker, CI/CD, one cloud",
+          "depth": "standard",
+          "depth_row": "20 · deployment, Docker, cloud, CI/CD · STANDARD (CORE for Indian IT and capability-centre roles)",
+          "aliases": [],
+          "list": [
+            "a multi-stage Dockerfile and docker-compose",
+            "one live URL",
+            "secrets, health checks, a canary and a rollback"
+          ],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "adaptation",
+      "name": "adaptation",
+      "concepts": [
+        {
+          "id": "when_to_finetune",
+          "name": "when to fine-tune",
+          "depth": "light",
+          "depth_row": "10 · fine-tuning, LoRA, distillation · LIGHT",
+          "aliases": [],
+          "list": [
+            "prompt, then retrieval, then fine-tuning",
+            "measuring whether fine-tuning helped"
+          ],
+          "questions": [
+            {
+              "id": "q53",
+              "text": "When would you choose RAG over fine-tuning (or combine both), and how would you measure whether fine-tuning actually improved the model?",
+              "source": "Real transcripts (MeetAssist, Sep-Oct 2026)"
+            }
+          ]
+        },
+        {
+          "id": "lora",
+          "name": "LoRA",
+          "depth": "light",
+          "depth_row": "10 · fine-tuning, LoRA, distillation · LIGHT",
+          "aliases": [],
+          "list": [
+            "low-rank adapters and their memory maths"
+          ],
+          "questions": [
+            {
+              "id": "q54",
+              "text": "A team fine-tuning with QLoRA on limited GPUs repeatedly hits out-of-memory (OOM) errors. How do you mitigate them?",
+              "source": "Real transcript (MeetAssist, Aug 2026)"
+            }
+          ]
+        },
+        {
+          "id": "distillation",
+          "name": "distillation",
+          "depth": "light",
+          "depth_row": "10 · fine-tuning, LoRA, distillation · LIGHT",
+          "aliases": [],
+          "list": [
+            "a teacher model and a student model, and when it pays"
+          ],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "system_design",
+      "name": "system design practice",
+      "concepts": [
+        {
+          "id": "system_design_practice",
+          "name": "system design practice",
+          "depth": "core",
+          "depth_row": "19 · system design for LLM products · CORE",
+          "aliases": [],
+          "list": [
+            "clarify, token and cost maths, architecture, deep dive, trade-offs, failure and security, evaluation"
+          ],
+          "note": "ten designs said out loud, each with an evaluation and a cost section",
+          "questions": [
+            {
+              "id": "q11",
+              "text": "How would you design and implement a production RAG pipeline?",
+              "source": "the top AI system design prompt (MeetAssist, Nov 2026)"
+            },
+            {
+              "id": "q29",
+              "text": "How would you design an agentic AI system if Spotify were to integrate Sierra for customer support (memory, RAG, MCP, inter-company data dynamics)?",
+              "source": "Sierra Technical Screen (Exponent, Dec 2025)"
+            },
+            {
+              "id": "q46",
+              "text": "Design a user-facing product powered by a frontier LLM while defending concrete safety-versus-utility trade-offs.",
+              "source": "OpenAI AI Engineer Final Round (InterviewQuery, 2025-2026)"
+            },
+            {
+              "id": "q70",
+              "text": "Design a system allowing an e-commerce site to track item views and scale from 100 users to 1M monthly events.",
+              "source": "PostHog AI Product Engineer (Jointaro, Oct-Nov 2025)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "interview",
+      "name": "interview execution and story",
+      "concepts": [
+        {
+          "id": "project_deep_dive",
+          "name": "project deep dive",
+          "depth": "core",
+          "depth_row": "section 3 has no row; section 7, stage 6 tags decomposition, product sense, deep dive and behavioural CORE",
+          "aliases": [],
+          "list": [
+            "a 90-second and a 20-minute version of the product",
+            "every decision three 'why' levels down"
+          ],
+          "questions": [
+            {
+              "id": "q72",
+              "text": "Describe one production AI system you personally shipped (baseline, metric, failure, post-launch change); tell me about pushing back on a customer or a time you were wrong.",
+              "source": "Glean, Palantir, Databricks, Anthropic (2026)"
+            }
+          ]
+        },
+        {
+          "id": "behavioural",
+          "name": "behavioural",
+          "depth": "core",
+          "depth_row": "section 3 has no row; section 7, stage 6 tags it CORE",
+          "aliases": [],
+          "list": [
+            "six STAR stories: a failure owned, pushing back with data, ambiguity, a safety trade-off"
+          ],
+          "questions": []
+        },
+        {
+          "id": "positioning",
+          "name": "positioning the evaluation background in engineering language",
+          "depth": "core",
+          "depth_row": "section 3 has no row; section 5 gives the positioning moves",
+          "aliases": [],
+          "list": [
+            "rubrics, failure lists, agreement audits, red-team cases: what he did, said truthfully",
+            "the 90-second opening"
+          ],
+          "questions": []
+        },
+        {
+          "id": "decomposition",
+          "name": "decomposition practice",
+          "depth": "core",
+          "depth_row": "21 · product sense · CORE for AI product and forward-deployed roles",
+          "aliases": [],
+          "list": [
+            "owner, data, a one-to-two-week MVP, the metric, the risks",
+            "a constraint added halfway through"
+          ],
+          "note": "in the merge's stage 9, missing from draft 1",
+          "questions": [
+            {
+              "id": "q65",
+              "text": "A logistics client is losing money on deliveries; find the root cause using only existing data.",
+              "source": "Palantir FDSE Decomposition (Thita.ai / Ophy, Oct 2026)"
+            },
+            {
+              "id": "q66",
+              "text": "Given 8,000 London taxi rides with 8 columns, propose how to improve drivers' lives; draw components, APIs, and a 1-week MVP.",
+              "source": "Palantir FDSE Decomposition (Blind / Thita.ai, Oct 2026)"
+            },
+            {
+              "id": "q67",
+              "text": "Use city traffic sensor data to reduce congestion, define the KPI, baseline it, and assign operational ownership.",
+              "source": "Databricks FDE Decomposition (Thita.ai, Oct 2026)"
+            },
+            {
+              "id": "q68",
+              "text": "Run a 45-minute discovery call with a VP of Engineering at a 5,000-person fintech evaluating [the lab's model] for an internal copilot, and respond to \"Convince me [your model] does anything ChatGPT can't.\"",
+              "source": "Anthropic FDE Customer Simulation (Getperspective / Thita.ai, 2026)"
+            }
+          ]
+        },
+        {
+          "id": "job_search",
+          "name": "the job search",
+          "depth": "core",
+          "depth_row": "section 3 has no row; section 7 ends on the job-search milestone, section 5 gives the order of applications",
+          "aliases": [],
+          "list": [
+            "two resumes: evaluation and applied AI; AI product and full-stack AI",
+            "one public write-up of the product's error analysis and evaluation numbers",
+            "applications in this order: first evaluation engineer and full-stack AI product seats at small startups; second applied AI and AI engineer; forward deployed last"
+          ],
+          "note": "row 1397 (2)(h)",
+          "questions": []
+        }
+      ]
+    }
+  ],
+  "tracks": [
+    {
+      "id": "python",
+      "name": "Python",
+      "depth": "core",
+      "note": "typing, async, Pydantic, FastAPI, pytest, SQL; the report calls it his biggest gap to close first",
+      "questions": [
+        {
+          "id": "q63",
+          "text": "Write a SQL query returning users with more than one transaction and a per-user summary.",
+          "source": "Databricks FDE Technical Screen (Thita.ai, Oct 2026)"
+        }
+      ]
+    },
+    {
+      "id": "coding_problems",
+      "name": "coding practice",
+      "depth": "standard",
+      "note": "50 to 75 easy-to-medium problems in Python, complexity said out loud; PLUS staged practical builds: a cache, a rate limiter, an async batch caller, debugging unfamiliar code; PLUS one AI-assisted round: read the code first, a scoped prompt, check the edge cases, explain the diff (row 1397 (2)(g))",
+      "questions": [
+        {
+          "id": "q55",
+          "text": "Build a credit ledger/management system where credits have expiration dates and different expiry/usage rules added in stages.",
+          "source": "OpenAI FDE Staged Coding (Thita.ai, Oct 2026)"
+        },
+        {
+          "id": "q56",
+          "text": "Implement an LRU cache with constraints added progressively in stages.",
+          "source": "Anthropic FDE CodeSignal Staged Coding (Thita.ai, Oct 2026)"
+        },
+        {
+          "id": "q57",
+          "text": "Implement a per-key fixed-window cost limiter (ALLOW key cost timestamp and RESET key) handling timestamps up to 10^15 and 200K commands.",
+          "source": "xAI Coding Round (Sep 2026)"
+        },
+        {
+          "id": "q58",
+          "text": "Fetch paginated REST data handling page size and total pages; or debug 80-250 lines of unfamiliar code with red herrings (e.g., HashMap double-count or social-graph infection spread).",
+          "source": "Palantir FDSE Coding and Re-Engineering Rounds (Thita.ai, Oct 2026)"
+        },
+        {
+          "id": "q59",
+          "text": "Implement file-system permissions with a hierarchy and change timestamps.",
+          "source": "ElevenLabs FDE Coding (Thita.ai, Oct 2026)"
+        },
+        {
+          "id": "q60",
+          "text": "In a pre-shared repo (CRUD backend + React UI + Python ML service + local open-weight model), implement production user stories, header auth, React filtering, and integrate/optimize local LLM inference live.",
+          "source": "Intuit SE-2 GenAI, Bengaluru (LeetCode Discuss)",
+          "note": "the AI-assisted, practical kind of round (row 1397 (2)(g))"
+        },
+        {
+          "id": "q61",
+          "text": "Build a React typeahead with async suggestions, keyboard navigation, and stale-result/race-condition handling with no third-party libraries.",
+          "source": "xAI Coding Round (Sep 2026)"
+        },
+        {
+          "id": "q62",
+          "text": "Calculate the running mean of an infinite data stream without storing all numbers or overflowing; validate a Binary Search Tree.",
+          "source": "LinkedIn AI Engineer IC2 (LeetCode Discuss, 2025-2026)"
+        }
+      ]
+    },
+    {
+      "id": "product_build",
+      "name": "the product build",
+      "depth": null,
+      "note": "with the evaluation harness at its centre; one step per stage",
+      "questions": []
+    }
+  ],
+  "light": [
+    {
+      "id": "multimodal",
+      "name": "multimodal (except PDFs and tables)"
+    },
+    {
+      "id": "computer_use_agents",
+      "name": "computer-use agents"
+    }
+  ],
+  "not_studied": [
+    "training from scratch and training loops",
+    "PyTorch drills",
+    "TensorFlow",
+    "older architectures (RNN, LSTM, GAN, Word2Vec)",
+    "catalogues of classical algorithms",
+    "the maths of RLHF",
+    "four or five agent frameworks",
+    "prompt-trick libraries",
+    "generic automatic scores (ROUGE, BLEU) as a goal",
+    "model leaderboards",
+    "hard-puzzle grinding",
+    "stacking certificates",
+    "multi-agent swarms before one agent works",
+    "Indic-language NLP",
+    "voice pipelines"
+  ],
+  "closures": [
+    {
+      "concept": "tokenization",
+      "ruling_row": "1338",
+      "his_words_n": "321",
+      "at": "2026-11-25T11:06:00+05:30"
+    },
+    {
+      "concept": "embeddings",
+      "ruling_row": "1338",
+      "his_words_n": "321",
+      "at": "2026-11-25T11:06:00+05:30"
+    },
+    {
+      "concept": "neuralnet",
+      "ruling_row": "1338",
+      "his_words_n": "321",
+      "at": "2026-11-25T11:06:00+05:30"
+    }
+  ]
+}

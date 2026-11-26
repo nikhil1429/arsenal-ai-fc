@@ -37,6 +37,16 @@ description: Run a full FORGE study session INSIDE Claude Code with ZERO capture
   block · Bolo at axis close · the English line) plus the pointer at every stop and THE BANK below.
   → `.claude/skills/learn/SKILL.md` "THE NOTES LAW".
 
+## THE SYLLABUS — the order, the list, the reps (his word 346, 26 Nov 2026, rows 1399 / 1400)
+
+At `start` (or `resume`): `node scripts/syllabus.mjs topic <concept>`. Its LIST is the coverage contract for this
+topic's axes: every item is taught in some axis before the close; mark each the moment it is taught —
+`node scripts/syllabus.mjs cover <concept> <n> --axis <a-i>`; an item shown OWED was skipped at its last close, teach
+it this sitting. Its REPORTED QUESTIONS are the interview reps, after the mechanism, never a quiz dump. When HE ends the
+topic, in any words: `node scripts/syllabus.mjs close <concept> --his "<his words, verbatim>"` — say its covered / not
+covered lines to him; what was not covered is recorded skipped by his word and stays owed (never a brake); it moves the
+floor to the next concept, the first unclosed one in the syllabus order (`node scripts/syllabus.mjs next`), never the sheet's.
+
 ## THE BANK — one command per answer, not optional (A3, 4 Sep 2026) — carried whole because every axis needs it
 
 At the axis's THREE banked moments only — the sharp check, the Bolo, the interview line — you type ONE

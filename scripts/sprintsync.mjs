@@ -201,7 +201,12 @@ export function derivedFloor(capsules) {
 }
 /** applyFloor — PURE: object in, verdict out, no fs (the shape applyStart uses, and
  *  for the same reason — sprint.json's path stays a literal const so xray resolves it). */
-export function applyFloor(sprint, concept, capsules, now = new Date()) {
+// ROW 1400 (2)+(3), 26 Nov 2026: a floor moved by CODE is never stamped as his word — `opts.by` carries the
+// mover's own reason (the syllabus close passes "syllabus order, after <concept> closed"); the default stays his
+// word, because a bare `floor <concept>` is still only ever typed on his order. And a name the study syllabus
+// (learning-layer/SYLLABUS.json, scripts/syllabus.mjs sole writer) holds is not a typo: `in_syllabus` silences the
+// spelling alarm; a name in neither the capsules nor the syllabus still raises it.
+export function applyFloor(sprint, concept, capsules, now = new Date(), opts = {}) {
   const want = String(concept || "").trim().toLowerCase();
   if (!want) return { ok: false, why: "no-concept" };
   if (!sprint || !sprint.progress) return { ok: false, why: "no-file" };
@@ -209,7 +214,9 @@ export function applyFloor(sprint, concept, capsules, now = new Date()) {
   // A floor naming a concept with no capsule is not refused — he may put the floor on a
   // topic he has never locked — but it IS labelled, so a typo is visible rather than
   // silently becoming the thing every router points at for four days.
-  const progress = { ...sprint.progress, current_floor: { concept: want, set_at: nowISO(now), by: "his word (sprintsync floor)", has_capsule: known } };
+  const by = String(opts.by || "").trim() || "his word (sprintsync floor)";
+  const inSyllabus = (opts.syllabusIds || []).includes(want);
+  const progress = { ...sprint.progress, current_floor: { concept: want, set_at: nowISO(now), by, has_capsule: known, in_syllabus: inSyllabus } };
   return { ok: true, why: "set", sprint: { ...sprint, progress } };
 }
 const nowISO = (now) => now.toISOString();
@@ -243,13 +250,20 @@ function setStart(dateStr) {
   return r;
 }
 
-function setFloor(concept) {
+const SYLLABUS_FILE = join(__dirname, "..", "learning-layer", "SYLLABUS.json");
+/** syllabusIds — every concept id and alias of the study syllabus, or [] when the file is absent. */
+export function syllabusIds(j = readJson(SYLLABUS_FILE)) {
+  if (!j || !Array.isArray(j.stages)) return [];
+  return j.stages.flatMap((st) => (st.concepts || []).flatMap((c) => [String(c.id || "").toLowerCase(), ...(c.aliases || []).map((a) => String(a).toLowerCase())]));
+}
+export const floorAlarm = (f) => !!f && !f.has_capsule && !f.in_syllabus;
+export function setFloor(concept, by = null) {
   const caps = loadCapsuleHeads();
-  const r = applyFloor(readJson(SPRINT), concept, caps);
+  const r = applyFloor(readJson(SPRINT), concept, caps, new Date(), { by, syllabusIds: syllabusIds() });
   if (r.why === "no-concept") { const d = derivedFloor(caps); console.log(`sprintsync: floor <concept> — kaunsa topic? Abhi khud se nikla hua floor: ${d ? d.id : "koi nahi (saare capsule dobara lock ho chuke hain — sheet ka apna current chalega)"}`); return r; }
   if (r.why === "no-file") { console.log("sprintsync: sprint.json missing or has no progress block — nothing written."); return r; }
   writeAtomic(SPRINT, r.sprint);
-  console.log(`sprintsync: floor → ${r.sprint.progress.current_floor.concept}${r.sprint.progress.current_floor.has_capsule ? "" : " (⚠ is naam ka koi capsule nahi mila — spelling dekh lo)"} · sheet ka \`done\` chhua tak nahi gaya`);
+  console.log(`sprintsync: floor → ${r.sprint.progress.current_floor.concept} · by ${r.sprint.progress.current_floor.by}${floorAlarm(r.sprint.progress.current_floor) ? " (⚠ is naam ka na capsule mila na syllabus mein topic — spelling dekh lo)" : ""} · sheet ka \`done\` chhua tak nahi gaya`);
   return r;
 }
 
@@ -321,6 +335,17 @@ function selftest() {
                  && JSON.stringify(r.sprint.progress.done) === JSON.stringify(sp.progress.done); })());
     assert("A4 FLOOR — a floor naming a concept with no capsule is KEPT but LABELLED, so a typo is visible instead of silently steering four days",
       applyFloor({ progress: {} }, "tokenizaton", FOUR).sprint.progress.current_floor.has_capsule === false);
+    assert("ROW 1400 F1 — a floor moved by code carries the mover's own reason, never his word",
+      (() => { const r = applyFloor({ progress: {} }, "self_attention", FOUR, new Date(), { by: "syllabus order, after inference closed" });
+               return r.sprint.progress.current_floor.by === "syllabus order, after inference closed" && !/his word/.test(r.sprint.progress.current_floor.by); })());
+    assert("ROW 1400 F1 — with no by-label the default stays his word (a bare floor is typed only on his order)",
+      applyFloor({ progress: {} }, "embeddings", FOUR).sprint.progress.current_floor.by === "his word (sprintsync floor)");
+    assert("ROW 1400 F2 — a name the syllabus holds raises no spelling alarm; a name in neither still does",
+      (() => { const ids = syllabusIds({ stages: [{ concepts: [{ id: "self_attention", aliases: [] }] }] });
+               const a = applyFloor({ progress: {} }, "self_attention", FOUR, new Date(), { syllabusIds: ids }).sprint.progress.current_floor;
+               const b = applyFloor({ progress: {} }, "self_atention", FOUR, new Date(), { syllabusIds: ids }).sprint.progress.current_floor;
+               const c = applyFloor({ progress: {} }, "inference", FOUR, new Date(), { syllabusIds: ids }).sprint.progress.current_floor;
+               return !floorAlarm(a) && floorAlarm(b) && !floorAlarm(c); })());
     assert("A4 FLOOR — an empty concept and a missing progress block both write nothing",
       applyFloor({ progress: {} }, "  ", FOUR).ok === false && applyFloor({}, "embeddings", FOUR).why === "no-file");
     assert("A4 FLOOR — a nightly `sync` PRESERVES the floor: progress is rebuilt from the sheet, so an un-carried field dies at the next fetch",
@@ -337,7 +362,7 @@ async function main() {
   const mode = (process.argv[2] || "sync").toLowerCase();
   if (mode === "selftest") { process.exit(selftest() ? 0 : 1); }
   if (mode === "set-start") { process.exit(setStart(process.argv[3]).ok ? 0 : 1); }
-  if (mode === "floor") { process.exit(setFloor(process.argv[3]).ok ? 0 : 1); }
+  if (mode === "floor") { const bi = process.argv.indexOf("--by"); process.exit(setFloor(process.argv[3], bi > 0 ? process.argv[bi + 1] : null).ok ? 0 : 1); }
   await sync();
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

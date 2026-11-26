@@ -40,6 +40,15 @@ description: The session-agnostic front door to the day's learning — reads the
    `node scripts/resume_pointer.mjs consume --concept <concept> --by learn`. Your first message to him is THAT consumed question, word for word — no recap, no summary of yesterday, no "you already know this" (HOW_HE_LEARNS #10). Then teach.
    If nothing is consumed (the line says why), open with ONE fresh micro-question where he stopped.
    If it shows NO open session: follow its route line (`forge_session.mjs start <concept>` consumes a pointer open for that concept and prints it first; `REFERENCE.md §1` by track for Python/course/domain tasks).
+3b. **THE SYLLABUS IS THE ORDER** (his word 346, 26 Nov 2026, rows 1399 / 1400 — the corrected syllabus, his yes on the
+   order): `node scripts/syllabus.mjs topic <concept>` for the concept you teach. Its LIST is the coverage contract for
+   this topic's axes — every item is taught in some axis before the close; the moment one is taught, mark it:
+   `node scripts/syllabus.mjs cover <concept> <n> --axis <a-i>`. An item shown OWED was skipped at its last close —
+   teach it this sitting. Its REPORTED QUESTIONS are the interview reps (the English line, the interview rep), asked
+   after the topic's own mechanism, never as a quiz dump. When HE ends the topic, in any words: `node scripts/syllabus.mjs
+   close <concept> --his "<his words, verbatim>"` — it prints covered and not covered (say both to him), records what was
+   not covered as skipped by his word (never a brake on him), and moves the floor to the syllabus's next concept, which is
+   the first unclosed one in its order. The next concept is always `node scripts/syllabus.mjs next` — never the sheet's.
 4. **Every stop** (axis end, mid-axis exit, his "bas", context near the line): `node scripts/forge_session.mjs
    pointer "<the exact unanswered micro-question + the gut-word ask + where in the axis>"` BEFORE anything else.
 5. Day end — when HE means the study day is over, in ANY words (no phrase list; read his meaning): run

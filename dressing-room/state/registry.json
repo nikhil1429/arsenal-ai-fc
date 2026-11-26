@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-11-17T00:50:26.880Z",
+ "updated_at": "2026-11-26T14:37:05.174Z",
  "tables": {
   "mechanisms": [
    {
@@ -379,6 +379,79 @@
     "notes": "forks row 880 (4)(a) - o4 takes the o2 slot guard: before the TimeAuditor first slot a timeaudit.json not dated today is EXPECTED, not a time-unmeasured RED (outwork_audit reads slotPassed, never re-implements)",
     "updated_at": "2026-11-14T08:37:10.381Z",
     "added_at": "2026-11-14T08:37:10.381Z"
+   },
+   {
+    "subject": "his_surfaces",
+    "schema_owner": "done.mjs",
+    "witness": "ci/mlaw/witness_mlaw.mjs SURFACES",
+    "subjects": [
+     "manager.mjs",
+     "captains_call.mjs"
+    ],
+    "why": "forks row 1146 (1) FK1 A / row 1193 (2): seeded by runner M at the mlaw landing, before the landed code first runs; subjects = main 5759cce scripts/done.mjs:47 literal",
+    "updated_at": "2026-11-20T07:01:31.529Z",
+    "added_at": "2026-11-20T07:01:31.529Z"
+   },
+   {
+    "subject": "senses",
+    "schema_owner": "senses.mjs",
+    "witness": "scripts/senses.mjs DEAD — one predicate per subject; ci/mpres/witness_mpres.mjs plants each both ways",
+    "subjects": [
+     "presence",
+     "touchline",
+     "timeaudit",
+     "dmn",
+     "mirror",
+     "capture",
+     "throwin"
+    ],
+    "rows": [
+     {
+      "subject": "presence",
+      "owner": "presence.mjs",
+      "file": "presence_input.json",
+      "input": "activitywatch"
+     },
+     {
+      "subject": "touchline",
+      "owner": "touchline.mjs",
+      "file": "pitch_read.json",
+      "input": "activitywatch"
+     },
+     {
+      "subject": "timeaudit",
+      "owner": "timeaudit.mjs",
+      "file": "timeaudit.json",
+      "input": "activitywatch"
+     },
+     {
+      "subject": "dmn",
+      "owner": "dmn.mjs",
+      "file": "dmn_input.json",
+      "input": "activitywatch"
+     },
+     {
+      "subject": "mirror",
+      "owner": "mirror.mjs",
+      "file": "mirror_manifest.json",
+      "input": "capsule-gist"
+     },
+     {
+      "subject": "capture",
+      "owner": "capture.mjs",
+      "file": "capture_pull.json",
+      "input": "drive-inbox"
+     },
+     {
+      "subject": "throwin",
+      "owner": "throwin.mjs",
+      "file": "throwin_state.json",
+      "input": "ntfy"
+     }
+    ],
+    "notes": "unit mpres (forks rows 1177 (2) / 1191, F3 B): a sensor whose input is dead reads red by name on the one state line; a new sensor is a ROW ADD here plus its predicate in senses.mjs DEAD",
+    "updated_at": "2026-11-20T16:18:10.602Z",
+    "added_at": "2026-11-20T16:18:10.602Z"
    }
   ],
   "sandbox_subjects": [
@@ -457,6 +530,24 @@
     "notes": "S10 migration #8 — INTENT #4 real build: critique-own-output -> rewrite next prompt, now ROW #1 of the self_repair table; the fix-and-tell-me policy (spec 13) generalizes across THIS table, and eligibility (reversible + report_anchor declared) is enforced by registry redRows",
     "updated_at": "2026-08-28T19:51:59.285Z",
     "added_at": "2026-08-28T19:51:59.285Z"
+   },
+   {
+    "subject": "activitywatch",
+    "artifact": "the ActivityWatch tray service (aw-qt) that feeds presence.mjs sense",
+    "launcher": "C:/Users/nikhi/AppData/Local/Programs/ActivityWatch/aw-qt.exe",
+    "launcher_args": [],
+    "reversible": true,
+    "reverse_by": "quit ActivityWatch from its tray (the service it started is the one it already runs at login)",
+    "verified_by": "presence.mjs sense: the next pass reads alive:true with last_live_at stamped",
+    "report_anchor": "the state line senses field (node scripts/state.mjs), an anchor he already reads",
+    "bound": "once per dead span (presence_input.json repair.span = dead_since); never a loop, never a second launcher",
+    "witness": "presence.mjs repair door (repairDoorOf) + senses.mjs wound evidence; seeded under forks row 1211 (2) by runner M",
+    "updated_at": "2026-11-21T22:43:13.351Z",
+    "added_at": "2026-11-20T16:22:58.845Z",
+    "revert_path": "quit the ActivityWatch tray app (its own Quit menu); retire this row by registry.mjs retire --table self_repair --subject activitywatch",
+    "retired": false,
+    "retired_at": "2026-11-21T09:43:12.539Z",
+    "retired_why": "row 1251: held until mpres2 lands: the door relaunches beside a running launcher (14 launchers 12:36-15:04 on 21 Nov); re-seed by registry set when mpres2 is on main"
    }
   ],
   "lanes": [
@@ -791,7 +882,7 @@
     "why": "R1's MANY-ONE shape, landed at S10-F (F-2): ONE schema owner (brain.mjs) and MANY appenders — CLAUDE.md's single documented exception to the owners-only law",
     "witness": "xray.mjs:1017 MULTI_WRITER_ALLOWLIST + xray.mjs:1243 the bite that keeps it multi-writer AND allowlisted; appenders[] and consumers[] are the LIVE xray IR's writers/readers for dressing-room/state/brain_ledger.jsonl, measured 29 Aug 2026",
     "notes": "appenders[] is MEASURED, not asserted: it is the IR's writer set, so a tenth appender changes this row, never the law. The lane is switched off with the organism (20 Aug) — reads stamp only when organs wake at S12",
-    "updated_at": "2026-08-28T23:13:47.526Z",
+    "updated_at": "2026-11-18T22:27:17.655Z",
     "added_at": "2026-08-28T23:05:25.023Z",
     "first_real_row_at": "2026-08-12T10:08:07.792Z",
     "newest_row_at": "2026-09-01T09:00:01.836Z",
@@ -819,7 +910,11 @@
      "viz.mjs": null
     },
     "metered_at": "2026-09-01T10:53:52.085Z",
-    "declared_elsewhere": "xray.mjs:1017 MULTI_WRITER_ALLOWLIST + the live IR writers/readers — a shared append LEDGER, not a gated LLM lane: nothing spends tokens on it and gate.mjs never judges it, so it must not enter the off-road consumer map"
+    "declared_elsewhere": "xray.mjs:1017 MULTI_WRITER_ALLOWLIST + the live IR writers/readers — a shared append LEDGER, not a gated LLM lane: nothing spends tokens on it and gate.mjs never judges it, so it must not enter the off-road consumer map",
+    "files": [
+     "dressing-room/state/brain_ledger.jsonl"
+    ],
+    "files_source": "xray 2026-11-18T22:26:36.531Z: brain.mjs is a writer of dressing-room/state/brain_ledger.jsonl, the row's own writes_to · forks row 1065 (3)"
    },
    {
     "subject": "night_coach",
@@ -881,8 +976,12 @@
     ],
     "reach": "any",
     "consumer_kind": "organ",
-    "updated_at": "2026-10-14T22:11:41.380Z",
-    "added_at": "2026-10-14T22:11:41.380Z"
+    "updated_at": "2026-11-18T22:27:17.754Z",
+    "added_at": "2026-10-14T22:11:41.380Z",
+    "files": [
+     "dressing-room/state/brain_out/nightshift/field_probes.json"
+    ],
+    "files_source": "xray 2026-11-18T22:26:36.531Z: nightshift.mjs is a writer of dressing-room/state/brain_out/nightshift/field_probes.json, whose file name carries the lane's subject · forks row 1065 (3)"
    },
    {
     "subject": "compiled_notes",
@@ -898,9 +997,13 @@
     ],
     "reach": "any",
     "writes_to": "compiled_notes.jsonl",
-    "updated_at": "2026-11-14T11:52:26.068Z",
+    "updated_at": "2026-11-18T22:27:17.842Z",
     "added_at": "2026-10-17T11:29:17.345Z",
-    "why": "the compiled axis notes of each study day: daily_green.mjs reads them for its step 3 (notes), and HE reads them at full-time through the glance of the note compiler (his ONE haan)"
+    "why": "the compiled axis notes of each study day: daily_green.mjs reads them for its step 3 (notes), and HE reads them at full-time through the glance of the note compiler (his ONE haan)",
+    "files": [
+     "dressing-room/state/compiled_notes.jsonl"
+    ],
+    "files_source": "xray 2026-11-18T22:26:36.531Z: notes_compiler.mjs is a writer of dressing-room/state/compiled_notes.jsonl, the row's own writes_to · forks row 1065 (3)"
    },
    {
     "subject": "notes_corrections",
@@ -916,9 +1019,12 @@
     ],
     "reach": "any",
     "writes_to": "notes_corrections.jsonl",
-    "updated_at": "2026-10-17T12:11:13.357Z",
+    "updated_at": "2026-11-19T02:59:19.825Z",
     "added_at": "2026-10-17T11:29:17.512Z",
-    "why": "the live corrections lane: notes_compiler.mjs reads it FIRST, before any compile, so a corrected claim is never served as truth; HE reads it before a capsule is taught"
+    "why": "the live corrections lane: notes_compiler.mjs reads it FIRST, before any compile, so a corrected claim is never served as truth; HE reads it before a capsule is taught",
+    "files": [
+     "dressing-room/state/notes_corrections.jsonl"
+    ]
    },
    {
     "subject": "capsule_backups",
@@ -946,8 +1052,11 @@
     ],
     "reach": "any",
     "why": "the RECORDED SessionStart brief: one row per brief his session printed (rung L6); HE is its consumer, and the rung L6 landing witness reads it back as its proof",
-    "updated_at": "2026-11-14T11:52:26.467Z",
-    "added_at": "2026-10-17T15:03:40.033Z"
+    "updated_at": "2026-11-19T02:59:20.173Z",
+    "added_at": "2026-10-17T15:03:40.033Z",
+    "files": [
+     "dressing-room/state/brief_log.jsonl"
+    ]
    },
    {
     "subject": "rejirah_log",
@@ -979,8 +1088,51 @@
     ],
     "reach": "any",
     "why": "the Re-Jirah back edge, one row per graded axis or closed round: rejirah.mjs derives due, state, held and pending from it; daily_green.mjs reads it for clause 5 (born, and written when a round was due); learnstate.mjs for the pending gist-write line of the brief; captains_call.mjs for the card of rounds closed but not in the gist; forge_session.mjs for its data-gates; nightshift.mjs for the round read; brain.mjs for the cracked-axes inventory behind dreams",
-    "updated_at": "2026-11-17T00:50:26.875Z",
-    "added_at": "2026-11-17T00:50:26.875Z"
+    "updated_at": "2026-11-18T22:27:17.931Z",
+    "added_at": "2026-11-17T00:50:26.875Z",
+    "files": [
+     "dressing-room/state/rejirah_log.jsonl"
+    ],
+    "files_source": "xray 2026-11-18T22:26:36.531Z: rejirah.mjs is a writer of dressing-room/state/rejirah_log.jsonl, the row's own writes_to · forks row 1065 (3)"
+   },
+   {
+    "subject": "rung_receipts",
+    "schema_owner": "rung_receipt.mjs",
+    "witness": "scripts/rung_receipt.mjs SOLE WRITER header · forks row 1122 (2) F9 b / F10 a",
+    "consumers": [
+     {
+      "name": "done.mjs"
+     }
+    ],
+    "reach": "any",
+    "writes_to": "rung_receipts.jsonl",
+    "files": [
+     "dressing-room/state/rung_receipts.jsonl"
+    ],
+    "why": "the rung receipt: rung_receipt.mjs measures each plan v3 clause (red before, green on a real day, meter equal); done.mjs reads it",
+    "updated_at": "2026-11-19T03:04:49.500Z",
+    "added_at": "2026-11-19T03:04:49.500Z"
+   },
+   {
+    "subject": "syllabus_coverage",
+    "schema_owner": "syllabus.mjs",
+    "witness": "scripts/syllabus.mjs SOLE WRITER header · forks rows 1399 (2)(b) / 1400 (5)",
+    "consumers": [
+     {
+      "name": "learnstate.mjs"
+     },
+     {
+      "name": "syllabus.mjs"
+     }
+    ],
+    "reach": "any",
+    "writes_to": "syllabus_coverage.jsonl",
+    "files": [
+     "dressing-room/state/syllabus_coverage.jsonl"
+    ],
+    "why": "the coverage contract of the study syllabus: syllabus.mjs cover marks a topic list item taught in an axis, close records his word with covered and skipped (owed); learnstate brief reads it for the list line and the syllabus next",
+    "updated_at": "2026-11-26T14:37:05.170Z",
+    "added_at": "2026-11-26T14:37:05.170Z"
    }
   ],
   "emit_contract": [
@@ -1442,6 +1594,16 @@
     "text": "additionally for all revision decks note this for future sessions as well that you have to go in my downloads and then AI folder and then put the files in the accurate subfolders and if subfolder does not exist then create one because i am on video calls mostly when studying so i do not want my repo name to be seen",
     "updated_at": "2026-11-14T22:53:06.203Z",
     "added_at": "2026-11-14T22:53:06.203Z"
+   },
+   {
+    "id": "rul-mwq24kdab6",
+    "at": "2026-11-21T06:58:57.690Z",
+    "scope": "architecture",
+    "by": "captain",
+    "source": "acts.reroute",
+    "text": "neuralnet axis d (math + range) closed by his word 21 Nov 2026 without sharp check / Bolo / English line: he gives the pending pieces after going through all axes. Build the axis d recap deck perfect for his ADHD-PI and autistic brain; next axis starts in a new session with /learn.",
+    "updated_at": "2026-11-21T06:58:57.694Z",
+    "added_at": "2026-11-21T06:58:57.694Z"
    }
   ],
   "job_inputs": [

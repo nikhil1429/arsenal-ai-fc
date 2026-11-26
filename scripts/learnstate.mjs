@@ -37,6 +37,7 @@ import { loadFreshDrill } from "./examiner.mjs";   // 11 Aug 2026 dead-wire swee
 import { isStale as forgeIsStale, STEPS as FORGE_STEPS } from "./forge_session.mjs";   // W0-D — the PEHLA KAAM line asks the pacer whether its session is stale, instead of re-deriving it · L3 — "STEP n/N" from the pacer's own list
 import { latest as latestPointer, istDay, readRows as pointerRows } from "./resume_pointer.mjs";   // L3 (15 Oct 2026) — the pointer ledger, READ-ONLY here (`latest`, never `consume`) · the ONE IST day key · L6 — readRows: its stamps key "the day before" (the witness's CLASS D), read through the owner
 import { preCyborg, gameOnEpoch } from "./registry.mjs";   // L6 · fate 18 — THE GAME-ON EPOCH: the ONE predicate (a date, never a list of names) gates every Re-Jirah name this brief serves
+import { order as syllabusOrder, idOf as syllabusIdOf, closedSet as syllabusClosed, readLog as syllabusLog, coverOf as syllabusCover } from "./syllabus.mjs";   // ROW 1400 (4) — the study syllabus, READ-ONLY here (syllabus.mjs is the sole writer of its file and its coverage log)
 import { derivedFloor } from "./sprintsync.mjs";   // A4 (4 Sep 2026) — the SYLLABUS FLOOR belongs to sprint.json's owner; this file reads it, it does not re-derive it
 import { gateableOf, TRAP_BAR } from "./notes_compiler.mjs";   // unit mtrap (mtrap-9 b) — C22 counts a thin note by the compiler's ONE predicate, never a second count
 import { starvedNightFor, recordConsumption, consumptionRows } from "./brain.mjs";   // 11 Aug 2026 dead-wire sweep — WHY the diary page is blank, in the brain's own words (see diaryLine) · recordConsumption: THE GATE's "briefed" stamp (18 Aug 2026), owner-held
@@ -958,7 +959,8 @@ export function nextup(dir = STATE, now = Date.now()) {
   const preTag = pre.length ? ` · sheet ke DONE mein pre-restart, seekhe hue NAHI (GAME ON 30 Aug): ${pre.join(" · ")}` : "";
   const fl = floorOf(dir, sprint);
   if (fl) {
-    return winnerOf("floor", `FLOOR ${fl.concept} [${fl.why}] — \`node scripts/forge_session.mjs start ${fl.concept}\`${cur ? ` · uske baad sheet ka ${cur.id} ${cur.task}` : ""}${preTag}`,
+    const sAfter = syllabusAfter(dir, fl.concept, 1);   // ROW 1400 (4) — the after-this clause is the syllabus's, whenever it exists
+    return winnerOf("floor", `FLOOR ${fl.concept} [${fl.why}] — \`node scripts/forge_session.mjs start ${fl.concept}\`${sAfter ? (sAfter.length ? ` · uske baad syllabus ka ${sAfter[0].name}` : "") : cur ? ` · uske baad sheet ka ${cur.id} ${cur.task}` : ""}${preTag}`,
       "jo re-open hua woh seekha hua nahi — pehle floor, phir sheet ka agla", losers);
   }
   if (cur) {
@@ -1006,10 +1008,44 @@ export function nextup(dir = STATE, now = Date.now()) {
 // each SITE, so two readers of two files cost one between them. (The same discipline
 // organism_test's `readOrgan` and sprintsync's literal-const SPRINT path already keep.)
 const readStateText = (dir, name) => { try { return readFileSync(join(dir, name), "utf8"); } catch { return ""; } };
+// ── ROW 1400 (4) · THE TEACHER-FACING NEXT IS THE SYLLABUS'S (his word 346, 26 Nov 2026) ─────────────────────────
+// Whenever learning-layer/SYLLABUS.json exists (it sits two levels above the state dir, so a fixture dir without one
+// keeps every older line byte-for-byte), the brief's NEXT UP line and the floor's "after this" clause name the
+// syllabus's next concepts. The sheet's position stays in its own file and in the next-up verb's LOSING claims —
+// kept (L9), never shown as what comes next: a teacher told the sheet's item follows will teach it.
+function syllabusFor(dir) {
+  try { const t = readStateText(join(dir, "..", "..", "learning-layer"), "SYLLABUS.json"); return t ? JSON.parse(t) : null; } catch { return null; }
+}
+/** syllabusAfter — the next `n` unclosed concepts after `afterConcept` in the syllabus order (from the start when
+ *  `afterConcept` is not in it), or null when there is no syllabus file. */
+function syllabusAfter(dir, afterConcept, n = 3) {
+  const s = syllabusFor(dir);
+  if (!s) return null;
+  try {
+    const closed = syllabusClosed(s, syllabusLog(dir));
+    const all = syllabusOrder(s);
+    const at = afterConcept ? all.findIndex((c) => c.id === syllabusIdOf(s, afterConcept)) : -1;
+    return all.slice(at + 1).filter((c) => !closed.has(c.id)).slice(0, n);
+  } catch { return null; }
+}
+/** syllabusListLine — the open concept's list (its coverage contract) on one line, or null. */
+function syllabusListLine(dir, concept) {
+  const s = syllabusFor(dir);
+  if (!s || !concept) return null;
+  try {
+    const id = syllabusIdOf(s, concept);
+    const c = id && syllabusOrder(s).find((x) => x.id === id);
+    if (!c) return null;
+    const cv = syllabusCover(s, syllabusLog(dir), c.id);
+    const items = c.list.map((x, i) => `${i + 1}. ${x.length > 48 ? x.slice(0, 47) + "…" : x}${cv.covered.includes(i + 1) ? " ✓" : cv.owed.includes(i + 1) ? " (owed)" : ""}`);
+    return `  SYLLABUS · ${c.name} [${c.depth}] · list ${cv.covered.length}/${c.list.length} covered · ${c.questions.length} reported questions — ${items.join(" · ")}  (poora: \`node scripts/syllabus.mjs topic ${c.id}\`)`;
+  } catch { return null; }
+}
 function floorOf(dir, sprint) {
   try {
     const over = sprint && sprint.progress && sprint.progress.current_floor;
-    if (over && over.concept) return { concept: String(over.concept), why: "his word (sprintsync floor)" };
+    // ROW 1400 (2): the floor's own by-label — a floor moved by code is never printed as his word.
+    if (over && over.concept) return { concept: String(over.concept), why: String(over.by || "his word (sprintsync floor)") };
     const d = derivedFloor(loadCapsules(join(dir, "capsules")));
     return d ? { concept: d.id, why: "GAME ON — first topic not proven post-epoch" } : null;
   } catch { return null; }
@@ -1117,6 +1153,7 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     // The sheet has no current task, but HE does. Before today this branch printed
     // "sprint.json has no current task — run the sprint sync" and nothing else.
     L.push(`LEARNING NOW: ${STUDYING ? "" : "FLOOR "}${HEADLINE.concept} [${HEADLINE.why}] — sheet pe koi current task nahi hai (\`node scripts/sprintsync.mjs\`), par yeh khula hai`);
+    { const sl = syllabusListLine(dir, HEADLINE.concept); if (sl) L.push(sl); }   // ROW 1400 (4) — the topic's list reaches the teacher
     if (FIRST_ACT) L.push(FIRST_ACT);   // L3 — the first act speaks with no sheet row
     try { for (const l of studyBlock(STUDYING || { step: 0, axes_done: [], axes_deferred: [] }, fsrsDue(dir, now))) L.push(l); } catch { /* orientation, never a crash */ }
   }
@@ -1132,7 +1169,11 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     L.push(HEADLINE
       ? `LEARNING NOW: ${STUDYING ? "" : "FLOOR "}${HEADLINE.concept} [${HEADLINE.why}] — pehle yeh, phir sheet ka apna agla`
       : `LEARNING NOW: ${cur.id} ${cur.task} [${cur.track}${sp ? ` · S${sp.n} ${sp.theme}` : ""}] — ${cur.subtopics || ""}${spTag}`);
-    if (HEADLINE) L.push(`  (sheet abhi bhi "${cur.id} ${cur.task}" par hai — woh NEXT UP mein hai, mita nahi.${STUDYING && FLOOR && FLOOR.concept !== STUDYING.concept ? ` Iske baad ka floor: ${FLOOR.concept}.` : ""} Floor hatana ho: \`node scripts/sprintsync.mjs floor <concept>\`)`);
+    // ROW 1400 (4): with a syllabus file the after-this clause is the syllabus's and the sheet is NOT named as next.
+    const SA = HEADLINE ? syllabusAfter(dir, HEADLINE.concept, 1) : null;
+    if (HEADLINE && SA) L.push(`  (iske baad syllabus ka: ${SA.length ? SA[0].name : "kuch nahi — har topic band"}. Sheet ki apni position sheet mein aur \`node scripts/learnstate.mjs nextup\` ke haare hue claims mein hai, mita nahi.)`);
+    else if (HEADLINE) L.push(`  (sheet abhi bhi "${cur.id} ${cur.task}" par hai — woh NEXT UP mein hai, mita nahi.${STUDYING && FLOOR && FLOOR.concept !== STUDYING.concept ? ` Iske baad ka floor: ${FLOOR.concept}.` : ""} Floor hatana ho: \`node scripts/sprintsync.mjs floor <concept>\`)`);
+    if (HEADLINE) { const sl = syllabusListLine(dir, HEADLINE.concept); if (sl) L.push(sl); }
     L.push(`  MODE: ${modeLine}`);
     // P7.B (7 Aug 2026) — ONE decision, made in code, so the kickoff never again
     // hands him a menu of six competing opinions. Fail-silent like every splice here.
@@ -1260,8 +1301,12 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     } catch { /* a brief must never be the thing that breaks SessionStart */ }
   }
   if (watch.length) L.push(`WATCH-LIST (his repeat JS-hangovers — catch these): ${watch.join(" · ")}`);
+  // ROW 1400 (4): whenever the syllabus file exists, NEXT UP is the syllabus's next concepts after the headline one;
+  // the sheet's next_up stays in sprint.json (L9) and prints only when there is no syllabus file.
+  const SN = (() => { try { return syllabusAfter(dir, HEADLINE ? HEADLINE.concept : null, 3); } catch { return null; } })();
   const nx = (sprint.progress && sprint.progress.next_up) || [];
-  if (nx.length) L.push(`NEXT UP: ${nx.slice(0, 3).join(" · ")}`);
+  if (SN) { if (SN.length) L.push(`NEXT UP (syllabus): ${SN.map((c) => c.name).join(" · ")}`); }
+  else if (nx.length) L.push(`NEXT UP: ${nx.slice(0, 3).join(" · ")}`);
   // A4 — the evening test follows the FLOOR too. It named the sheet's task, so on a
   // floor day it would have tested him on the one topic he did not study.
   if (sprint.progress && sprint.progress.examiner_daily) L.push(`DAILY EXAMINER: at day's end, test today's concept (${(STUDYING && STUDYING.concept) || (cur ? cur.task : "current")}) — retrieval practice, not a full mock.`);
@@ -1963,6 +2008,43 @@ function selftest() {
     assert("A4 · once every capsule is re-locked the floor disappears by itself and the sheet's own current takes back over — no code change",
       (() => { for (const id of ["tokenization", "embeddings"]) W(`capsules/${id}.json`, { id, num: id === "tokenization" ? "01" : "02", title: id, lockedOn: "2026-06-15", relockedOn: "2026-09-03", faultLines: [], doubts: [] });
                const o = brief(d, NOW); return !/FLOOR/.test(o) && /LEARNING NOW: 1-04 Hallucinations/.test(o); })());
+  }
+
+  // ── ROW 1400 (4) · THE SYLLABUS'S NEXT, NEVER THE SHEET'S — on a FIXTURE root (state dir + learning-layer), never his
+  {
+    const root = mkdtempSync(join(tmpdir(), "ls-syl-"));
+    const d = join(root, "dressing-room", "state");
+    const W = (n, o) => { mkdirSync(dirname(join(d, n)), { recursive: true }); writeFileSync(join(d, n), typeof o === "string" ? o : JSON.stringify(o)); };
+    const SYL = join(root, "learning-layer", "SYLLABUS.json");
+    const NOW = Date.parse("2026-11-26T15:00:00.000Z");
+    const SYLLABUS_FIX = { part: "study_syllabus", status: "draft", closures: [{ concept: "tokenization", ruling_row: "1338", at: "2026-11-25T05:36:00.000Z" }], tracks: [],
+      stages: [{ id: "m", name: "model mechanism", concepts: [
+        { id: "tokenization", name: "tokenization", depth: "standard", aliases: [], list: [], questions: [] },
+        { id: "inference", name: "inference and sampling", depth: "core", aliases: [], list: ["KV cache", "prefill against decode"], questions: [] },
+        { id: "self_attention", name: "self-attention and the transformer", depth: "standard", aliases: [], list: ["grouped-query attention", "RMSNorm"], questions: [{ id: "q01", text: "Explain attention.", source: "x" }] },
+        { id: "context_window", name: "context window", depth: "core", aliases: [], list: ["context rot"], questions: [] }] }] };
+    const SPRINT = { start: "2026-08-25", sprints: [{ n: 1, theme: "Foundations" }], progress: { synced_at: new Date(NOW).toISOString(), done: [],
+      current: { id: "5-41", task: "RAG evaluation", track: "concept" }, next_up: ["5-42 Re-ranking", "5-43 M2: Bank Reconciliation"], examiner_daily: true,
+      current_floor: { concept: "self_attention", set_at: new Date(NOW).toISOString(), by: "syllabus order, after inference closed", has_capsule: false, in_syllabus: true } } };
+    W("sprint.json", SPRINT);
+    W("working_set.json", { ts: new Date(NOW).toISOString() });
+    W("season.json", { season_day: 1, matches_played: 0, rows: [] });
+    W("forge_session.json", { concept: "inference", step: 3, closed_at: new Date(NOW).toISOString(), started_at: new Date(NOW - 7200000).toISOString(), updated_at: new Date(NOW).toISOString(), steps_done: [0, 3], axes_done: ["a", "b"], axes_deferred: [], question_moments: {} });
+    W("syllabus_coverage.jsonl", JSON.stringify({ v: 1, kind: "closed", at: new Date(NOW).toISOString(), concept: "inference", by: "his word", his_words: "band karo", covered: [1], skipped: [2] }) + "\n");
+    mkdirSync(dirname(SYL), { recursive: true });
+    writeFileSync(SYL, JSON.stringify(SYLLABUS_FIX));
+    const o = brief(d, NOW);
+    const nextUp = o.split("\n").find((x) => /^NEXT UP/.test(x)) || "";
+    assert("ROW 1400 (2) · a floor moved by the syllabus close is printed with ITS reason, never as his word",
+      /LEARNING NOW: FLOOR self_attention \[syllabus order, after inference closed\]/.test(o) && !/FLOOR self_attention \[his word/.test(o));
+    assert("ROW 1400 (4) · with the syllabus file present the NEXT UP line is the syllabus's, and the sheet's planted next_up item is ABSENT from it",
+      /^NEXT UP \(syllabus\): context window$/.test(nextUp) && !/5-42/.test(nextUp));
+    assert("ROW 1400 (4) · the after-this clause names the syllabus's next concept, not the sheet's item",
+      /iske baad syllabus ka: context window/.test(o) && /uske baad syllabus ka context window/.test(o) && !/uske baad sheet ka/.test(o));
+    assert("ROW 1400 (4) · the open concept's LIST reaches the teacher on the brief, with its reported-question count",
+      /SYLLABUS · self-attention and the transformer \[standard\] · list 0\/2 covered · 1 reported questions — 1\. grouped-query attention · 2\. RMSNorm/.test(o));
+    assert("ROW 1400 (4) · CONTROL: with NO syllabus file the sheet's NEXT UP line prints exactly as before (the planted sheet line comes back)",
+      (() => { writeFileSync(SYL, ""); const o2 = brief(d, NOW); return /^NEXT UP: 5-42 Re-ranking · 5-43 M2: Bank Reconciliation$/m.test(o2) && !/NEXT UP \(syllabus\)/.test(o2); })());
   }
 
   // ── L3 (15 Oct 2026) · OPEN, WHERE AM I, RESUME — on FIXTURE state dirs, never his ──────────────
