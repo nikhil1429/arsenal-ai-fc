@@ -1167,7 +1167,8 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     // Sheet is untouched and still says what it says; it simply stops being the thing that
     // decides what he opens today.
     L.push(HEADLINE
-      ? `LEARNING NOW: ${STUDYING ? "" : "FLOOR "}${HEADLINE.concept} [${HEADLINE.why}] — pehle yeh, phir sheet ka apna agla`
+      // ROW 1400 (4): with a syllabus file the tail names the syllabus as what follows, never the sheet
+      ? `LEARNING NOW: ${STUDYING ? "" : "FLOOR "}${HEADLINE.concept} [${HEADLINE.why}] — pehle yeh, phir ${syllabusFor(dir) ? "syllabus ka agla" : "sheet ka apna agla"}`
       : `LEARNING NOW: ${cur.id} ${cur.task} [${cur.track}${sp ? ` · S${sp.n} ${sp.theme}` : ""}] — ${cur.subtopics || ""}${spTag}`);
     // ROW 1400 (4): with a syllabus file the after-this clause is the syllabus's and the sheet is NOT named as next.
     const SA = HEADLINE ? syllabusAfter(dir, HEADLINE.concept, 1) : null;
@@ -2037,6 +2038,8 @@ function selftest() {
     const nextUp = o.split("\n").find((x) => /^NEXT UP/.test(x)) || "";
     assert("ROW 1400 (2) · a floor moved by the syllabus close is printed with ITS reason, never as his word",
       /LEARNING NOW: FLOOR self_attention \[syllabus order, after inference closed\]/.test(o) && !/FLOOR self_attention \[his word/.test(o));
+    assert("ROW 1400 (4) · the LEARNING NOW line's tail names the syllabus as what follows, never the sheet",
+      /^LEARNING NOW: .* — pehle yeh, phir syllabus ka agla$/m.test(o) && !/phir sheet ka apna agla/.test(o));
     assert("ROW 1400 (4) · with the syllabus file present the NEXT UP line is the syllabus's, and the sheet's planted next_up item is ABSENT from it",
       /^NEXT UP \(syllabus\): context window$/.test(nextUp) && !/5-42/.test(nextUp));
     assert("ROW 1400 (4) · the after-this clause names the syllabus's next concept, not the sheet's item",
