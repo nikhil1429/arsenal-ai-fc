@@ -1,14 +1,14 @@
 {
-  "date": "2026-11-18",
-  "generated_at": "2026-11-18T03:50:19.542Z",
-  "total_reps": 2,
+  "date": "2026-11-26",
+  "generated_at": "2026-11-26T03:46:32.782Z",
+  "total_reps": 6,
   "status": "ok",
   "low_confidence": false,
   "gate": {
-    "have": 2,
+    "have": 6,
     "need": 1,
     "unit": "reps",
-    "line": "2/1 reps",
+    "line": "6/1 reps",
     "open": true,
     "withheld": [],
     "emitted_regardless": [
@@ -22,27 +22,27 @@
     "sub": [
       {
         "name": "weak_connection",
-        "have": 2,
+        "have": 6,
         "need": 1,
         "unit": "reps",
-        "line": "2/1 reps",
+        "line": "6/1 reps",
         "open": true
       },
       {
         "name": "maidan_stage_focus",
-        "have": 2,
+        "have": 6,
         "need": 1,
         "unit": "reps",
-        "line": "2/1 reps",
+        "line": "6/1 reps",
         "open": true
       },
       {
         "name": "any concept → 🟡 held",
-        "have": 1,
+        "have": 2,
         "need": 2,
         "unit": "correct in a row",
-        "line": "1/2 correct in a row",
-        "open": false
+        "line": "2/2 correct in a row",
+        "open": true
       },
       {
         "name": "any concept → 🟢 fluent",
@@ -61,27 +61,27 @@
     {
       "concept": "inference",
       "axis": null,
-      "overdue_days": 139
+      "overdue_days": 147
     },
     {
       "concept": "context",
       "axis": null,
-      "overdue_days": 135
+      "overdue_days": 143
     },
     {
       "concept": "embeddings",
       "axis": null,
-      "overdue_days": 123
+      "overdue_days": 131
     },
     {
       "concept": "hallucinations",
       "axis": null,
-      "overdue_days": 99
+      "overdue_days": 107
     },
     {
       "concept": "tokenization",
-      "axis": "a (kya+analogy)",
-      "overdue_days": 73
+      "axis": "b (kyun/first-principles)",
+      "overdue_days": 76
     }
   ],
   "core_vs_light": {
@@ -94,14 +94,14 @@
     {
       "id": "tokenization",
       "track": "concept",
-      "axis": "a",
-      "fluency": "🔴 learning",
+      "axis": "b",
+      "fluency": "🟡 held",
       "core": true,
-      "reps": 2,
-      "last_seen": "2026-09-05",
+      "reps": 6,
+      "last_seen": "2026-09-08",
       "velocity": {
-        "slope": "holding",
-        "reps_to_state": 1,
+        "slope": "improving",
+        "reps_to_state": 6,
         "stalled": false
       },
       "edge": null,
@@ -114,8 +114,19 @@
       "label": "kya+analogy",
       "fluent_frac": 0,
       "counts": {
-        "learning": 1,
-        "held": 0,
+        "learning": 0,
+        "held": 1,
+        "fluent": 0
+      },
+      "due_count": 0
+    },
+    {
+      "axis": "b",
+      "label": "kyun/first-principles",
+      "fluent_frac": 0,
+      "counts": {
+        "learning": 0,
+        "held": 1,
         "fluent": 0
       },
       "due_count": 1
@@ -183,7 +194,7 @@
   },
   "position": {
     "session_open": true,
-    "concept": "neuralnet",
+    "concept": "inference",
     "step": 3,
     "step_name": "SAMJHAO",
     "axes_done": [
@@ -204,19 +215,19 @@
       "a",
       "b"
     ],
-    "started_at": "2026-11-13T08:06:30.681Z",
-    "stale": false,
-    "stale_as_of": "2026-11-18T03:50:19.542Z",
+    "started_at": "2026-11-24T08:42:52.340Z",
+    "stale": true,
+    "stale_as_of": "2026-11-26T03:46:32.782Z",
     "last_closed": {
       "concept": "neuralnet",
-      "ended_at": "2026-11-13T08:06:29.818Z",
+      "ended_at": "2026-11-24T08:04:37.869Z",
       "steps_ran": [
         0,
+        1,
         2,
         3
       ],
       "steps_missed": [
-        1,
         4,
         5,
         6,
@@ -226,9 +237,7 @@
         10,
         11
       ],
-      "axes_done": [],
-      "axes_deferred": [],
-      "axes_untouched": [
+      "axes_done": [
         "a",
         "b",
         "c",
@@ -239,12 +248,12 @@
         "h",
         "i"
       ],
-      "elapsed_min": 37279.9,
-      "axis_marks_span_min": null,
-      "check_q_refused": 1,
-      "core_missing": [
-        "d"
-      ]
+      "axes_deferred": [],
+      "axes_untouched": [],
+      "elapsed_min": 15838.1,
+      "axis_marks_span_min": 12319.9,
+      "check_q_refused": 6,
+      "core_missing": []
     }
   }
 }

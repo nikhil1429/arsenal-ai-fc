@@ -175,6 +175,72 @@
         "audit_ts": "2026-10-18T06:07:03.849Z",
         "title": "inference_axis_b_greedy_vs_sampling_stepper",
         "recorded_at": "2026-10-18T06:07:05.173Z"
+      },
+      {
+        "session_id": "422c9bc1-6d82-4c1c-9f90-9e23e5271208",
+        "audit_ts": "2026-11-24T08:45:38.890Z",
+        "title": "inference_big_picture_map",
+        "recorded_at": "2026-11-24T08:45:39.026Z"
+      },
+      {
+        "session_id": "422c9bc1-6d82-4c1c-9f90-9e23e5271208",
+        "audit_ts": "2026-11-24T09:27:51.528Z",
+        "title": "sampling_parchi_bowl",
+        "recorded_at": "2026-11-24T09:27:52.415Z"
+      },
+      {
+        "session_id": "422c9bc1-6d82-4c1c-9f90-9e23e5271208",
+        "audit_ts": "2026-11-24T09:27:56.768Z",
+        "title": "sampling_parchi_bowl",
+        "recorded_at": "2026-11-24T09:27:56.896Z"
+      },
+      {
+        "session_id": "422c9bc1-6d82-4c1c-9f90-9e23e5271208",
+        "audit_ts": "2026-11-24T09:32:52.571Z",
+        "title": "inference_is_the_whole_loop",
+        "recorded_at": "2026-11-24T09:32:53.142Z"
+      },
+      {
+        "session_id": "422c9bc1-6d82-4c1c-9f90-9e23e5271208",
+        "audit_ts": "2026-11-24T09:45:46.047Z",
+        "title": "api_call_is_inference_call",
+        "recorded_at": "2026-11-24T09:45:46.237Z"
+      },
+      {
+        "session_id": "422c9bc1-6d82-4c1c-9f90-9e23e5271208",
+        "audit_ts": "2026-11-25T06:17:49.620Z",
+        "title": "autoregressive_dependency_tree",
+        "recorded_at": "2026-11-25T06:17:50.754Z"
+      },
+      {
+        "session_id": "422c9bc1-6d82-4c1c-9f90-9e23e5271208",
+        "audit_ts": "2026-11-25T06:17:56.992Z",
+        "title": "autoregressive_dependency_tree",
+        "recorded_at": "2026-11-25T06:17:57.150Z"
+      },
+      {
+        "session_id": "422c9bc1-6d82-4c1c-9f90-9e23e5271208",
+        "audit_ts": "2026-11-25T06:24:03.704Z",
+        "title": "greedy_vs_sampling",
+        "recorded_at": "2026-11-25T06:24:04.254Z"
+      },
+      {
+        "session_id": "422c9bc1-6d82-4c1c-9f90-9e23e5271208",
+        "audit_ts": "2026-11-25T06:51:19.883Z",
+        "title": "temperature_slider_katora",
+        "recorded_at": "2026-11-25T06:51:20.593Z"
+      },
+      {
+        "session_id": "422c9bc1-6d82-4c1c-9f90-9e23e5271208",
+        "audit_ts": "2026-11-25T07:32:40.698Z",
+        "title": "top_k_slider_katora",
+        "recorded_at": "2026-11-25T07:32:40.842Z"
+      },
+      {
+        "session_id": "422c9bc1-6d82-4c1c-9f90-9e23e5271208",
+        "audit_ts": "2026-11-25T07:32:44.073Z",
+        "title": "top_k_slider_katora",
+        "recorded_at": "2026-11-25T07:32:44.209Z"
       }
     ],
     "neuralnet": [
@@ -237,6 +303,54 @@
         "audit_ts": "2026-11-17T04:28:20.057Z",
         "title": "neuralnet_axis_c_slope_fast_vs_slow",
         "recorded_at": "2026-11-17T04:28:20.262Z"
+      },
+      {
+        "session_id": "e915458c-dffa-4f95-a1b4-62c9cc107c26",
+        "audit_ts": "2026-11-19T09:47:00.530Z",
+        "title": "neuralnet_axis_c_batch_mse_epoch",
+        "recorded_at": "2026-11-19T09:47:00.914Z"
+      },
+      {
+        "session_id": "f0f4328a-a766-4899-8996-e41137a73682",
+        "audit_ts": "2026-11-21T06:02:29.848Z",
+        "title": "neuralnet_axis_d_output_vs_error_flow",
+        "recorded_at": "2026-11-21T06:02:33.082Z"
+      },
+      {
+        "session_id": "89262150-922f-430a-9f91-46245a921c74",
+        "audit_ts": "2026-11-21T07:31:38.589Z",
+        "title": "neuralnet_axis_e_dead_relu_zero_nudge",
+        "recorded_at": "2026-11-21T07:31:38.753Z"
+      },
+      {
+        "session_id": "89262150-922f-430a-9f91-46245a921c74",
+        "audit_ts": "2026-11-21T07:54:01.200Z",
+        "title": "neuralnet_axis_e_relu_off_vs_dead",
+        "recorded_at": "2026-11-21T07:54:03.240Z"
+      },
+      {
+        "session_id": "7f7fb8ec-a594-4ba8-8fb2-b05caf5d441a",
+        "audit_ts": "2026-11-22T05:52:03.822Z",
+        "title": "relu_vs_leaky_relu_slope",
+        "recorded_at": "2026-11-22T05:52:05.335Z"
+      },
+      {
+        "session_id": "7f7fb8ec-a594-4ba8-8fb2-b05caf5d441a",
+        "audit_ts": "2026-11-22T05:52:12.360Z",
+        "title": "relu_vs_leaky_relu_slope",
+        "recorded_at": "2026-11-22T05:52:12.513Z"
+      },
+      {
+        "session_id": "7f7fb8ec-a594-4ba8-8fb2-b05caf5d441a",
+        "audit_ts": "2026-11-22T06:23:16.742Z",
+        "title": "lr_schedule_warmup_peak_decay",
+        "recorded_at": "2026-11-22T06:23:18.218Z"
+      },
+      {
+        "session_id": "e3440d81-526d-4753-aff1-b7f9e29dae32",
+        "audit_ts": "2026-11-23T10:47:25.014Z",
+        "title": "neuralnet_axis_h_point_of_the_axis",
+        "recorded_at": "2026-11-23T10:47:26.251Z"
       }
     ]
   }
