@@ -1,6 +1,6 @@
 {
-  "date": "2026-11-26",
-  "generated_at": "2026-11-26T03:46:32.782Z",
+  "date": "2026-11-28",
+  "generated_at": "2026-11-28T08:45:06.425Z",
   "total_reps": 6,
   "status": "ok",
   "low_confidence": false,
@@ -61,27 +61,27 @@
     {
       "concept": "inference",
       "axis": null,
-      "overdue_days": 147
+      "overdue_days": 149
     },
     {
       "concept": "context",
       "axis": null,
-      "overdue_days": 143
+      "overdue_days": 145
     },
     {
       "concept": "embeddings",
       "axis": null,
-      "overdue_days": 131
+      "overdue_days": 133
     },
     {
       "concept": "hallucinations",
       "axis": null,
-      "overdue_days": 107
+      "overdue_days": 109
     },
     {
       "concept": "tokenization",
       "axis": "b (kyun/first-principles)",
-      "overdue_days": 76
+      "overdue_days": 78
     }
   ],
   "core_vs_light": {
@@ -199,13 +199,13 @@
     "step_name": "SAMJHAO",
     "axes_done": [
       "a",
-      "b"
+      "b",
+      "c",
+      "d",
+      "e"
     ],
     "axes_deferred": [],
     "axes_left": [
-      "c",
-      "d",
-      "e",
       "f",
       "g",
       "h",
@@ -213,11 +213,14 @@
     ],
     "axes_ungraded": [
       "a",
-      "b"
+      "b",
+      "c",
+      "d",
+      "e"
     ],
     "started_at": "2026-11-24T08:42:52.340Z",
-    "stale": true,
-    "stale_as_of": "2026-11-26T03:46:32.782Z",
+    "stale": false,
+    "stale_as_of": "2026-11-28T08:45:06.425Z",
     "last_closed": {
       "concept": "neuralnet",
       "ended_at": "2026-11-24T08:04:37.869Z",

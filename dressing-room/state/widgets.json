@@ -241,6 +241,36 @@
         "audit_ts": "2026-11-25T07:32:44.073Z",
         "title": "top_k_slider_katora",
         "recorded_at": "2026-11-25T07:32:44.209Z"
+      },
+      {
+        "session_id": "d44526b4-885c-4663-8c17-c90c0b2cd81f",
+        "audit_ts": "2026-11-27T05:55:11.305Z",
+        "title": "inference_axis_d_temperature_two_parchi_boxes",
+        "recorded_at": "2026-11-27T05:55:12.330Z"
+      },
+      {
+        "session_id": "b79cdd76-124e-4387-b560-c2a925b5a0dc",
+        "audit_ts": "2026-11-27T08:30:15.799Z",
+        "title": "inference_axis_e_gap_per_token",
+        "recorded_at": "2026-11-27T08:30:17.172Z"
+      },
+      {
+        "session_id": "b79cdd76-124e-4387-b560-c2a925b5a0dc",
+        "audit_ts": "2026-11-27T08:30:22.239Z",
+        "title": "inference_axis_e_gap_per_token",
+        "recorded_at": "2026-11-27T08:30:22.396Z"
+      },
+      {
+        "session_id": "aa7a672e-c77f-48fd-920a-8baf58e427e2",
+        "audit_ts": "2026-11-27T14:33:38.181Z",
+        "title": "inference_axis_f_hosted_vs_selfhosted_corrected",
+        "recorded_at": "2026-11-27T14:33:38.578Z"
+      },
+      {
+        "session_id": "aa7a672e-c77f-48fd-920a-8baf58e427e2",
+        "audit_ts": "2026-11-27T14:33:43.841Z",
+        "title": "inference_axis_f_hosted_vs_selfhosted_corrected",
+        "recorded_at": "2026-11-27T14:33:43.882Z"
       }
     ],
     "neuralnet": [
